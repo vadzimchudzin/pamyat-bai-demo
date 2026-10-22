@@ -1,0 +1,6 @@
+services:
+- type: web
+  name: pamyat-bai-demo
+  runtime: static
+  buildCommand: ""
+  staticPublishPath: .
