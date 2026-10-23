@@ -18,6 +18,7 @@
   var live = sec.querySelector('.sc-live');
   var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var small = window.matchMedia('(max-width: 820px)').matches;
+  var VER = 'v2-10230853';
   var A = '/assets/motion/';
   var PI_ = .05, PO_ = .955;
   var IW = 1920, IH = 1080, IAR = IW / IH;
@@ -82,11 +83,11 @@
   }
   var queue = [];
   KEYS.forEach(function (k, i) {
-    queue.push(['k' + k, A + 'k' + k + (small ? '-m' : '') + '.webp']);
-    if (i < NT) { queue.push(['t' + i, A + 't' + i + '.webp']); queue.push(['a' + i, A + 'a' + i + '.webp']); }
+    queue.push(['k' + k, A + 'k' + k + (small ? '-m' : '') + '.webp?v=' + VER]);
+    if (i < NT) { queue.push(['t' + i, A + 't' + i + '.webp?v=' + VER]); queue.push(['a' + i, A + 'a' + i + '.webp?v=' + VER]); }
   });
   function preload() {
-    fetch(A + 'motion.json').then(function (r) { return r.json(); }).then(function (j) {
+    fetch(A + 'motion.json?v=' + VER, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
       MT = j.tr; dirty = true;
       var i = 0;
       (function next() {
@@ -313,7 +314,7 @@
   function fallback() {
     canvas.style.display = 'none';
     var imgs = KEYS.map(function (k, i) {
-      var im = document.createElement('img'); im.className = 'story-fb'; im.alt = ''; im.src = A + 'k' + k + (small ? '-m' : '') + '.webp';
+      var im = document.createElement('img'); im.className = 'story-fb'; im.alt = ''; im.src = A + 'k' + k + (small ? '-m' : '') + '.webp?v=' + VER;
       im.style.opacity = i ? 0 : 1; screen.insertBefore(im, screen.firstChild); return im;
     });
     function upd() {
