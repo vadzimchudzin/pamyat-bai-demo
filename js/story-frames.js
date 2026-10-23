@@ -16,7 +16,7 @@
   var live = sec.querySelector('.sc-live');
   var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var small = window.matchMedia('(max-width: 820px)').matches;
-  var VER = 'r1';
+  var VER = 'r3';
   var BASE = small ? '/assets/render-m/' : '/assets/render/';
   var META = null;               // {count, step, w, h, stages:[[frameStart, cardIndex], ...]}
   var PI_ = .05, PO_ = .955;
