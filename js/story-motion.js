@@ -18,7 +18,7 @@
   var live = sec.querySelector('.sc-live');
   var calm = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   var small = window.matchMedia('(max-width: 820px)').matches;
-  var VER = 'v2-10230853';
+  var VER = 'v3-10231015';
   var A = '/assets/motion/';
   var PI_ = .05, PO_ = .955;
   var IW = 1920, IH = 1080, IAR = IW / IH;
@@ -270,7 +270,9 @@
       gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
       var AW = spr.size[0], AH = spr.size[1], an = 'a' + st.k, list = [];
       for (var i = 0; i < spr.items.length; i++) {
-        var it = spr.items[i], u = clamp((st.t - it.t[0]) / (it.t[1] - it.t[0]));
+        var it = spr.items[i];
+        if (it.occ) continue;
+        var u = clamp((st.t - it.t[0]) / (it.t[1] - it.t[0]));
         if (u <= 0) continue;
         list.push([it, u]);
       }
@@ -287,9 +289,15 @@
         var e = 1 - Math.pow(1 - u3, 3);
         var settle = u3 > .82 ? Math.sin((u3 - .82) / .18 * Math.PI) * .012 : 0; // tiny bounce on landing
         var y = bx3[1] - (1 - e) * it3.d + settle * it3.d;
-        var al = sm(0, .45, u3);
+        var al = it3.nf ? 1 : sm(0, .2, u3);
         var uvr3 = [it3.uv[0] / AW, 1 - (it3.uv[1] + bx3[3]) / AH, (it3.uv[0] + bx3[2]) / AW, 1 - it3.uv[1] / AH];
         drawItem(an, bx3[0], y, bx3[2], bx3[3], uvr3, al, 0, 0);
+      }
+      // occluders: scene parts in front of falling objects, redrawn on top (true depth)
+      if (list.length) for (var o = 0; o < spr.items.length; o++) {
+        var oc = spr.items[o]; if (!oc.occ) continue;
+        var bo = oc.box, uvo = [oc.uv[0] / AW, 1 - (oc.uv[1] + bo[3]) / AH, (oc.uv[0] + bo[2]) / AW, 1 - oc.uv[1] / AH];
+        drawItem(an, bo[0], bo[1], bo[2], bo[3], uvo, 1, 0, 0);
       }
       gl.disable(gl.BLEND);
     }
