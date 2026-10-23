@@ -14,7 +14,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="/assets/img/hero-plate.jpg">
 <link rel="stylesheet" href="/css/base.css?v=v3-10231015">
-<link rel="stylesheet" href="/css/site.css?v=v3-10231015">
+<link rel="stylesheet" href="/css/site.css?v=r2-10231015">
 </head>
 <body>
 <header class="top" id="top">
@@ -78,7 +78,7 @@
     </div>
 
     <div class="story-screen">
-      <canvas id="storyGL" aria-hidden="true"></canvas>
+      <canvas id="storyCV" aria-hidden="true"></canvas>
       <canvas id="storyFX" aria-hidden="true"></canvas>
       <div class="story-shade"></div>
     </div>
@@ -91,25 +91,25 @@
       </div>
       <div class="sc-stack">
         <article class="sc-item on" data-chapter="Разметка" data-ch="0"><h3>Участок до начала работ</h3><p>Выезжаем на место, замеряем участок и выставляем разметку по колышкам. Проверяем диагонали, чтобы комплекс встал ровно по оси.</p><small>Контроль: диагонали и оси участка</small></article>
-        <article class="sc-item" data-chapter="Фундамент" data-ch="1" data-live><h3>Опалубка и армирование</h3><p>Ставим опалубку по периметру, делаем щебёночную подушку и вяжем арматурную сетку ряд за рядом.</p><small>Контроль: шаг сетки и защитный слой</small></article>
-        <article class="sc-item" data-side="r" data-chapter="Фундамент" data-ch="1" data-live><h3>Заливка бетона</h3><p>Заливаем бетон за один подход и выравниваем правилом. Основание получается монолитным, без холодных швов.</p><small>Контроль: горизонт по всей плоскости</small></article>
-        <article class="sc-item" data-side="r" data-chapter="Плитка" data-ch="2" data-live><h3>Укладка гранитной плитки</h3><p>Каждую плитку кладём на клей и выставляем киянкой и уровнем, ряд за рядом. В конце бордюр по периметру.</p><small>Контроль: швы и уклон для воды</small></article>
-        <article class="sc-item" data-chapter="Ограда" data-ch="3" data-live><h3>Ограда и цветники</h3><p>Ставим гранитные столбики, перемычки и короба цветников. Каждый элемент по уровню и в одну линию.</p><small>Контроль: симметрия относительно оси</small></article>
-        <article class="sc-item" data-chapter="Памятник" data-ch="4" data-live><h3>Установка стел</h3><p>Стелы опускаем подъёмником, без рывков и сколов. Сквозной крест совмещаем точно по шву.</p><small>Контроль: вертикаль и совмещение креста</small></article>
-        <article class="sc-item" data-chapter="Озеленение" data-ch="5" data-live><h3>Озеленение</h3><p>Укладываем газон, высаживаем цветы, ставим вазу и убираем за собой весь строительный мусор.</p><small>Контроль: чистота участка</small></article>
+        <article class="sc-item" data-chapter="Фундамент" data-ch="1" data-live><h3>Опалубка и армирование</h3><p>Доски опалубки встают по периметру, колья забиваются в грунт. Щебёночная подушка, затем арматура: каждый пруток на своё место.</p><small>Контроль: шаг сетки и защитный слой</small></article>
+        <article class="sc-item" data-chapter="Фундамент" data-ch="1" data-live><h3>Заливка бетона</h3><p>Бетон идёт по лотку и растекается по сетке. Заливаем за один подход и проходим правилом: монолит без холодных швов.</p><small>Контроль: горизонт по всей плоскости</small></article>
+        <article class="sc-item" data-chapter="Плитка" data-ch="2" data-live><h3>Бордюр и плитка</h3><p>Снимаем опалубку, ставим гранитный бордюр. Плитку кладём на клей по одной, ряд за рядом, со швом 4 мм.</p><small>Контроль: швы и уклон для воды</small></article>
+        <article class="sc-item" data-chapter="Ограда" data-ch="3" data-live><h3>Ограда и цветники</h3><p>Столбики, перемычки и короба цветников из того же гранита. Каждый элемент по уровню, грунт засыпаем последним.</p><small>Контроль: симметрия относительно оси</small></article>
+        <article class="sc-item" data-chapter="Памятник" data-ch="4" data-live><h3>Установка стел</h3><p>Стелы опускаем медленно, без рывков и сколов. Две половины сходятся, и сквозной крест складывается точно по шву.</p><small>Контроль: вертикаль и совмещение креста</small></article>
+        <article class="sc-item" data-chapter="Озеленение" data-ch="5" data-live><h3>Ваза и газон</h3><p>Ставим вазу с живыми лилиями, газон в цветниках прорастает. Убираем за собой весь мусор.</p><small>Контроль: чистота участка</small></article>
         <article class="sc-item" data-chapter="Готово" data-ch="6"><h3>Комплекс в день сдачи</h3><p>Чисто, ровно, спокойно. Таким вы увидите место, когда приедете принимать работу.</p><small>Сдаём по акту, с гарантией</small></article>
       </div>
     </div>
 
     <nav class="story-rail" aria-label="Этапы установки">
       <div class="rail-btns">
-        <button class="rail-btn now" data-go="0">Разметка</button>
-        <button class="rail-btn" data-go="0.06">Фундамент</button>
-        <button class="rail-btn" data-go="2.06">Плитка</button>
-        <button class="rail-btn" data-go="3.06">Ограда</button>
-        <button class="rail-btn" data-go="4.06">Памятник</button>
-        <button class="rail-btn" data-go="5.06">Озеленение</button>
-        <button class="rail-btn" data-go="6">Готово</button>
+        <button class="rail-btn now" data-f="0">Разметка</button>
+        <button class="rail-btn" data-f="8">Фундамент</button>
+        <button class="rail-btn" data-f="170">Плитка</button>
+        <button class="rail-btn" data-f="272">Ограда</button>
+        <button class="rail-btn" data-f="371">Памятник</button>
+        <button class="rail-btn" data-f="429">Озеленение</button>
+        <button class="rail-btn" data-f="482">Готово</button>
       </div>
       <div class="rail-line"><i class="rail-fill"></i></div>
     </nav>
@@ -249,7 +249,7 @@
   </div>
 </footer>
 
-<script src="/js/story-motion.js?v=v3-10231015"></script>
+<script src="/js/story-frames.js?v=r2"></script>
 <script src="/js/main.js?v=v3-10231015"></script>
 </body>
 </html>
