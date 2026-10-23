@@ -24,16 +24,8 @@
 
   var KEYS = ['00', '01', '03', '05', '07', '09', '11'];
   var NT = KEYS.length - 1; // 6 transitions
-  // per transition: edge softness, glow, sprites
-  var TR = [
-    { w: .05, glow: .55, sp: [] },
-    { w: .07, glow: .35, sp: [{ id: 'w_pour', fin: [0, .12], fout: [.86, .99], dx: [0, 18] }] },
-    { w: .016, glow: .9, sp: [{ id: 'w_tiles', fin: [0, .1], fout: [.82, .95], dx: [0, 26] }] },
-    { w: .035, glow: .6, sp: [{ id: 'w_fence', fin: [0, .1], fout: [.86, .98], dx: [-12, 0] }] },
-    { w: .02, glow: .3, sp: [{ id: 'w_stele', fin: [0, .1], fout: [.95, 1], dx: [0, 0] }], drop: true },
-    { w: .05, glow: .45, sp: [{ id: 'w_plant', fin: [0, .1], fout: [.84, .97], dx: [10, 0] }] }
-  ];
-  var BOX = { s_stelae: [904, 59, 561, 518], w_pour: [178, 125, 1358, 637], w_tiles: [0, 439, 658, 495], w_fence: [1491, 448, 429, 605], w_stele: [1065, 0, 844, 805], w_plant: [1146, 426, 479, 614] };
+  var MT = null; // motion.json: per transition {w, glow, sprites:{atlas,size,items:[{box,uv,t,d,sh}]}, dust}
+  var DEF = [{ w: .05, glow: .35 }, { w: .07, glow: .3 }, { w: .02, glow: .5 }, { w: .04, glow: .3 }, { w: .03, glow: .2 }, { w: .05, glow: .35 }];
 
   // ---------------- WebGL ----------------
   var gl = null;
@@ -58,16 +50,16 @@
     'float m=clamp((uT*(1.+uW)-mp.r)/uW,0.,1.);if(uT>=.9999)m=1.;vec3 c=mix(a,b,m);float g=mp.b*4.*m*(1.-m);' +
     'c+=vec3(1.,.83,.55)*g*.22*uGlow;gl_FragColor=vec4(grade(c),1.);}');
   var sprP = prog('attribute vec2 p;attribute vec2 t;varying vec2 v;void main(){v=t;gl_Position=vec4(p,0.,1.);}',
-    'precision mediump float;varying vec2 v;uniform sampler2D uX;uniform float uAl;uniform int uMode;' + COMMON +
-    'void main(){vec4 s=texture2D(uX,v);if(uMode==1){float d=length((v-.5)*2.);s=vec4(0.,0.,0.,smoothstep(1.,0.,d)*.75);gl_FragColor=vec4(s.rgb,s.a*uAl);return;}' +
-    'gl_FragColor=vec4(grade(s.rgb),s.a*uAl);}');
+    'precision mediump float;varying vec2 v;uniform sampler2D uX;uniform float uAl;uniform int uMode;uniform vec2 uTx;uniform vec4 uR;' + COMMON +
+    'void main(){if(uMode==2){float a=0.;for(int i=-2;i<=2;i++)for(int j=-2;j<=2;j++){vec2 q=clamp(v+vec2(float(i),float(j))*uTx,uR.xy,uR.zw);a+=texture2D(uX,q).a;}' +
+    'a/=25.;gl_FragColor=vec4(0.,0.,0.,a*uAl);return;}vec4 s=texture2D(uX,v);gl_FragColor=vec4(grade(s.rgb),s.a*uAl);}');
 
   var quad = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, quad);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]), gl.STATIC_DRAW);
   var sbuf = gl.createBuffer();
   function U(p, n) { return gl.getUniformLocation(p, n); }
   var ub = {}; ['uA', 'uB', 'uM', 'uT', 'uW', 'uGlow', 'uZ', 'uS', 'uOff', 'uZc', 'uTint', 'uVig', 'uDark', 'uRes'].forEach(function (k) { ub[k] = U(baseP, k); });
-  var us = {}; ['uX', 'uAl', 'uMode', 'uTint', 'uVig', 'uDark', 'uRes'].forEach(function (k) { us[k] = U(sprP, k); });
+  var us = {}; ['uX', 'uAl', 'uMode', 'uTx', 'uR', 'uTint', 'uVig', 'uDark', 'uRes'].forEach(function (k) { us[k] = U(sprP, k); });
   gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
   var TEX = {}, PEND = {};
@@ -82,7 +74,7 @@
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, f); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, f);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE); gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, im);
-        TEX[name] = t; dirty = true; res(t);
+        t._size = [im.naturalWidth, im.naturalHeight]; TEX[name] = t; dirty = true; res(t);
       };
       im.onerror = function () { res(null); };
       im.src = url;
@@ -91,13 +83,18 @@
   var queue = [];
   KEYS.forEach(function (k, i) {
     queue.push(['k' + k, A + 'k' + k + (small ? '-m' : '') + '.webp']);
-    if (i < NT) queue.push(['t' + i, A + 't' + i + '.webp']);
+    if (i < NT) { queue.push(['t' + i, A + 't' + i + '.webp']); queue.push(['a' + i, A + 'a' + i + '.webp']); }
   });
-  ['w_pour', 'w_tiles', 'w_fence', 's_stelae', 'w_stele', 'w_plant'].forEach(function (s) { queue.push([s, A + s + '.webp']); });
   function preload() {
-    var i = 0;
-    (function next() { if (i >= queue.length) return; var q = queue[i++]; load(q[0], q[1]).then(next); })();
-    (function next2() { })();
+    fetch(A + 'motion.json').then(function (r) { return r.json(); }).then(function (j) {
+      MT = j.tr; dirty = true;
+      var i = 0;
+      (function next() {
+        if (i >= queue.length) return; var q = queue[i++];
+        if (q[0][0] === 'a' && !(MT[+q[0].slice(1)] || {}).sprites) return next();
+        load(q[0], q[1]).then(next);
+      })();
+    });
   }
 
   // ---------------- camera & mapping ----------------
@@ -124,17 +121,21 @@
   }
   function toPx(x, y) { var c = toClip(x, y); return [(c[0] + 1) / 2 * cw, (1 - (c[1] + 1) / 2) * ch]; }
 
-  function drawSprite(name, x, y, w, h, alpha, mode) {
-    var tex = TEX[name]; if (!mode && !tex) return;
+  // draw an atlas item at image-space box (x,y,w,h); uvr = [u0,v0,u1,v1] (GL tex coords, v up)
+  function drawItem(texName, x, y, w, h, uvr, alpha, mode, blurPx) {
+    var tex = TEX[texName]; if (!tex) return;
     var a = toClip(x, y + h), b = toClip(x + w, y + h), c = toClip(x, y), d = toClip(x + w, y);
     gl.useProgram(sprP);
     gl.bindBuffer(gl.ARRAY_BUFFER, sbuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([a[0], a[1], 0, 0, b[0], b[1], 1, 0, c[0], c[1], 0, 1, d[0], d[1], 1, 1]), gl.DYNAMIC_DRAW);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([a[0], a[1], uvr[0], uvr[1], b[0], b[1], uvr[2], uvr[1], c[0], c[1], uvr[0], uvr[3], d[0], d[1], uvr[2], uvr[3]]), gl.DYNAMIC_DRAW);
     var lp = gl.getAttribLocation(sprP, 'p'), lt = gl.getAttribLocation(sprP, 't');
     gl.enableVertexAttribArray(lp); gl.enableVertexAttribArray(lt);
     gl.vertexAttribPointer(lp, 2, gl.FLOAT, false, 16, 0); gl.vertexAttribPointer(lt, 2, gl.FLOAT, false, 16, 8);
-    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex || TEX.k00);
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, tex);
     gl.uniform1i(us.uX, 0); gl.uniform1f(us.uAl, alpha); gl.uniform1i(us.uMode, mode || 0);
+    var sz = tex._size || [2048, 2048];
+    gl.uniform2f(us.uTx, (blurPx || 0) / sz[0], (blurPx || 0) / sz[1]);
+    gl.uniform4f(us.uR, uvr[0], uvr[1], uvr[2], uvr[3]);
     gl.uniform3fv(us.uTint, grade.tint); gl.uniform1f(us.uVig, grade.vig); gl.uniform1f(us.uDark, grade.dark); gl.uniform2f(us.uRes, cw, ch);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     gl.disableVertexAttribArray(lt);
@@ -213,9 +214,10 @@
       fctx.globalCompositeOperation = 'source-over';
     }
     // landing dust for stelae drop
-    if (st.k === 4 && st.t > .9 && st.t < 1) {
-      var q = (st.t - .9) / .1;
-      var b = BOX.s_stelae, base = toPx(b[0] + b[2] / 2, b[1] + b[3] - 8), edge = toPx(b[0] + b[2], b[1] + b[3]);
+    var sit = MT && MT[4] && MT[4].sprites && MT[4].sprites.items[0];
+    if (sit && st.k === 4 && st.t > sit.t[1] - .02 && st.t < sit.t[1] + .09) {
+      var q = (st.t - sit.t[1] + .02) / .11;
+      var b = sit.box, base = toPx(b[0] + b[2] / 2, b[1] + b[3] - 8), edge = toPx(b[0] + b[2], b[1] + b[3]);
       var span = Math.abs(edge[0] - base[0]);
       for (var k = 0; k < puff.length; k++) {
         var p = puff[k];
@@ -258,25 +260,38 @@
     grade.tint = [lerp(.97, 1.045, P), lerp(.99, 1.0, P), lerp(1.03, .93, P)];
     grade.vig = .55; grade.dark = .05 * (1 - st.e) + .14 * st.o;
 
-    var tr = TR[st.k];
+    var tr = (MT && MT[st.k]) || DEF[st.k];
     var a = 'k' + KEYS[st.k], b = 'k' + KEYS[st.k + 1], m = 't' + st.k;
     if (!TEX[a]) return;
-    drawBase(a, b, m, st.t, tr);
-    gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
-    if (tr.drop && TEX.s_stelae && st.t < .95) {
-      var u = clamp((st.t - .06) / .87), e = 1 - Math.pow(1 - u, 3);
-      var bx = BOX.s_stelae, y = bx[1] - (1 - e) * 640;
-      var sh = .25 + .55 * e;
-      drawSprite(null, bx[0] - bx[2] * (.25 - .15 * e), bx[1] + bx[3] - 34, bx[2] * (1.5 - .3 * e), 68, sh * (st.t > .9 ? 1 - (st.t - .9) * 20 : 1), 1);
-      drawSprite('s_stelae', bx[0], y, bx[2], bx[3], 1, 0);
+    var spr = tr.sprites, ready = spr && TEX['a' + st.k];
+    drawBase(a, b, m, ready || !spr ? st.t : 0, tr);
+    if (ready && st.t < .9999) {
+      gl.enable(gl.BLEND); gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+      var AW = spr.size[0], AH = spr.size[1], an = 'a' + st.k, list = [];
+      for (var i = 0; i < spr.items.length; i++) {
+        var it = spr.items[i], u = clamp((st.t - it.t[0]) / (it.t[1] - it.t[0]));
+        if (u <= 0) continue;
+        list.push([it, u]);
+      }
+      // contact shadows first (own silhouette, blurred), grow as the element approaches the ground
+      for (var j = 0; j < list.length; j++) {
+        var it2 = list[j][0], u2 = list[j][1], bx = it2.box;
+        var uvr = [it2.uv[0] / AW, 1 - (it2.uv[1] + bx[3]) / AH, (it2.uv[0] + bx[2]) / AW, 1 - it2.uv[1] / AH];
+        var sa = (it2.sh || .45) * Math.pow(u2, 1.6) * (1 - sm(.86, 1, u2));
+        if (sa > .003) drawItem(an, bx[0] - 6, bx[1] + 4, bx[2] + 12, bx[3] + 6, uvr, sa, 2, 3 + 9 * (1 - u2));
+      }
+      list.sort(function (p, q2) { return (p[0].box[1] + p[0].box[3]) - (q2[0].box[1] + q2[0].box[3]); });
+      for (var k2 = 0; k2 < list.length; k2++) {
+        var it3 = list[k2][0], u3 = list[k2][1], bx3 = it3.box;
+        var e = 1 - Math.pow(1 - u3, 3);
+        var settle = u3 > .82 ? Math.sin((u3 - .82) / .18 * Math.PI) * .012 : 0; // tiny bounce on landing
+        var y = bx3[1] - (1 - e) * it3.d + settle * it3.d;
+        var al = sm(0, .45, u3);
+        var uvr3 = [it3.uv[0] / AW, 1 - (it3.uv[1] + bx3[3]) / AH, (it3.uv[0] + bx3[2]) / AW, 1 - it3.uv[1] / AH];
+        drawItem(an, bx3[0], y, bx3[2], bx3[3], uvr3, al, 0, 0);
+      }
+      gl.disable(gl.BLEND);
     }
-    tr.sp.forEach(function (s) {
-      var al = sm(s.fin[0], s.fin[1], st.t) * (1 - sm(s.fout[0], s.fout[1], st.t));
-      if (al <= .002) return;
-      var bx = BOX[s.id], dx = lerp(s.dx[0], s.dx[1], st.t);
-      drawSprite(s.id, bx[0] + dx, bx[1] + (1 - al) * 6, bx[2], bx[3], al, 0);
-    });
-    gl.disable(gl.BLEND);
     drawFX(now, st);
   }
   function kick() { measure(); if (visible && !raf) raf = requestAnimationFrame(frame); }
