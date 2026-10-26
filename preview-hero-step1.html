@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ПАМЯТЬ.БАЙ — предпросмотр главного экрана</title>
+<style>
+:root{--ink:#2b2420;--gold:#a98544;--cream:#f6f1e8}
+*{box-sizing:border-box}
+html,body{margin:0;min-height:100%;font-family:Arial,Helvetica,sans-serif;color:var(--ink)}
+.hero{min-height:100svh;position:relative;overflow:hidden;isolation:isolate;background:linear-gradient(180deg,#d9e9f0 0%,#f9e8d6 52%,#fff0d8 100%);display:flex;align-items:center}
+.clouds{position:absolute;inset:0;overflow:hidden;z-index:-1;pointer-events:none}
+.cloud{position:absolute;width:75vw;height:34vw;min-height:220px;border-radius:50%;filter:blur(28px);opacity:.72;background:radial-gradient(ellipse at 30% 55%,#fff 0 15%,rgba(255,255,255,.82) 30%,rgba(255,255,255,0) 70%);animation:cloud-drift 38s linear infinite;will-change:transform}
+.cloud:nth-child(1){left:-24%;top:28%;animation-duration:42s}
+.cloud:nth-child(2){left:24%;top:48%;width:95vw;opacity:.55;animation-duration:54s;animation-direction:reverse}
+.cloud:nth-child(3){left:58%;top:18%;width:65vw;opacity:.48;animation-duration:48s}
+.cloud:nth-child(4){left:-15%;top:67%;width:90vw;opacity:.65;animation-duration:60s;animation-direction:reverse}
+@keyframes cloud-drift{0%{transform:translate3d(-12vw,0,0) scale(1)}50%{transform:translate3d(12vw,-2vh,0) scale(1.06)}100%{transform:translate3d(32vw,1vh,0) scale(1)}}
+.sun{position:absolute;right:13%;top:10%;width:clamp(130px,23vw,300px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(255,255,245,.96),rgba(255,239,200,.52) 38%,rgba(255,221,173,0) 72%);filter:blur(7px)}
+.content{width:min(1180px,100%);margin:0 auto;padding:clamp(30px,7vw,90px);position:relative;z-index:1}
+.eyebrow{font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:#8b6b3a;margin:0 0 22px}
+h1{font-family:Georgia,'Times New Roman',serif;font-weight:400;font-size:clamp(56px,8vw,112px);line-height:.91;letter-spacing:-.045em;max-width:750px;margin:0 0 28px;text-wrap:balance}
+.rule{height:2px;width:54px;background:#b08a4e;margin:0 0 22px}
+p{font-size:clamp(16px,1.45vw,19px);line-height:1.55;max-width:440px;color:#51473e;margin:0 0 28px}
+.cta{display:inline-flex;align-items:center;gap:14px;padding:15px 23px;border-radius:999px;background:linear-gradient(180deg,#a98544,#8f6f36);color:#fff;text-decoration:none;font-size:14px;box-shadow:0 12px 28px #80633335;transition:transform .25s,box-shadow .25s}
+.cta:hover{transform:translateY(-2px);box-shadow:0 16px 34px #80633350}
+.note{position:absolute;bottom:18px;left:50%;transform:translateX(-50%);font-size:11px;color:#6e6255;letter-spacing:.04em;white-space:nowrap}
+@media(max-width:600px){.hero{min-height:100svh;align-items:flex-end}.content{padding:0 25px 76px}h1{font-size:clamp(54px,13vw,76px);line-height:.94;max-width:100%;margin-bottom:23px}.eyebrow{font-size:11px;margin-bottom:18px}.rule{margin-bottom:18px}p{font-size:16px;line-height:1.5;max-width:330px;margin-bottom:22px}.sun{right:-5%;top:8%;width:210px}.cloud{width:115vw;height:56vw;filter:blur(20px)}.cloud:nth-child(1){top:24%;left:-55%}.cloud:nth-child(2){top:43%;left:-25%}.cloud:nth-child(3){top:17%;left:48%}.cloud:nth-child(4){top:61%;left:-35%}.note{font-size:9px;bottom:13px}}
+@media(prefers-reduced-motion:reduce){.cloud{animation:none}}
+</style>
+</head>
+<body>
+<main class="hero">
+ <div class="clouds" aria-hidden="true"><div class="cloud"></div><div class="cloud"></div><div class="cloud"></div><div class="cloud"></div></div>
+ <div class="sun" aria-hidden="true"></div>
+ <section class="content">
+  <div class="eyebrow">ПАМЯТЬ.БАЙ · ПАМЯТНИКИ ПОД КЛЮЧ</div>
+  <h1>Память,<br>которая<br>живёт</h1>
+  <div class="rule"></div>
+  <p>Памятники из гранита, установка под ключ и благоустройство участка. Беларусь.</p>
+  <a class="cta" href="#contact">Обсудить заказ <span aria-hidden="true">→</span></a>
+ </section>
+ <div class="note">ПРЕДПРОСМОТР · ЭТАП 1 · АДАПТИВНЫЙ ГЛАВНЫЙ ЭКРАН</div>
+</main>
+</body>
+</html>
