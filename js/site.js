@@ -40,6 +40,80 @@
     setTimeout(flicker, 65 + Math.random() * 145);
   })();
 
+  /* ---------- облака заслоняют солнце: яркость солнца и лучей гаснет под облаком ---------- */
+  (function () {
+    var heroEl = $('#hero'), sun = heroEl && $('.sun .core', heroEl), clouds = heroEl ? $$('.sky .cl', heroEl) : [];
+    if (!sun || !clouds.length) return;
+    var maps = {}, GW = 160, GH = 68, cur = 1;
+    function grid(src, cb) {
+      if (maps[src]) return cb(maps[src]);
+      var im = new Image(); im.crossOrigin = 'anonymous';
+      im.onload = function () {
+        try {
+          var c = document.createElement('canvas'); c.width = GW; c.height = GH;
+          var x = c.getContext('2d'); x.drawImage(im, 0, 0, GW, GH);
+          var d = x.getImageData(0, 0, GW, GH).data, a = new Float32Array(GW * GH);
+          for (var i = 0; i < a.length; i++) a[i] = d[i * 4 + 3] / 255;
+          maps[src] = a; cb(a);
+        } catch (e) { }
+      };
+      im.src = src;
+    }
+    /* у каждого слоя — «окна» без облаков: облака идут группами, солнце то открыто, то закрыто */
+    var GAPS = { c1: [0, .1, .45, .55, .6, .95, 1], c2: [.04, .16, .34, .44, .58, .7, .86, .96], c3: [.08, .2, .38, .5, .62, .74, .9, 1] };
+    function maskAt(cls, u) {                  // плавная маска: пары [вход, полное, полное, выход]
+      var g = GAPS[cls]; if (!g || cls === 'c1') return 1;
+      for (var i = 0; i + 3 < g.length; i += 4) {
+        var a = g[i], b = g[i + 1], c = g[i + 2], d = g[i + 3];
+        if (u >= a && u <= d) return u < b ? (u - a) / (b - a) : u > c ? (d - u) / (d - c) : 1;
+      }
+      return 0;
+    }
+    clouds.forEach(function (el) {
+      var cls = ['c1', 'c2', 'c3'].filter(function (k) { return el.classList.contains(k); })[0], g = GAPS[cls];
+      if (g && cls !== 'c1') {
+        var st = []; for (var i = 0; i + 3 < g.length; i += 4) st.push('transparent ' + g[i] * 100 + '%', '#000 ' + g[i + 1] * 100 + '%', '#000 ' + g[i + 2] * 100 + '%', 'transparent ' + g[i + 3] * 100 + '%');
+        var mk = 'linear-gradient(90deg,transparent 0%,' + st.join(',') + ',transparent 100%)';
+        el.style.webkitMaskImage = mk; el.style.maskImage = mk; el._cls = cls;
+      }
+      var m = /url\(["']?([^"')]+)["']?\)/.exec(el.style.backgroundImage);
+      if (m) grid(m[1], function (a) { el._a = a; });
+    });
+    function sample(a, u, v) {           // среднее по пятну ~ размер солнечного диска
+      var s = 0, n = 0;
+      for (var dy = -2; dy <= 2; dy++) for (var dx = -3; dx <= 3; dx++) {
+        var x = Math.round(u * (GW - 1)) + dx, y = Math.round(v * (GH - 1)) + dy;
+        if (x < 0 || y < 0 || x >= GW || y >= GH) continue;
+        s += a[y * GW + x]; n++;
+      }
+      return n ? s / n : 0;
+    }
+    function step() {
+      var r = sun.getBoundingClientRect(), sx = r.left + r.width / 2, sy = r.top + r.height / 2;
+      var clear = 1;
+      clouds.forEach(function (el) {
+        if (!el._a) return;
+        var b = el.getBoundingClientRect();
+        if (sx < b.left || sx > b.right || sy < b.top || sy > b.bottom) return;
+        var u = (sx - b.left) / b.width, v = (sy - b.top) / b.height;
+        var mu = u;                                                   // маска считается до зеркалирования
+        if (el.classList.contains('c3')) u = 1 - u;                 // зеркальное облако
+        var op = parseFloat(getComputedStyle(el).opacity) || 0;
+        var mf = el._cls ? maskAt(el._cls, el.classList.contains('c3') ? 1 - mu : mu) : 1;
+        var w = el._cls ? 1.2 : 0.25;                               // перистые облака почти не гасят солнце
+        clear *= 1 - Math.min(1, sample(el._a, u, v) * op * mf * w);
+      });
+      var target = 0.18 + 0.82 * clear;                              // под облаком солнце почти гаснет
+      cur += (target - cur) * 0.08;
+      heroEl.style.setProperty('--sun', cur.toFixed(3));
+    }
+    var last = 0;
+    (function loop(t) {
+      if (t - last > 60 && heroEl.getBoundingClientRect().bottom > 0) { last = t; step(); }
+      requestAnimationFrame(loop);
+    })(0);
+  })();
+
   /* ---------- появление блоков ---------- */
   if ('IntersectionObserver' in window && !calm) {
     var io = new IntersectionObserver(function (es) {

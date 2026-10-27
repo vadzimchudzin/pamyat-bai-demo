@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="/assets/img/hero-plate.jpg">
-<link rel="stylesheet" href="/css/dusk.css?v=d2">
+<link rel="stylesheet" href="/css/dusk.css?v=d3">
 </head>
 <body>
 <div class="ambience" aria-hidden="true"><div class="flame-light"></div><div class="light-breath"></div></div>
@@ -36,13 +36,16 @@
 <section class="hero" id="hero">
   <div class="canvas">
     <img class="plate" src="/assets/img/hero-plate.jpg" alt="Гранитный памятник над облаками на закате">
-    <div class="sky" aria-hidden="true" style="-webkit-mask-image:url(/assets/img/sky-mask.png);mask-image:url(/assets/img/sky-mask.png)">
-      <div class="cl a1" style="background-image:url(/assets/img/cloud-a.jpg)"></div>
-      <div class="cl a2" style="background-image:url(/assets/img/cloud-a.jpg)"></div>
-      <div class="cl b1" style="background-image:url(/assets/img/cloud-b.jpg)"></div>
-      <div class="cl b2" style="background-image:url(/assets/img/cloud-b.jpg)"></div>
+    <div class="sun" aria-hidden="true">
+      <i class="halo"></i>
+      <div class="sunsky" style="-webkit-mask-image:url(/assets/img/sky-mask.png);mask-image:url(/assets/img/sky-mask.png)"><i class="beams"></i><i class="beams b2"></i></div>
+      <i class="glow"></i><i class="core"></i>
     </div>
-    <div class="sun" aria-hidden="true"><i class="halo"></i><i class="rays"></i><i class="rays r2"></i><i class="glow"></i><i class="core"></i></div>
+    <div class="sky" aria-hidden="true" style="-webkit-mask-image:url(/assets/img/sky-mask.png);mask-image:url(/assets/img/sky-mask.png)">
+      <div class="cl c1" style="background-image:url(/assets/img/cloud-b.webp)"></div>
+      <div class="cl c2" style="background-image:url(/assets/img/cloud-a.webp)"></div>
+      <div class="cl c3" style="background-image:url(/assets/img/cloud-a.webp)"></div>
+    </div>
   </div>
   <div class="veil"></div>
   <div class="wrap hero-copy">
@@ -220,6 +223,6 @@
 <div class="lbx" id="lbx"><div class="in"><img id="lbimg" alt=""></div></div>
 
 <script src="/js/pamyat-store.js?v=d1"></script>
-<script src="/js/site.js?v=d2"></script>
+<script src="/js/site.js?v=d3"></script>
 </body>
 </html>

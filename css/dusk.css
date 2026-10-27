@@ -79,20 +79,30 @@ em,i,cite{font-style:normal}
 .canvas{position:absolute;left:50%;top:50%;width:var(--cw);aspect-ratio:2752/1536;--tx:-50%;transform:translate(var(--tx),-50%);transform-origin:68% 50%;animation:kb 50s ease-in-out infinite alternate;will-change:transform}
 @keyframes kb{to{transform:translate(var(--tx),-50%) scale(1.05)}}
 .plate{position:absolute;inset:0;width:100%;height:100%}
-.sky{position:absolute;inset:0;overflow:hidden;pointer-events:none;mix-blend-mode:screen;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
-.sky .cl{position:absolute;width:130%;left:-15%;aspect-ratio:3168/1344;background-size:100% 100%;opacity:0;animation:drift var(--T) linear infinite;animation-delay:var(--d);will-change:transform,opacity}
-.sky .a1{--T:140s;--d:-40s;top:-8%;--o:.7}
-.sky .a2{--T:165s;--d:-100s;top:6%;--o:.6;scale:-1 1}
-.sky .b1{--T:110s;--d:-20s;top:-42%;--o:.6}
-.sky .b2{--T:125s;--d:-70s;top:-34%;--o:.55;scale:-1 1}
-@keyframes drift{0%{transform:translateX(-22%);opacity:0}10%{opacity:var(--o)}90%{opacity:var(--o)}100%{transform:translateX(22%);opacity:0}}
-.sun{position:absolute;left:63.1%;top:38.6%;width:0;height:0;mix-blend-mode:screen}
-.sun i{position:absolute;left:0;top:0;translate:-50% -50%;border-radius:50%;display:block}
-.sun .halo{width:calc(var(--cw)*.42);height:calc(var(--cw)*.42);background:radial-gradient(circle,rgba(255,226,170,.28) 0,rgba(255,206,150,.12) 36%,transparent 68%);animation:breathe 10s ease-in-out infinite}
-.sun .glow{width:calc(var(--cw)*.17);height:calc(var(--cw)*.17);background:radial-gradient(circle,rgba(255,246,220,.62) 0,rgba(255,226,168,.32) 28%,rgba(255,200,140,.1) 55%,transparent 72%);animation:pulse 7s ease-in-out infinite}
-.sun .core{width:calc(var(--cw)*.035);height:calc(var(--cw)*.035);background:radial-gradient(circle,rgba(255,252,240,.75) 0,rgba(255,250,235,.45) 34%,transparent 70%);animation:pulse 5s ease-in-out infinite -1s}
-.sun .rays{width:calc(var(--cw)*.9);height:calc(var(--cw)*.9);background:repeating-conic-gradient(from 0deg,rgba(255,238,200,.5) 0 .5deg,transparent .5deg 5.5deg);-webkit-mask-image:radial-gradient(circle,#000 2%,transparent 62%);mask-image:radial-gradient(circle,#000 2%,transparent 62%);opacity:.3;animation:spin 140s linear infinite}
-.sun .rays.r2{background:repeating-conic-gradient(from 2deg,rgba(255,228,185,.45) 0 .9deg,transparent .9deg 11deg);opacity:.22;animation:spin 220s linear infinite reverse}
+/* облака: настоящие (с прозрачностью), плывут и заслоняют солнце; за памятником — скрыты маской */
+.sky{position:absolute;inset:0;overflow:hidden;pointer-events:none;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat}
+.sky .cl{position:absolute;width:150%;left:-25%;aspect-ratio:1600/678;background-size:100% 100%;opacity:0;animation:drift var(--T) linear infinite;animation-delay:var(--d);will-change:transform,opacity}
+.sky .c1{--T:170s;--d:-80s;top:-26%;--o:.6;width:160%;left:-30%}
+.sky .c2{--T:92s;--d:-36s;top:0%;--o:.95;width:108%;left:-4%}
+.sky .c3{--T:118s;--d:-90s;top:16%;--o:.82;width:78%;left:12%;scale:-1 1}
+@keyframes drift{0%{transform:translateX(-46%);opacity:0}7%{opacity:var(--o)}93%{opacity:var(--o)}100%{transform:translateX(46%);opacity:0}}
+
+/* солнце: мягкий ореол и размытые лучи; яркость (--sun) гаснет, когда облако закрывает диск */
+.hero{--sun:1}
+.sun{position:absolute;left:58%;top:33%;width:0;height:0}
+.sun>i{mix-blend-mode:screen}
+.sun>i{position:absolute;left:0;top:0;translate:-50% -50%;border-radius:50%;display:block}
+.sunsky{position:absolute;left:calc(var(--cw) * -.58);top:calc(var(--cw) / 1.7917 * -.33);width:var(--cw);aspect-ratio:2752/1536;-webkit-mask-size:100% 100%;mask-size:100% 100%;-webkit-mask-repeat:no-repeat;mask-repeat:no-repeat;overflow:hidden}
+.sunsky .beams{position:absolute;left:58%;top:33%;width:calc(var(--cw)*1.3);height:calc(var(--cw)*1.3);translate:-50% -50%;border-radius:50%;
+  background:conic-gradient(from 4deg,transparent 0deg,rgba(255,214,152,.75) 8deg,transparent 18deg,transparent 34deg,rgba(255,222,166,.55) 42deg,transparent 52deg,transparent 70deg,rgba(255,214,152,.7) 78deg,transparent 88deg,transparent 118deg,rgba(255,226,172,.5) 126deg,transparent 136deg,transparent 160deg,rgba(255,214,152,.68) 168deg,transparent 178deg,transparent 205deg,rgba(255,222,166,.55) 213deg,transparent 223deg,transparent 246deg,rgba(255,214,152,.72) 254deg,transparent 264deg,transparent 292deg,rgba(255,226,172,.52) 300deg,transparent 310deg,transparent 330deg,rgba(255,214,152,.62) 338deg,transparent 348deg);
+  -webkit-mask-image:radial-gradient(circle,rgba(0,0,0,.9) 0,rgba(0,0,0,.75) 10%,rgba(0,0,0,.35) 30%,transparent 60%);mask-image:radial-gradient(circle,rgba(0,0,0,.9) 0,rgba(0,0,0,.75) 10%,rgba(0,0,0,.35) 30%,transparent 60%);
+  filter:blur(20px);opacity:calc(.9 * var(--sun));animation:spin 480s linear infinite,beam 11s ease-in-out infinite}
+.sunsky .beams.b2{background:conic-gradient(from 20deg,transparent 0deg,rgba(255,230,184,.5) 12deg,transparent 28deg,transparent 60deg,rgba(255,230,184,.42) 74deg,transparent 90deg,transparent 140deg,rgba(255,230,184,.46) 154deg,transparent 170deg,transparent 220deg,rgba(255,230,184,.4) 234deg,transparent 250deg,transparent 290deg,rgba(255,230,184,.44) 304deg,transparent 320deg);
+  filter:blur(34px);opacity:calc(.7 * var(--sun));animation:spin 700s linear infinite reverse,beam 15s ease-in-out infinite -5s}
+@keyframes beam{0%,100%{scale:1}50%{scale:1.06}}
+.sun .halo{width:calc(var(--cw)*.46);height:calc(var(--cw)*.46);background:radial-gradient(circle,rgba(255,226,172,.26) 0,rgba(255,208,150,.11) 36%,transparent 68%);opacity:calc(.35 + .65 * var(--sun));animation:breathe 12s ease-in-out infinite}
+.sun .glow{width:calc(var(--cw)*.15);height:calc(var(--cw)*.15);background:radial-gradient(circle,rgba(255,246,222,.55) 0,rgba(255,226,170,.26) 30%,rgba(255,200,140,.08) 56%,transparent 72%);opacity:calc(.2 + .8 * var(--sun));animation:pulse 8s ease-in-out infinite}
+.sun .core{width:calc(var(--cw)*.03);height:calc(var(--cw)*.03);background:radial-gradient(circle,rgba(255,252,242,.7) 0,rgba(255,250,236,.35) 36%,transparent 70%);opacity:var(--sun);animation:pulse 6s ease-in-out infinite -1s}
 @keyframes pulse{0%,100%{transform:scale(.92);opacity:.82}50%{transform:scale(1.08);opacity:1}}
 @keyframes breathe{0%,100%{transform:scale(.96);opacity:.72}50%{transform:scale(1.05);opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
