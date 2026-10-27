@@ -4,14 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Расчёт — ПАМЯТЬ.БАЙ</title>
-<link rel="stylesheet" href="/css/base.css?v=s6">
-<link rel="stylesheet" href="/css/site.css?v=s6">
-<link rel="stylesheet" href="/css/app.css?v=s6">
-<link rel="stylesheet" href="/css/ambience.css?v=s6">
+<link rel="stylesheet" href="/css/base.css?v=s7">
+<link rel="stylesheet" href="/css/site.css?v=s7">
+<link rel="stylesheet" href="/css/app.css?v=s7">
+<link rel="stylesheet" href="/css/ambience.css?v=s7">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
-
 <header class="top" id="top">
   <div class="wrap bar-h">
     <a class="logo" href="/">ПАМЯТЬ<span>.БАЙ</span></a>
@@ -24,60 +23,86 @@
 </header>
 <main class="app-page">
   <div class="wrap wizard">
-    <h1>Калькулятор под ключ</h1>
-    <p class="app-lead">Шаг за шагом. Сумма — ориентир. Точная смета после замера. Цены правятся в админке.</p>
+    <h1>Соберите свой комплекс</h1>
+    <p class="app-lead">Каждый участок уникален. Отметьте нужное, чтобы понять порядок цен. Точную смету зафиксируем в договоре после выезда.</p>
     <div class="step-nav" id="nav"></div>
     <div id="step"></div>
     <div class="calc-sum" id="sumBox" hidden>
-      <p>Ориентировочно: <strong id="sum">0</strong> BYN</p>
-      <p class="note">Итог уточняется на замере. Материалы и работа включены «под ключ».</p>
+      <p>Ориентировочно: от <strong id="sum">0</strong> BYN</p>
+      <p class="note">Указанные цены базовые. Итог зависит от породы камня, габаритов и участка и фиксируется до начала работ.</p>
       <form class="form-grid" id="lead" style="margin-top:1rem">
         <input name="name" required placeholder="Имя">
-        <input name="phone" required placeholder="Телефон">
+        <input name="phone" required placeholder="+375 (XX) XXX-XX-XX">
         <textarea name="comment" rows="3" placeholder="Комментарий"></textarea>
-        <button class="btn btn-gold" type="submit">Отправить заявку</button>
+        <button class="btn btn-gold" type="submit">Узнать точную стоимость</button>
         <a class="btn btn-outline" href="/calc?custom=1">Индивидуальный расчёт</a>
       </form>
-      <div class="ok" id="ok" hidden>Заявка принята. Мы свяжемся с вами.</div>
+      <div class="ok" id="ok" hidden>Спасибо! Перезвоним в рабочее время.</div>
     </div>
   </div>
 </main>
-<script src="/js/catalog-data.js?v=s1"></script>
+<script src="/js/catalog-data.js?v=s7"></script>
+<script src="/js/pamyat-store.js?v=s7"></script>
 <script>
-const STEPS=[
-  {id:'form', title:'Памятник — форма', opts:[
-    {id:'vertical',t:'Вертикальный'},{id:'horizontal',t:'Горизонтальный'},{id:'cross',t:'С крестом'},{id:'double',t:'Двойной'},{id:'exclusive',t:'Эксклюзив'}]},
-  {id:'size', title:'Размер стелы, см', opts:[{id:'80',t:'80'},{id:'100',t:'100'},{id:'120',t:'120'}]},
-  {id:'stone', title:'Цвет / порода', opts:[{id:'gabbro',t:'Габбро чёрный'},{id:'diabase',t:'Диабаз'},{id:'labrador',t:'Лабрадорит'},{id:'grey',t:'Серый гранит'}]},
-  {id:'engraving', title:'Гравировка', opts:[{id:'none',t:'Без'},{id:'text',t:'Текст'},{id:'portrait',t:'Портрет'},{id:'both',t:'Текст и портрет'}]},
-  {id:'base', title:'Основание и благоустройство', opts:[{id:'slab',t:'Плита'},{id:'tile',t:'Плитка'},{id:'full',t:'Комплекс под ключ'}]},
-  {id:'extra', title:'Декор и доп. услуги', multi:true, opts:[{id:'fence',t:'Ограда'},{id:'vase',t:'Ваза'},{id:'portrait',t:'Фотокерамика'},{id:'grass',t:'Газон'}]}
+const P = PamyatStore.load().prices;
+const STEPS = [
+  {id:'monument', title:'Памятник', radio:true, opts:[
+    {id:'vertical', t:'Вертикальный — от '+P.monument.vertical+' BYN'},
+    {id:'horizontal', t:'Горизонтальный — от '+P.monument.horizontal+' BYN'},
+    {id:'complex', t:'Комплекс — от '+P.monument.complex+' BYN'},
+    {id:'cross', t:'Крест — от '+P.monument.cross+' BYN'},
+    {id:'exclusive', t:'Эксклюзив — индивидуальный расчёт'}
+  ]},
+  {id:'foundation', title:'Основание', radio:true, opts:[
+    {id:'concrete', t:'Армированный фундамент — от '+P.foundation.concrete},
+    {id:'ready', t:'На готовое основание — от '+P.foundation.ready}
+  ]},
+  {id:'engraving', title:'Гравировка', radio:true, opts:[
+    {id:'base', t:'Базовая (ФИО, даты) — включено'},
+    {id:'art', t:'Художественная — от '+P.engraving.art},
+    {id:'medal', t:'Медальон — от '+P.engraving.medal}
+  ]},
+  {id:'land', title:'Благоустройство', multi:true, opts:[
+    {id:'granite_tile', t:'Гранитная плитка — от '+P.land.granite_tile},
+    {id:'concrete_curb', t:'Бетонный бордюр — от '+P.land.concrete_curb},
+    {id:'paving', t:'Тротуарная плитка — от '+P.land.paving},
+    {id:'fence', t:'Ограда из гранита — от '+P.land.fence}
+  ]},
+  {id:'decor', title:'Декор', multi:true, opts:[
+    {id:'vase', t:'Ваза / лампада — от '+P.decor.vase},
+    {id:'grass', t:'Трава / белый щебень — от '+P.decor.grass}
+  ]}
 ];
-const sel={form:'vertical',size:'100',stone:'gabbro',engraving:'text',base:'full',extra:['fence']};
-let i=0;
+const q = new URLSearchParams(location.search);
+const sel = {monument:q.get('form')||'vertical', foundation:'concrete', engraving:'base', land:[], decor:[]};
+let i = 0;
+function priceOf(step, id){
+  if(step.id==='monument') return P.monument[id]||0;
+  if(step.id==='foundation') return P.foundation[id]||0;
+  if(step.id==='engraving') return P.engraving[id]||0;
+  if(step.id==='land') return P.land[id]||0;
+  if(step.id==='decor') return P.decor[id]||0;
+  return 0;
+}
 function total(){
-  const P=PAMYAT_PRICES;
-  let n=P.form[sel.form]+P.size[sel.size]+P.stone[sel.stone]+P.engraving[sel.engraving]+P.base[sel.base];
-  (sel.extra||[]).forEach(e=>n+=P.extra[e]||0);
+  let n = priceOf(STEPS[0], sel.monument)+priceOf(STEPS[1], sel.foundation)+priceOf(STEPS[2], sel.engraving);
+  (sel.land||[]).forEach(id=>n+=priceOf(STEPS[3], id));
+  (sel.decor||[]).forEach(id=>n+=priceOf(STEPS[4], id));
   return n;
 }
-function drawNav(){
-  document.getElementById('nav').innerHTML=STEPS.map((s,k)=>`<b class="${k===i?'on':''}">${k+1}</b>`).join('');
-}
+function drawNav(){ document.getElementById('nav').innerHTML=STEPS.map((s,k)=>`<b class="${k===i?'on':''}">${k+1}</b>`).join(''); }
+function isOn(s,id){ return s.multi ? (sel[s.id]||[]).includes(id) : sel[s.id]===id; }
 function draw(){
   drawNav();
   const s=STEPS[i];
-  const opts=s.opts.map(o=>{
-    const on=s.multi?(sel.extra||[]).includes(o.id):sel[s.id]===o.id;
-    return `<button type="button" class="opt ${on?'on':''}" data-id="${o.id}">${o.t}</button>`;
-  }).join('');
+  const opts=s.opts.map(o=>`<button type="button" class="opt ${isOn(s,o.id)?'on':''}" data-id="${o.id}">${o.t}</button>`).join('');
   document.getElementById('step').innerHTML=`<h2>${s.title}</h2><div class="opts">${opts}</div>
     <div class="row" style="display:flex;gap:.6rem;margin-top:1rem">
       ${i>0?'<button class="btn btn-outline" id="prev">Назад</button>':''}
       <button class="btn btn-gold" id="next">${i===STEPS.length-1?'Рассчитать':'Далее'}</button>
     </div>`;
   document.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{
-    if(s.multi){ const set=new Set(sel.extra||[]); set.has(b.dataset.id)?set.delete(b.dataset.id):set.add(b.dataset.id); sel.extra=[...set]; }
+    if(s.multi){ const set=new Set(sel[s.id]||[]); set.has(b.dataset.id)?set.delete(b.dataset.id):set.add(b.dataset.id); sel[s.id]=[...set]; }
     else sel[s.id]=b.dataset.id;
     draw();
   });
@@ -87,20 +112,19 @@ function draw(){
 function showSum(){
   document.getElementById('sumBox').hidden=false;
   document.getElementById('sum').textContent=total();
+  document.getElementById('sumBox').scrollIntoView({behavior:'smooth'});
 }
-document.getElementById('lead').onsubmit=async (e)=>{
+document.getElementById('lead').onsubmit=e=>{
   e.preventDefault();
   const fd=new FormData(e.target);
-  const body={
+  PamyatStore.addLead({
     type:'calc', name:fd.get('name'), phone:fd.get('phone'), comment:fd.get('comment'),
     config:sel, price:total(), source:location.href, at:new Date().toISOString()
-  };
-  try{ await fetch('/api/lead',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}); }catch(_){}
-  const leads=JSON.parse(localStorage.getItem('pamyat_leads')||'[]'); leads.unshift(body); localStorage.setItem('pamyat_leads',JSON.stringify(leads));
+  });
   document.getElementById('ok').hidden=false;
 };
-draw();
+if(q.get('custom')){ sel.monument='exclusive'; i=STEPS.length-1; showSum(); }
+else draw();
 </script>
-<script src="/js/ambience.js?v=s5"></script>
 </body>
 </html>

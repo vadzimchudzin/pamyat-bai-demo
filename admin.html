@@ -4,40 +4,152 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Админка — ПАМЯТЬ.БАЙ</title>
-<link rel="stylesheet" href="/css/base.css?v=s1">
-<link rel="stylesheet" href="/css/site.css?v=s1">
-<link rel="stylesheet" href="/css/app.css?v=s1">
+<link rel="stylesheet" href="/css/base.css?v=s7">
+<link rel="stylesheet" href="/css/app.css?v=s7">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+.tabs{display:flex;flex-wrap:wrap;gap:.4rem;margin:1rem 0}
+.tabs button{border:1px solid #ddd2bd;background:#f7f2e7;border-radius:999px;padding:.4rem .9rem;cursor:pointer;font:inherit}
+.tabs button.on{background:#9a7436;color:#fff;border-color:#9a7436}
+.pane{display:none}.pane.on{display:block}
+label.row{display:flex;align-items:center;justify-content:space-between;gap:1rem;padding:.45rem 0;border-bottom:1px solid #eee3d0}
+input[type=range]{flex:1}
+.muted{color:#7a6f5f;font-size:.9rem}
+</style>
 </head>
 <body>
 <main class="app-page">
   <div class="wrap admin">
     <h1>Админка</h1>
-    <p class="app-lead">Черновик спринта 1. Заявки хранятся в браузере, пока нет БД. Пароль: pamyat</p>
     <form id="login" class="form-grid">
+      <input name="user" placeholder="Логин" required>
       <input name="pass" type="password" placeholder="Пароль" required>
+      <input name="otp" placeholder="Код с почты (любые 4 цифры для демо)" required>
       <button class="btn btn-gold" type="submit">Войти</button>
+      <p class="muted">Демо: admin / pamyat / 0000. Роли: администратор, менеджер, сотрудник.</p>
     </form>
     <div id="panel" hidden>
-      <p>Роли позже: администратор / менеджер / сотрудник. 2FA — код на почту.</p>
-      <h2>Заявки</h2>
-      <table class="table" id="tbl"><thead><tr><th>Когда</th><th>Имя</th><th>Телефон</th><th>Сумма</th><th>Статус</th></tr></thead><tbody></tbody></table>
-      <h2>Цены калькулятора</h2>
-      <pre id="prices" style="background:#fff;padding:1rem;border:1px solid #e6dcc8;overflow:auto"></pre>
+      <p id="who" class="muted"></p>
+      <div class="tabs" id="tabs"></div>
+      <div id="panes"></div>
     </div>
   </div>
 </main>
-<script src="/js/catalog-data.js?v=s1"></script>
+<script src="/js/catalog-data.js?v=s7"></script>
+<script src="/js/pamyat-store.js?v=s7"></script>
 <script>
-document.getElementById('login').onsubmit=e=>{
+const STATUSES=["новая","взята в работу","связались","назначен замер","отправлена смета","заключён договор","отказ","завершена"];
+let role="администратор";
+document.getElementById("login").onsubmit=e=>{
   e.preventDefault();
-  if(e.target.pass.value!=='pamyat'){ alert('Неверный пароль'); return; }
-  e.target.hidden=true; document.getElementById('panel').hidden=false;
-  const leads=JSON.parse(localStorage.getItem('pamyat_leads')||'[]');
-  document.querySelector('#tbl tbody').innerHTML=leads.map(l=>`<tr>
-    <td>${(l.at||'').slice(0,16)}</td><td>${l.name||''}</td><td>${l.phone||''}</td>
-    <td>${l.price||'—'}</td><td><span class="pill">новая</span></td></tr>`).join()||'<tr><td colspan="5">Пока пусто — отправьте расчёт</td></tr>';
-  document.getElementById('prices').textContent=JSON.stringify(PAMYAT_PRICES,null,2);
+  const u=e.target.user.value, p=e.target.pass.value, o=e.target.otp.value;
+  if(p!=="pamyat"||o.length<4){ alert("Неверный вход"); return; }
+  role = u==="manager"?"менеджер":u==="staff"?"сотрудник":"администратор";
+  e.target.hidden=true; document.getElementById("panel").hidden=false;
+  document.getElementById("who").textContent="Роль: "+role;
+  render();
 };
+const TABS=[
+  ["dash","Дашборд"],["leads","Заявки"],["catalog","Каталог"],["prices","Цены"],
+  ["calc","Калькулятор"],["texts","Тексты"],["tg","Telegram"],["users","Роли"],["acc","Бухгалтерия"]
+];
+function render(){
+  document.getElementById("tabs").innerHTML=TABS.map((t,i)=>`<button class="${i===0?'on':''}" data-t="${t[0]}">${t[1]}</button>`).join("");
+  document.getElementById("tabs").onclick=e=>{
+    const b=e.target.closest("button"); if(!b) return;
+    [...document.getElementById("tabs").children].forEach(x=>x.classList.toggle("on",x===b));
+    [...document.querySelectorAll(".pane")].forEach(p=>p.classList.toggle("on",p.id==="p-"+b.dataset.t));
+  };
+  const s=PamyatStore.load();
+  const leads=s.leads;
+  const won=leads.filter(l=>l.status==="заключён договор"||l.status==="завершена").length;
+  document.getElementById("panes").innerHTML=`
+  <div class="pane on" id="p-dash">
+    <p>Заявок: <b>${leads.length}</b> · договоры: <b>${won}</b> · конверсия: <b>${leads.length?Math.round(won*100/leads.length):0}%</b></p>
+    <p class="muted">Источники: сайт, Instagram, Kufar, реклама, мессенджеры.</p>
+  </div>
+  <div class="pane" id="p-leads">${leadsTable(leads)}</div>
+  <div class="pane" id="p-catalog"><p class="muted">${PAMYAT_CATALOG.length} моделей. Полный CRUD фото — следующий проход с загрузкой файлов.</p>
+    ${PAMYAT_CATALOG.map(x=>`<p>${x.title} — от ${x.price} BYN</p>`).join("")}</div>
+  <div class="pane" id="p-prices">${priceSliders(s)}</div>
+  <div class="pane" id="p-calc"><p class="muted">Формулы = сумма выбранных позиций. Меняются ползунками во вкладке Цены.</p></div>
+  <div class="pane" id="p-texts">${textFields(s)}</div>
+  <div class="pane" id="p-tg">
+    <label class="row">Повтор, мин <input type="number" id="rm" value="${s.settings.repeatMinutes}"></label>
+    <label class="row">Лимит повторов <input type="number" id="rl" value="${s.settings.repeatLimit}"></label>
+    <button class="btn btn-gold" id="saveTg">Сохранить</button>
+  </div>
+  <div class="pane" id="p-users"><p>Администратор / менеджер / сотрудник. Вход: admin, manager, staff + пароль pamyat + код 0000.</p></div>
+  <div class="pane" id="p-acc">${accTable(s)}</div>`;
+  bindPrices(s); bindTexts(s);
+  document.getElementById("saveTg")?.addEventListener("click",()=>{
+    s.settings.repeatMinutes=+document.getElementById("rm").value;
+    s.settings.repeatLimit=+document.getElementById("rl").value;
+    PamyatStore.save(s); alert("Сохранено");
+  });
+  document.getElementById("p-leads")?.addEventListener("change",e=>{
+    if(e.target.dataset.id){
+      const L=s.leads.find(x=>x.id===e.target.dataset.id); if(!L) return;
+      L.status=e.target.value; L.history.push({at:new Date().toISOString(), t:L.status});
+      PamyatStore.save(s);
+    }
+  });
+}
+function leadsTable(leads){
+  if(!leads.length) return "<p>Пока пусто — отправьте расчёт.</p>";
+  return `<table class="table"><thead><tr><th>Когда</th><th>Имя</th><th>Тел</th><th>Сумма</th><th>Статус</th></tr></thead><tbody>
+  ${leads.map(l=>`<tr><td>${(l.at||"").slice(0,16)}</td><td>${l.name||""}</td><td>${l.phone||""}</td>
+  <td>${l.price||"—"}</td><td><select data-id="${l.id}">${STATUSES.map(st=>`<option ${st===l.status?"selected":""}>${st}</option>`).join("")}</select></td></tr>`).join("")}
+  </tbody></table>`;
+}
+function priceSliders(s){
+  const rows=[];
+  function walk(obj, prefix){
+    Object.keys(obj).forEach(k=>{
+      const v=obj[k];
+      if(typeof v==="number") rows.push(`<label class="row">${prefix+k} <span>${v}</span> <input type="range" min="0" max="8000" step="10" value="${v}" data-path="${prefix+k}"></label>`);
+      else if(v&&typeof v==="object") walk(v, prefix+k+".");
+    });
+  }
+  walk(s.prices,"");
+  return rows.join("")+`<p class="muted">Ползунок сразу пишет в localStorage — на сайте «от» подтянется после обновления.</p>`;
+}
+function bindPrices(s){
+  document.querySelectorAll("#p-prices input[type=range]").forEach(inp=>{
+    inp.oninput=()=>{
+      const parts=inp.dataset.path.split(".");
+      let o=s.prices; for(let i=0;i<parts.length-1;i++) o=o[parts[i]];
+      o[parts.at(-1)]=+inp.value; inp.previousElementSibling.textContent=inp.value; PamyatStore.save(s);
+    };
+  });
+}
+function textFields(s){
+  return Object.keys(s.texts).map(k=>`<label>${k}<input data-k="${k}" value="${s.texts[k].replace(/"/g,"&quot;")}"></label>`).join("")+`<button class="btn btn-gold" id="saveTxt">Сохранить тексты</button>`;
+}
+function bindTexts(s){
+  document.getElementById("saveTxt")?.addEventListener("click",()=>{
+    document.querySelectorAll("#p-texts [data-k]").forEach(i=>s.texts[i.dataset.k]=i.value);
+    PamyatStore.save(s); alert("Тексты сохранены");
+  });
+}
+function accTable(s){
+  const sum=s.leads.reduce((a,l)=>a+(+l.price||0),0);
+  return `<h3>Клиенты и заявки</h3>
+  <p>Оборот ориентир: <b>${sum}</b> BYN</p>
+  <table class="table"><thead><tr><th>Клиент</th><th>Телефон</th><th>Смета от</th><th>Статус</th></tr></thead><tbody>
+  ${s.leads.map(l=>`<tr><td>${l.name}</td><td>${l.phone}</td><td>${l.price||0}</td><td>${l.status}</td></tr>`).join("")||"<tr><td colspan=4>Нет данных</td></tr>"}
+  </tbody></table>
+  <h3>Расходы / реклама</h3>
+  <p class="muted">Таблицы расходов заполняются здесь. Экспорт CSV:</p>
+  <button class="btn btn-outline" id="csv">Скачать CSV заявок</button>`;
+}
+document.addEventListener("click",e=>{
+  if(e.target.id==="csv"){
+    const s=PamyatStore.load();
+    const csv="id,at,name,phone,price,status\n"+s.leads.map(l=>[l.id,l.at,l.name,l.phone,l.price,l.status].join(",")).join("\n");
+    const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"})); a.download="leads.csv"; a.click();
+  }
+});
 </script>
 </body>
 </html>

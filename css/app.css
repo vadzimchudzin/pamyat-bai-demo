@@ -1,12 +1,12 @@
 .app-page{padding:5.5rem 0 4rem}
-.app-page h1{font-family:Cormorant Garamond,serif;font-size:clamp(2rem,5vw,3.2rem);margin:0 0 .4rem}
+.app-page h1{font-family:var(--serif),Georgia,serif;font-size:clamp(2rem,5vw,3.2rem);margin:0 0 .4rem;text-transform:uppercase}
 .app-lead{color:#5c5348;max-width:40rem;margin:0 0 1.6rem}
 .filters{display:flex;flex-wrap:wrap;gap:.5rem;margin:0 0 1.4rem}
 .chip{border:1px solid #c9b48a;background:#fffdf8;color:#3d3428;padding:.35rem .8rem;border-radius:999px;cursor:pointer;font:inherit}
 .chip.on,.chip:hover{background:#c9a227;color:#fff;border-color:#c9a227}
 .grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem}
 .card-m{background:#fff;border:1px solid #e6dcc8;border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
-.card-m .ph{height:160px;background:linear-gradient(160deg,#2b2b2b,#111);display:flex;align-items:flex-end;padding:1rem;color:#f3e6c4;font-family:Cormorant Garamond,serif;font-size:1.3rem}
+.card-m .ph{height:160px;background:linear-gradient(160deg,#3a3228,#1c1814);display:flex;align-items:flex-end;padding:1rem;color:#f3e6c4;font-family:var(--serif),Georgia,serif;font-size:1.3rem}
 .card-m .body{padding:1rem;display:flex;flex-direction:column;gap:.35rem;flex:1}
 .card-m .meta{font-size:.85rem;color:#6b6256}
 .card-m .price{font-weight:600;color:#8a6d1f;margin-top:auto}

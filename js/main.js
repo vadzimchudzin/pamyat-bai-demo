@@ -141,7 +141,19 @@
   // ---------- form ----------
   var lead = document.getElementById('lead');
   if (lead) lead.addEventListener('submit', function (e) {
-    e.preventDefault(); document.getElementById('thanks').hidden = false; e.target.reset();
+    e.preventDefault();
+    var fd = new FormData(e.target);
+    if (window.PamyatStore) {
+      PamyatStore.addLead({
+        type: 'contact',
+        name: fd.get('name'),
+        phone: fd.get('phone'),
+        comment: fd.get('msg'),
+        source: location.href,
+        at: new Date().toISOString()
+      });
+    }
+    document.getElementById('thanks').hidden = false;
   });
 
   // prefill message from pricing buttons
