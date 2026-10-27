@@ -14,7 +14,8 @@
 <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="/assets/img/hero-plate.jpg">
 <link rel="stylesheet" href="/css/base.css?v=v3-10231015">
-<link rel="stylesheet" href="/css/site.css?v=r2-10231015">
+<link rel="stylesheet" href="/css/site.css?v=s2">
+<link rel="stylesheet" href="/css/atmosphere.css?v=s2">
 </head>
 <body>
 <header class="top" id="top">
@@ -52,6 +53,8 @@
   </div>
   <a class="hero-scroll" href="#works" aria-label="Листать вниз"><i></i></a>
 </section>
+<div class="atm-dusk" id="dusk"></div>
+<div class="atm-candle" id="candle"><span class="wick"></span><span class="flame"></span><span class="glowc"></span></div>
 
 <section class="section" id="works">
   <div class="wrap">
@@ -251,5 +254,18 @@
 
 <script src="/js/story-frames.js?v=r3"></script>
 <script src="/js/main.js?v=v3-10231015"></script>
+<script>
+(function(){
+  var dusk=document.getElementById('dusk'), candle=document.getElementById('candle');
+  function tick(){
+    var h=Math.max(1, document.documentElement.scrollHeight - innerHeight);
+    var p=Math.min(1, scrollY / h);
+    if(dusk) dusk.style.opacity = String(Math.min(1, p*1.2));
+    if(candle) candle.style.opacity = String(p<.18?0:(p-.18)/.4);
+  }
+  addEventListener('scroll', tick, {passive:true});
+  tick();
+})();
+</script>
 </body>
 </html>
