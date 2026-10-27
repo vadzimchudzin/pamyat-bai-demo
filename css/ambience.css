@@ -1,0 +1,26 @@
+:root{--flicker:1;--fx:0px;--fy:0px}
+html{background:#182636}
+body{position:relative;isolation:isolate;background:transparent}
+.ambience{position:fixed;inset:0;z-index:-1;pointer-events:none;overflow:hidden;
+  background:linear-gradient(180deg,#1c2b3d 0%,#202d3b 9%,#232d37 18%,#252b32 29%,#25282c 40%,#262624 51%,#292521 62%,#30261f 73%,#3a281d 84%,#4a2d1b 94%,#58331c 100%)}
+.ambience:before{content:"";position:absolute;inset:0;background:
+  radial-gradient(ellipse 68% 14% at 3% 0%,rgba(205,220,235,.018),transparent 78%),
+  radial-gradient(ellipse 72% 56% at 0% 100%,rgba(255,164,82,calc(.31 * var(--flicker))) 0%,rgba(255,139,62,calc(.19 * var(--flicker))) 24%,rgba(220,111,53,calc(.10 * var(--flicker))) 46%,rgba(165,88,49,.035) 67%,transparent 79%),
+  linear-gradient(90deg,rgba(9,12,16,.05),transparent 44%,rgba(7,10,14,.25))}
+.flame-light{position:absolute;left:-18%;bottom:-7%;width:86%;height:56%;
+  background:radial-gradient(ellipse 48% 53% at 24% 76%,rgba(255,215,153,calc(.22 * var(--flicker))) 0%,rgba(255,174,98,calc(.16 * var(--flicker))) 28%,rgba(221,126,68,calc(.08 * var(--flicker))) 49%,transparent 76%);
+  transform:translate3d(var(--fx),var(--fy),0) scale(var(--flicker));transform-origin:24% 76%;will-change:transform,opacity;opacity:.96}
+.flame-light:after{content:"";position:absolute;inset:5% 0 0 0;
+  background:radial-gradient(ellipse 29% 46% at 24% 78%,rgba(255,227,174,calc(.12 * var(--flicker))) 0%,rgba(255,186,113,calc(.08 * var(--flicker))) 31%,transparent 72%);
+  transform:translate3d(calc(var(--fx) * -.4),calc(var(--fy) * -.8),0);transform-origin:24% 78%}
+.hdr-clouds{position:fixed;left:0;right:0;top:0;height:min(38vh,280px);z-index:0;pointer-events:none;overflow:hidden;mix-blend-mode:screen;opacity:.55}
+.hdr-clouds .cl{position:absolute;width:140%;aspect-ratio:3168/1344;left:-20%;background-size:100% 100%;background-repeat:no-repeat;mix-blend-mode:screen;opacity:0;animation:drift var(--T,110s) linear infinite;animation-delay:var(--d,0s)}
+.hdr-clouds .a1,.hdr-clouds .a2{background-image:url("/assets/img/cloud-a.jpg");--o:.55}
+.hdr-clouds .b1,.hdr-clouds .b2{background-image:url("/assets/img/cloud-b.jpg");--o:.45}
+.hdr-clouds .a1{--T:110s;--d:-40s;top:-18%}
+.hdr-clouds .a2{--T:110s;--d:-125s;top:4%;scale:-1 1}
+.hdr-clouds .b1{--T:78s;--d:-20s;top:-50%}
+.hdr-clouds .b2{--T:78s;--d:-80s;top:-36%;scale:-1 1}
+.stage-hero{background:transparent}
+.section,.story{position:relative;z-index:1}
+@media (prefers-reduced-motion:reduce){.hdr-clouds .cl{animation:none!important;opacity:.4!important}}
