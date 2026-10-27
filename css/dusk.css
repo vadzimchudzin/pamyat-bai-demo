@@ -190,9 +190,10 @@ em,i,cite{font-style:normal}
 .calc{display:grid;grid-template-columns:1.35fr .9fr;gap:22px;align-items:start}
 .panel{padding:clamp(20px,3vw,32px)}
 .stepnav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:22px}
-.stepnav span{font-size:11px;letter-spacing:.14em;text-transform:uppercase;padding:7px 12px;border-radius:999px;border:1px solid var(--line);color:var(--dim)}
-.stepnav span.on{border-color:var(--gold);color:var(--gold)}
-.stepnav span.done{color:var(--mut);background:rgba(255,248,236,.05)}
+.stepnav button{font:500 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;padding:8px 13px;border-radius:999px;border:1px solid var(--line);color:var(--mut);background:transparent;cursor:pointer;transition:border-color .3s,color .3s,background .3s}
+.stepnav button:hover{border-color:rgba(214,176,122,.6);color:var(--ink)}
+.stepnav button.on{border-color:var(--gold);color:var(--gold);background:rgba(214,176,122,.1)}
+.stepnav button.done{color:var(--ink);background:rgba(255,248,236,.05)}
 .qtitle{font-family:var(--serif);font-size:22px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:6px}
 .qsub{color:var(--mut);font-size:14px;margin-bottom:18px}
 .radio,.tog{display:flex;align-items:center;gap:14px;padding:14px 16px;border:1px solid var(--line);border-radius:16px;margin-bottom:10px;background:rgba(255,248,236,.04);cursor:pointer;transition:border-color .3s,background .3s}

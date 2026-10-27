@@ -122,6 +122,12 @@ footer{position:relative;color:rgba(243,238,231,.6);display:flex;justify-content
 
 .ptop .plogo,.ptop .pmenu a{color:#2a241c}.ptop .plogo span{color:#9a7436}
 
+/* карточка «Эксклюзивные»: класс .x конфликтовал с кнопкой закрытия */
+.cc .pv.x{position:static!important;width:auto!important;height:210px!important;border-radius:14px!important;background:var(--tile)!important;color:#9a7436!important;cursor:inherit;z-index:auto;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;font:500 52px "Playfair Display",Georgia,serif}
+.cc .pv.x span{font:500 12px Inter,sans-serif;letter-spacing:.16em;text-transform:uppercase}
+/* заголовок раздела читается на любом участке фона */
+.sec{width:fit-content;max-width:calc(100% - 48px);margin:8px auto 22px!important;padding:12px 26px!important;border-radius:16px;background:rgba(251,247,240,.86);border:1px solid var(--line);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);text-align:center}
+
 </style></head><body>
 <div class="ambience" aria-hidden="true"><div class="flame-light"></div></div><div class="grain" aria-hidden="true"></div><header class="ptop"><div class="hsky" aria-hidden="true"><i style="background-image:url(/assets/img/cloud-a.jpg)"></i><i style="background-image:url(/assets/img/cloud-b.jpg)"></i></div><div class="pbar"><a class="plogo" href="/">Память<span>.бай</span></a><div class="pmenu"><a href="/#works">Работы</a><a href="/catalog">Каталог</a><a href="/#calc">Расчёт</a><a href="/#contact">Контакты</a><a class="pbtn" href="/#calc">Рассчитать →</a></div></div></header>
 <div id="home"><header class="hero"><div class="eyebrow">Памятники · Установка под ключ · Беларусь</div>

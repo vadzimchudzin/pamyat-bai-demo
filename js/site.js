@@ -124,9 +124,12 @@
 
   /* ---------- лайтбокс работ ---------- */
   var lbx = $('#lbx');
-  $$('.work').forEach(function (w) {
-    w.addEventListener('click', function () { $('#lbimg').src = w.querySelector('img').src; lbx.classList.add('on'); });
-  });
+  function bindWorks() {
+    $$('.work').forEach(function (w) {
+      w.addEventListener('click', function () { $('#lbimg').src = w.querySelector('img').src; lbx.classList.add('on'); });
+    });
+  }
+  bindWorks();
   if (lbx) lbx.addEventListener('click', function () { lbx.classList.remove('on'); });
   addEventListener('keydown', function (e) { if (e.key === 'Escape' && lbx) lbx.classList.remove('on'); });
 
@@ -202,66 +205,115 @@
     size(); tick();
   })();
 
-  /* ---------- калькулятор ---------- */
-  var store = window.PamyatStore ? PamyatStore.load() : null;
-  var SP = store && store.prices ? store.prices : {};
-  var P = {
-    monument: Object.assign({ vertical: 950, horizontal: 1700, cross: 1800, complex: 3300, exclusive: 0 }, SP.monument),
-    foundation: Object.assign({ concrete: 1000, ready: 300 }, SP.foundation),
-    engraving: Object.assign({ base: 0, art: 200, medal: 250 }, SP.engraving),
-    land: { granite: (SP.land && SP.land.granite_tile) || 1600, curb: (SP.land && SP.land.concrete_curb) || 300, paving: (SP.land && SP.land.paving) || 400, fence: (SP.land && SP.land.fence) || 1200 },
-    decor: Object.assign({ vase: 200, grass: 80 }, SP.decor)
-  };
-  var STEPS = [
-    { k: 'monument', n: 'Памятник', type: 'radio', sub: 'Форма памятника. В комплект входят стела, тумба и цветник.', o: [['vertical', 'Вертикальный'], ['horizontal', 'Горизонтальный'], ['cross', 'В форме креста'], ['complex', 'Мемориальный комплекс'], ['exclusive', 'Эксклюзивный']] },
-    { k: 'foundation', n: 'Основание', type: 'radio', sub: 'Выберите один вариант.', o: [['concrete', 'Армированный бетонный фундамент'], ['ready', 'Установка на готовое основание']] },
-    { k: 'engraving', n: 'Гравировка', type: 'radio', sub: 'Базовая гравировка (ФИО, даты) уже включена.', o: [['base', 'Базовая (ФИО, даты)'], ['art', 'Художественная (портрет, пейзаж)'], ['medal', 'Медальон']] },
-    { k: 'land', n: 'Благоустройство', type: 'multi', sub: 'Можно выбрать несколько.', o: [['granite', 'Гранитная плитка'], ['curb', 'Бетонный бордюр'], ['paving', 'Тротуарная плитка'], ['fence', 'Ограда из гранита']] },
-    { k: 'decor', n: 'Декор', type: 'multi', sub: 'Дополните композицию вазой, искусственной травой или белым щебнем.', o: [['vase', 'Гранитная ваза / лампада'], ['grass', 'Искусственная трава / белый щебень']] }
-  ];
-  var q = new URLSearchParams(location.search);
-  var S = { monument: 'vertical', foundation: 'concrete', engraving: 'base', land: [], decor: [], model: q.get('model') || '' };
-  var step = 0;
-  function fmt(n) { return n.toLocaleString('ru-RU'); }
-  function lp(k, id) { if (k === 'engraving' && id === 'base') return 'включено'; if (k === 'monument' && id === 'exclusive') return 'инд. расчёт'; return 'от ' + fmt(P[k][id]); }
-  function label(k, id) { var s = STEPS.filter(function (x) { return x.k === k; })[0]; return s.o.filter(function (o) { return o[0] === id; })[0][1]; }
-  function total() { var t = P.monument[S.monument] + P.foundation[S.foundation] + P.engraving[S.engraving]; S.land.forEach(function (i) { t += P.land[i]; }); S.decor.forEach(function (i) { t += P.decor[i]; }); return t; }
+  /* ---------- содержимое из админки (тексты, контакты, работы, калькулятор) ---------- */
+  var DEF_CALC = { steps: [
+    { id: 'monument', name: 'Памятник', type: 'radio', sub: 'Форма памятника. В комплект входят стела, тумба и цветник.', items: [
+      { id: 'vertical', name: 'Вертикальный', price: 950 }, { id: 'horizontal', name: 'Горизонтальный', price: 1700 },
+      { id: 'cross', name: 'В форме креста', price: 1800 }, { id: 'complex', name: 'Мемориальный комплекс', price: 3300 },
+      { id: 'exclusive', name: 'Эксклюзивный', price: null, note: 'инд. расчёт' }] },
+    { id: 'foundation', name: 'Основание', type: 'radio', sub: 'Выберите один вариант.', items: [
+      { id: 'concrete', name: 'Армированный бетонный фундамент', price: 1000 }, { id: 'ready', name: 'Установка на готовое основание', price: 300 }] },
+    { id: 'engraving', name: 'Гравировка', type: 'radio', sub: 'Базовая гравировка (ФИО, даты) уже включена.', items: [
+      { id: 'base', name: 'Базовая (ФИО, даты)', price: 0, note: 'включено' }, { id: 'art', name: 'Художественная (портрет, пейзаж)', price: 200 },
+      { id: 'medal', name: 'Медальон', price: 250 }] },
+    { id: 'land', name: 'Благоустройство', type: 'multi', sub: 'Можно выбрать несколько.', items: [
+      { id: 'granite', name: 'Гранитная плитка', price: 1600 }, { id: 'curb', name: 'Бетонный бордюр', price: 300 },
+      { id: 'paving', name: 'Тротуарная плитка', price: 400 }, { id: 'fence', name: 'Ограда из гранита', price: 1200 }] },
+    { id: 'decor', name: 'Декор', type: 'multi', sub: 'Дополните композицию вазой, искусственной травой или белым щебнем.', items: [
+      { id: 'vase', name: 'Гранитная ваза / лампада', price: 200 }, { id: 'grass', name: 'Искусственная трава / белый щебень', price: 80 }] }
+  ] };
+  var STEPS = DEF_CALC.steps, S = {}, step = 0, MODEL = new URLSearchParams(location.search).get('model') || '';
+  function resetSel() {
+    S = {}; STEPS.forEach(function (s) { S[s.id] = s.type === 'multi' ? [] : (s.items[0] ? s.items[0].id : ''); });
+    if (step >= STEPS.length) step = 0;
+  }
+  function fmt(n) { return Number(n).toLocaleString('ru-RU'); }
+  function item(s, id) { return s.items.filter(function (x) { return x.id === id; })[0]; }
+  function priceLabel(it) { if (it.note) return it.note; if (it.price == null) return 'инд. расчёт'; return 'от ' + fmt(it.price); }
+  function individual() { return STEPS.some(function (s) { return s.type !== 'multi' && item(s, S[s.id]) && item(s, S[s.id]).price == null; }); }
+  function total() {
+    var t = 0;
+    STEPS.forEach(function (s) {
+      (s.type === 'multi' ? S[s.id] : [S[s.id]]).forEach(function (id) { var it = item(s, id); if (it && it.price) t += +it.price; });
+    });
+    return t;
+  }
+  function summary() {
+    return STEPS.map(function (s) {
+      var ids = s.type === 'multi' ? S[s.id] : [S[s.id]];
+      var names = ids.map(function (id) { var it = item(s, id); return it ? it.name : ''; }).filter(Boolean);
+      return s.name + ': ' + (names.join(', ') || '—');
+    }).join('; ') + (MODEL ? '; Модель: ' + MODEL : '');
+  }
   function render() {
-    if (!$('#q')) return;
+    if (!$('#q') || !STEPS.length) return;
     var s = STEPS[step];
-    $('#snav').innerHTML = STEPS.map(function (x, i) { return '<span class="' + (i === step ? 'on' : i < step ? 'done' : '') + '">' + (i + 1) + '. ' + x.n + '</span>'; }).join('');
-    $('#q').innerHTML = '<div class="qtitle">' + s.n + '</div><div class="qsub">' + s.sub + '</div>' + s.o.map(function (o) {
-      var on = s.type === 'multi' ? S[s.k].indexOf(o[0]) > -1 : S[s.k] === o[0];
+    // вкладки шагов — кликабельные
+    $('#snav').innerHTML = STEPS.map(function (x, i) {
+      return '<button type="button" data-step="' + i + '" class="' + (i === step ? 'on' : i < step ? 'done' : '') + '">' + (i + 1) + '. ' + x.name + '</button>';
+    }).join('');
+    $$('#snav button').forEach(function (b) { b.addEventListener('click', function () { step = +b.dataset.step; render(); }); });
+    $('#q').innerHTML = '<div class="qtitle">' + s.name + '</div><div class="qsub">' + (s.sub || '') + '</div>' + s.items.map(function (o) {
+      var on = s.type === 'multi' ? S[s.id].indexOf(o.id) > -1 : S[s.id] === o.id;
       return s.type === 'multi'
-        ? '<div class="tog' + (on ? ' on' : '') + '" data-id="' + o[0] + '" role="switch" aria-checked="' + on + '" tabindex="0"><span class="sw"></span><span class="t">' + o[1] + '</span><span class="p">' + lp(s.k, o[0]) + '</span></div>'
-        : '<div class="radio' + (on ? ' on' : '') + '" data-id="' + o[0] + '" role="radio" aria-checked="' + on + '" tabindex="0"><i></i><span class="t">' + o[1] + '</span><span class="p">' + lp(s.k, o[0]) + '</span></div>';
+        ? '<div class="tog' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="switch" aria-checked="' + on + '" tabindex="0"><span class="sw"></span><span class="t">' + o.name + '</span><span class="p">' + priceLabel(o) + '</span></div>'
+        : '<div class="radio' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="radio" aria-checked="' + on + '" tabindex="0"><i></i><span class="t">' + o.name + '</span><span class="p">' + priceLabel(o) + '</span></div>';
     }).join('');
     $$('[data-id]', $('#q')).forEach(function (el) {
-      var act = function () { var id = el.dataset.id; if (s.type === 'multi') { var a = S[s.k], j = a.indexOf(id); j > -1 ? a.splice(j, 1) : a.push(id); } else S[s.k] = id; render(); };
+      var act = function () { var id = el.dataset.id; if (s.type === 'multi') { var a = S[s.id], j = a.indexOf(id); j > -1 ? a.splice(j, 1) : a.push(id); } else S[s.id] = id; render(); };
       el.addEventListener('click', act); el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
     });
     $('#prev').style.visibility = step ? 'visible' : 'hidden';
     $('#next').textContent = step === STEPS.length - 1 ? 'Рассчитать' : 'Далее →';
-    var rows = [['Памятник', label('monument', S.monument)]];
-    if (S.model) rows.push(['Модель из каталога', S.model]);
-    rows.push(['Основание', label('foundation', S.foundation)], ['Гравировка', label('engraving', S.engraving)],
-      ['Благоустройство', S.land.map(function (i) { return label('land', i); }).join(', ') || '—'], ['Декор', S.decor.map(function (i) { return label('decor', i); }).join(', ') || '—']);
+    var rows = [];
+    STEPS.forEach(function (x, i) {
+      var ids = x.type === 'multi' ? S[x.id] : [S[x.id]];
+      rows.push([x.name, ids.map(function (id) { var it = item(x, id); return it ? it.name : ''; }).filter(Boolean).join(', ') || '—']);
+      if (i === 0 && MODEL) rows.push(['Модель из каталога', MODEL]);
+    });
     $('#sum').innerHTML = rows.map(function (r) { return '<li><span>' + r[0] + '</span><span>' + r[1] + '</span></li>'; }).join('');
   }
   if ($('#q')) {
     $('#prev').onclick = function () { if (step > 0) { step--; render(); } };
     $('#next').onclick = function () {
       if (step < STEPS.length - 1) { step++; render(); return; }
-      $('#tv').textContent = S.monument === 'exclusive' ? 'Индивидуальный расчёт' : 'от ' + fmt(total()) + ' BYN';
+      $('#tv').textContent = individual() ? 'Индивидуальный расчёт' : 'от ' + fmt(total()) + ' BYN';
       $('#total').classList.add('on');
     };
-    render();
+    resetSel(); render();
   }
-  // выбор модели из каталога (страница /catalog или окно каталога в превью)
+  // выбор модели из каталога
   window.pamyatPickModel = function (code, kind) {
-    S.model = code; if (kind) S.monument = kind; step = 0; render();
+    MODEL = code;
+    var first = STEPS[0]; if (kind && first && item(first, kind)) S[first.id] = kind;
+    step = 0; render();
     var c = $('#calc'); if (c) c.scrollIntoView({ behavior: 'smooth' });
   };
+
+  function applyContent(c) {
+    if (!c) return;
+    var T = c.texts || {};
+    $$('[data-t]').forEach(function (el) { var v = T[el.dataset.t]; if (v) el.textContent = v; });
+    var C = c.contacts || {};
+    var tel = (C.phone || '').replace(/[^\d+]/g, '');
+    if ($('#cPhone') && C.phone) { $('#cPhone').textContent = C.phone; $('#cPhone').href = tel.replace(/\D/g, '').length >= 7 ? 'tel:' + tel : '#contact'; }
+    function link(id, url) { var a = $(id); if (!a) return; if (url) { a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.hidden = false; } else a.hidden = !!c.__live; }
+    link('#cTg', C.telegram ? (/^https?:/.test(C.telegram) ? C.telegram : 'https://t.me/' + C.telegram.replace(/^@/, '')) : '');
+    link('#cViber', C.viber ? 'viber://chat?number=' + encodeURIComponent(C.viber.replace(/[^\d+]/g, '')) : '');
+    link('#cWa', C.whatsapp ? 'https://wa.me/' + C.whatsapp.replace(/\D/g, '') : '');
+    if ($('#cLegal') && (C.company || C.unp)) $('#cLegal').textContent = [C.company, C.unp ? 'УНП ' + C.unp : ''].filter(Boolean).join(' · ');
+    if (Array.isArray(c.works) && c.works.length && $('#worksGrid')) {
+      $('#worksGrid').innerHTML = c.works.map(function (w) {
+        return '<figure class="work glass rv in"><div class="mat"><img src="' + w.img + '" loading="lazy" alt="' + (w.caption || 'Пример работы') + '"></div><p>' + (w.caption || '') + '</p></figure>';
+      }).join('');
+      bindWorks();
+    }
+    if (c.calc && Array.isArray(c.calc.steps) && c.calc.steps.length) { STEPS = c.calc.steps.filter(function (s) { return s.items && s.items.length; }); resetSel(); render(); }
+  }
+  if (!window.PAMYAT_DEMO) {
+    fetch('/api/content', { headers: { accept: 'application/json' } }).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) { if (d && d.ok) { d.content.__live = true; applyContent(d.content); } }).catch(function () { });
+  }
 
   /* ---------- FAQ ---------- */
   var QA = [
@@ -276,16 +328,25 @@
     $$('.qa button').forEach(function (b) { b.addEventListener('click', function () { b.parentElement.classList.toggle('open'); }); });
   }
 
-  /* ---------- формы → заявка ---------- */
+  /* ---------- формы → заявка (база + Telegram) ---------- */
   function bind(formSel, okSel, type) {
     var f = $(formSel); if (!f) return;
     f.addEventListener('submit', function (e) {
       e.preventDefault();
-      var fd = new FormData(f);
-      var lead = { type: type, name: fd.get('name'), phone: fd.get('phone'), comment: fd.get('c') || '', source: location.href, at: new Date().toISOString() };
-      if (type === 'calc') { lead.config = S; lead.price = S.monument === 'exclusive' ? null : total(); }
-      if (window.PamyatStore) PamyatStore.addLead(lead);
-      f.style.display = 'none'; $(okSel).classList.add('on');
+      var fd = new FormData(f), btn = f.querySelector('button[type=submit]');
+      var lead = { type: type, name: fd.get('name'), phone: fd.get('phone'), comment: fd.get('c') || '', source: location.href };
+      if (type === 'calc') { lead.price = individual() ? null : total(); lead.config = { summary: summary(), sel: S, model: MODEL }; }
+      function done() { f.style.display = 'none'; $(okSel).classList.add('on'); }
+      if (window.PAMYAT_DEMO) return done();
+      btn.disabled = true; btn.textContent = 'Отправляем…';
+      fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(lead) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { ok: r.ok && d.ok, d: d }; }); })
+        .then(function (x) {
+          if (x.ok) return done();
+          btn.disabled = false; btn.textContent = 'Отправить ещё раз';
+          alert((x.d && x.d.error) || 'Не удалось отправить. Позвоните нам, пожалуйста.');
+        })
+        .catch(function () { btn.disabled = false; btn.textContent = 'Отправить ещё раз'; alert('Нет связи. Позвоните нам, пожалуйста.'); });
     });
   }
   bind('#cform', '#cok', 'calc'); bind('#lform', '#lok', 'contact');

@@ -1,0 +1,7 @@
+{
+  "name": "pamyat-bai",
+  "private": true,
+  "description": "ПАМЯТЬ.БАЙ — сайт и админка",
+  "engines": { "node": ">=18" },
+  "dependencies": { "pg": "^8.13.0" }
+}
