@@ -40,7 +40,7 @@
     var N = META.count, order = [], seen = {};
     [16, 8, 4, 2, 1].forEach(function (s) { for (var i = 0; i < N; i += s) if (!seen[i]) { seen[i] = 1; order.push(i); } });
     if (!seen[N - 1]) order.splice(1, 0, N - 1);
-    var inflight = 0, k = 0, MAX = 6;
+    var inflight = 0, k = 0, MAX = 10;
     function pump() {
       while (inflight < MAX && k < order.length) {
         (function (i) {
@@ -114,7 +114,7 @@
     raf = requestAnimationFrame(frame);
     resize();
     var d = target - cur;
-    cur = calm ? target : cur + d * .09;
+    cur = calm ? target : cur + d * .16;
     if (Math.abs(d) < 1e-5) cur = target;
     var e = eio(clamp(cur / PI_)), o = clamp((cur - PO_) / (1 - PO_));
     pin.style.setProperty('--e', e.toFixed(4)); pin.style.setProperty('--o', o.toFixed(4)); pin.style.setProperty('--p', cur.toFixed(4));
