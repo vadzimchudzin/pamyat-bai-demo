@@ -8,14 +8,26 @@
 
   /* ---------- шапка + тепло лампады по скроллу ---------- */
   var top = $('#top'), hero = $('#hero');
+  /* фон — одно полотно: верх светлый, ниже ~47% страницы — сумерки. Тема текста секции по месту на полотне */
+  var EDGE = 0.47;
+  function themes() {
+    var H = document.documentElement.scrollHeight;
+    $$('main > section:not(.hero)').forEach(function (sec) {
+      var y = sec.getBoundingClientRect().top + scrollY + Math.min(sec.offsetHeight, innerHeight) * 0.5;
+      sec.classList.toggle('tl', y / H < EDGE);
+    });
+  }
   function onScroll() {
     var h = hero ? hero.offsetHeight : 600;
-    if (top) top.classList.toggle('scrolled', scrollY > h * 0.55);
-    var max = Math.max(1, document.documentElement.scrollHeight - innerHeight);
-    var p = Math.min(1, Math.max(0, (scrollY - h * 0.4) / (max - h * 0.4)));
-    root.style.setProperty('--warm', (0.2 + 0.8 * p).toFixed(3));
+    if (top) {
+      top.classList.toggle('scrolled', scrollY > h * 0.55);
+      top.classList.toggle('dk', (scrollY + 40) / document.documentElement.scrollHeight > EDGE + 0.03);
+    }
   }
-  onScroll(); addEventListener('scroll', onScroll, { passive: true }); addEventListener('resize', onScroll);
+  themes(); onScroll();
+  addEventListener('scroll', onScroll, { passive: true });
+  addEventListener('resize', function () { themes(); onScroll(); });
+  addEventListener('load', themes);
 
   /* живое дрожание пламени (как в демо: свет не ездит, а дышит) */
   if (!calm) (function flicker() {
