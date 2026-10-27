@@ -11,11 +11,11 @@
 <meta property="og:image" content="/assets/motion/k11.webp?v=v3-10231015">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="/assets/img/hero-plate.jpg">
-<link rel="stylesheet" href="/css/base.css?v=s3">
-<link rel="stylesheet" href="/css/site.css?v=s3">
-<link rel="stylesheet" href="/css/ambience.css?v=s5">
+<link rel="stylesheet" href="/css/base.css?v=s6">
+<link rel="stylesheet" href="/css/site.css?v=s6">
+<link rel="stylesheet" href="/css/ambience.css?v=s6">
 </head>
 <body>
 <div class="ambience" aria-hidden="true"><div class="flame-light"></div></div>
@@ -36,14 +36,15 @@
       <a class="link" href="/catalog">Каталог</a>
       <a class="link" href="/calc">Расчёт</a>
       <a class="link" href="#story">Установка</a>
-      <a class="link" href="#pricing">Цены</a>
+      <a class="link" href="#pricing">Расчёт</a>
       <a class="link" href="#contact">Контакты</a>
       <a class="btn btn-outline btn-sm" href="/calc"><em class="hide-s">Рассчитать</em><em class="show-s">Расчёт</em> <span>→</span></a>
     </nav>
   </div>
 </header>
 
-<section class="stage-hero" id="hero">
+<section class="stage-hero lamp-zone" id="hero">
+  <div class="flame-light" aria-hidden="true"></div>
   <div class="canvas">
     <img class="plate" src="/assets/img/hero-plate.jpg" alt="Гранитный памятник на каменной площадке над облаками на закате">
     <div class="sky" aria-hidden="true">
@@ -57,10 +58,10 @@
   </div>
   <div class="veil"></div>
   <div class="wrap hero-copy">
-    <h1>Память,<br>которая живёт</h1>
+    <h1>Память, которая живёт</h1>
     <span class="rule"></span>
     <p class="sub">Памятники из гранита, установка под ключ и благоустройство участка. Беларусь.</p>
-    <a class="btn btn-gold" href="/calc">Рассчитать комплекс <span>→</span></a>
+    <a class="btn btn-gold" href="/calc">Рассчитать стоимость <span>→</span></a>
   </div>
   <a class="hero-scroll" href="#works" aria-label="Листать вниз"><i></i></a>
 </section>
@@ -169,36 +170,17 @@
 <section class="section pricing" id="pricing">
   <div class="wrap">
     <div class="head">
-      <p class="eyebrow">Стоимость</p>
-      <h2 class="split">Три уровня работ</h2>
-      <p>Точную смету даём после замера участка. Всё, что в ней указано, не меняется в процессе.</p>
+      <p class="eyebrow">Расчёт</p>
+      <h2 class="split">Соберите свой комплекс</h2>
+      <p>Каждый участок уникален. Отметьте то, что вам необходимо, чтобы понять порядок цен. Точную смету зафиксируем в договоре после выезда на участок.</p>
     </div>
-    <div class="prices">
-      <article class="price" style="--i:0">
-        <h3>Памятник</h3>
-        <p class="p-sum"><small>от</small> 1 200 <small>BYN</small></p>
-        <ul><li>Стела из гранита</li><li>Гравировка и эскиз</li><li>Установка на основание</li></ul>
-        <a class="btn btn-line" href="#contact" data-pack="Памятник">Обсудить</a>
-      </article>
-      <article class="price" style="--i:1">
-        <h3>Комплекс</h3>
-        <p class="p-sum"><small>от</small> 3 900 <small>BYN</small></p>
-        <ul><li>Памятник</li><li>Армированный фундамент</li><li>Гранитная плитка и бордюр</li><li>Цветник</li></ul>
-        <a class="btn btn-line" href="#contact" data-pack="Комплекс">Обсудить</a>
-      </article>
-      <article class="price feat" style="--i:2">
-        <span class="tag">Как в истории выше</span>
-        <h3>Под ключ</h3>
-        <p class="p-sum"><small>от</small> 7 500 <small>BYN</small></p>
-        <ul><li>Двойная стела со сквозным крестом</li><li>Фундамент, плитка, ограда</li><li>Два цветника и ваза</li><li>Газон, цветы, уборка участка</li></ul>
-        <a class="btn btn-gold" href="#contact" data-pack="Под ключ">Рассчитать <span>→</span></a>
-      </article>
-    </div>
-    <p class="p-note">Цены ориентировочные и зависят от камня, размеров и состояния участка.</p>
+    <p class="p-note">Памятник может быть изготовлен из любого гранита по Вашему выбору. В стандартную комплектацию уже входят стела, цветник и тумба. Указанные цены являются базовыми.</p>
+    <p style="margin:28px 0 0"><a class="btn btn-gold" href="/calc">Рассчитать стоимость <span>→</span></a></p>
   </div>
 </section>
 
-<section class="section trust" id="trust">
+<section class="section trust lamp-zone" id="trust">
+  <div class="flame-light" aria-hidden="true"></div>
   <div class="wrap">
     <div class="head">
       <p class="eyebrow">Условия</p>
@@ -211,7 +193,7 @@
       <div class="point reveal" style="--i:3"><h3>Гарантия</h3><p>Даём гарантию на установку и фундамент. Срок и условия указываем в договоре.</p></div>
     </div>
     <figure class="quote reveal">
-      <p>Мы не продаём камень. Мы помогаем сохранить место, куда хочется возвращаться.</p>
+      <p>Памятник — это не камень. Это знак того, что человека помнят и любят.</p>
       <cite>ПАМЯТЬ.БАЙ</cite>
     </figure>
   </div>
@@ -248,7 +230,9 @@
       <label>Имя<input name="name" autocomplete="name" placeholder="Как к вам обращаться"></label>
       <label>Телефон<input name="phone" type="tel" placeholder="+375"></label>
       <label>Что нужно<textarea name="msg" placeholder="Например: памятник из чёрного гранита, установка к 2 ноября"></textarea></label>
-      <button class="btn btn-dark" type="submit" style="justify-self:start">Отправить заявку</button>
+      <button class="btn btn-gold" type="submit" style="justify-self:start">Жду звонка</button>
+      <p style="font-size:14px;color:var(--soft)">Нажимая кнопку, вы соглашаетесь с обработкой данных.</p>
+      <p style="font-size:15px">Написать: Telegram · Viber · WhatsApp</p>
       <p class="serif" id="thanks" hidden style="font-size:20px;color:var(--accent)">Спасибо! Перезвоним в рабочее время.</p>
     </form>
   </div>

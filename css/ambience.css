@@ -1,77 +1,85 @@
+/* Этап 1: беж + золото. Лампада только hero + манифест. Облака — hero и шапка. */
 :root{
-  --flicker:1;--fx:0px;--fy:0px;
-  --sky:#1c2b3d;--lamp:#58331c;
-  --cream:#f3eee7;--mut:rgba(243,238,231,.72);
-  --gold:#d4b077;--glass:rgba(22,24,28,.42);--line:rgba(243,238,231,.14);
+  --bg:#f6f1e8;--bg2:#efe7d8;--ink:#2a241c;--mut:#7a6f5f;--gold:#9a7436;--goldt:#fff;
+  --line:#ddd2bd;--tile:#f7f2e7;--sh:0 10px 30px #4a3a1d22;
+  --serif:"Playfair Display",Georgia,serif;
+  --sans:"Inter",system-ui,sans-serif;
+  --flicker:1;
 }
-html{background:#182636}
-body{position:relative;isolation:isolate;background:transparent;color:var(--cream)}
-h1,h2,h3,.logo{color:var(--cream)}
-.lead,.sub,.app-lead,.note,.meta,p{color:var(--mut)}
-a.link{color:var(--mut)}
-a.link:hover{color:var(--cream)}
+html{background:var(--bg)}
+body{
+  position:relative;
+  isolation:isolate;
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--sans);
+}
+body:before{
+  content:"";
+  pointer-events:none;
+  position:fixed;inset:0;z-index:80;
+  opacity:.04;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='4' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)' opacity='.55'/></svg>");
+  mix-blend-mode:multiply;
+}
+h1,h2,h3,.logo,.eyebrow{
+  font-family:var(--serif);
+  font-style:normal;
+  font-weight:600;
+  text-transform:uppercase;
+  letter-spacing:.06em;
+}
+em,i,cite{font-style:normal}
+.quote p{font-style:normal!important}
 
-/* Background only — never mixed into cards */
-.ambience{position:fixed;inset:0;z-index:-2;pointer-events:none;overflow:hidden;
-  background:linear-gradient(180deg,#1c2b3d 0%,#202d3b 10%,#232d37 20%,#252b32 32%,#25282c 44%,#262624 56%,#292521 68%,#3a281d 84%,#4a2d1b 94%,#58331c 100%);
-  transition:opacity .6s ease}
-.ambience:before{content:"";position:absolute;inset:0;background:
-  radial-gradient(ellipse 68% 14% at 3% 0%,rgba(205,220,235,.018),transparent 78%),
-  radial-gradient(ellipse 72% 56% at 0% 100%,rgba(255,164,82,calc(.31 * var(--flicker))) 0%,rgba(255,139,62,calc(.19 * var(--flicker))) 24%,rgba(220,111,53,calc(.10 * var(--flicker))) 46%,rgba(165,88,49,.035) 67%,transparent 79%),
-  linear-gradient(90deg,rgba(9,12,16,.05),transparent 44%,rgba(7,10,14,.25))}
-.flame-light{position:absolute;left:-18%;bottom:-7%;width:86%;height:56%;
-  background:radial-gradient(ellipse 48% 53% at 24% 76%,rgba(255,215,153,calc(.22 * var(--flicker))) 0%,rgba(255,174,98,calc(.16 * var(--flicker))) 28%,rgba(221,126,68,calc(.08 * var(--flicker))) 49%,transparent 76%);
-  transform:translate3d(var(--fx),var(--fy),0) scale(var(--flicker));transform-origin:24% 76%;will-change:transform,opacity;opacity:.96;transition:opacity .4s ease}
-.flame-light:after{content:"";position:absolute;inset:5% 0 0 0;
-  background:radial-gradient(ellipse 29% 46% at 24% 78%,rgba(255,227,174,calc(.12 * var(--flicker))) 0%,rgba(255,186,113,calc(.08 * var(--flicker))) 31%,transparent 72%);
-  transform:translate3d(calc(var(--fx) * -.4),calc(var(--fy) * -.8),0);transform-origin:24% 78%}
-.hdr-clouds{position:fixed;left:0;right:0;top:0;height:min(38vh,280px);z-index:-1;pointer-events:none;overflow:hidden;mix-blend-mode:screen;opacity:.5}
-.hdr-clouds .cl{position:absolute;width:140%;aspect-ratio:3168/1344;left:-20%;background-size:100% 100%;background-repeat:no-repeat;mix-blend-mode:screen;opacity:0;animation:drift var(--T,110s) linear infinite;animation-delay:var(--d,0s)}
-.hdr-clouds .a1,.hdr-clouds .a2{background-image:url("/assets/img/cloud-a.jpg");--o:.55}
-.hdr-clouds .b1,.hdr-clouds .b2{background-image:url("/assets/img/cloud-b.jpg");--o:.45}
-.hdr-clouds .a1{--T:110s;--d:-40s;top:-18%}
-.hdr-clouds .a2{--T:110s;--d:-125s;top:4%;scale:-1 1}
-.hdr-clouds .b1{--T:78s;--d:-20s;top:-50%}
-.hdr-clouds .b2{--T:78s;--d:-80s;top:-36%;scale:-1 1}
+/* Лампада — только внутри .lamp-zone */
+.lamp-zone{position:relative;overflow:hidden}
+.lamp-zone .flame-light{
+  position:absolute;left:-18%;bottom:-12%;width:90%;height:58%;
+  pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 48% 53% at 24% 76%,
+    rgba(154,116,54,calc(.14 * var(--flicker))) 0%,
+    rgba(154,116,54,calc(.08 * var(--flicker))) 32%,
+    transparent 72%);
+  animation:lamp-breathe 4.6s ease-in-out infinite;
+}
+@keyframes lamp-breathe{
+  0%,100%{opacity:.72}
+  50%{opacity:1}
+}
+@media (prefers-reduced-motion:reduce){
+  .lamp-zone .flame-light,.hdr-clouds .cl,.hdr-sky .cl,.sky .cl{animation:none!important}
+}
 
-/* Content sits above, frosted so text is readable without hiding the sky */
-.glass{
-  background:var(--glass);
-  border:1px solid var(--line);
-  border-radius:22px;
-  backdrop-filter:blur(18px) saturate(1.1);
-  -webkit-backdrop-filter:blur(18px) saturate(1.1);
-  box-shadow:0 24px 60px rgba(0,0,0,.22);
-}
-.section,.app-page,.wizard{position:relative;z-index:1;background:transparent}
-.trust{background:transparent}
-.stage-hero{background:transparent}
-.story{background:transparent;margin-top:0;padding-top:0}
-.section .wrap,.app-page > .wrap,.wizard{
-  background:rgba(18,20,24,.38);
-  border:1px solid var(--line);
-  border-radius:28px;
-  padding:2.2rem 1.8rem;
-  backdrop-filter:blur(16px) saturate(1.08);
-  -webkit-backdrop-filter:blur(16px) saturate(1.08);
-}
-.top{background:rgba(20,24,30,.35);backdrop-filter:blur(14px);border-bottom:1px solid var(--line);color:var(--cream)}
-.top .logo,.top .menu a.link{color:var(--cream)}
-.top.scrolled{background:rgba(18,20,24,.62)}
-.top.dark{background:rgba(18,20,24,.7)}
+/* Облака плывут в шапке после скролла с hero */
+.hdr-clouds{display:none}
+.hdr-sky{opacity:0;transition:opacity .9s ease}
+.top.scrolled .hdr-sky{opacity:.7}
+.hdr-sky .cl{opacity:0}
+.top{background:transparent;color:var(--ink)}
+.top.scrolled{background:rgba(246,241,232,.92);backdrop-filter:blur(10px)}
+.top .logo,.top .menu a.link{color:var(--ink)}
 .eyebrow{color:var(--gold)}
-.btn-gold,.chip.on,.opt.on,.step-nav b.on{background:linear-gradient(180deg,#d4b077,#9a7436);color:#1a140c;border-color:#d4b077}
-.btn-outline{border-color:rgba(212,176,119,.55);color:var(--cream);background:rgba(255,255,255,.06)}
-.works figure,.card-m,.calc-sum,.opt,.chip,.price,.faq-item,.point,.step{
-  background:rgba(255,248,236,.08);
-  border:1px solid var(--line);
-  color:var(--cream)
+.btn-gold,.chip.on,.opt.on,.step-nav b.on{
+  background:var(--gold);color:#fff;border-color:var(--gold)
 }
-.card-m .meta,.app-lead{color:var(--mut)}
-.card-m .price{color:var(--gold)}
-.form-grid input,.form-grid textarea,input,textarea{
-  background:rgba(10,12,16,.35);color:var(--cream);border-color:var(--line)
+.btn-outline{border-color:var(--line);color:var(--ink);background:transparent}
+
+/* Не стеклянные тёмные панели */
+.section .wrap,.app-page > .wrap,.wizard{
+  background:transparent;border:0;backdrop-filter:none;padding:0
 }
-.hero-copy h1,.hero-copy .sub{text-shadow:0 8px 30px rgba(0,0,0,.35)}
-.hero-copy .sub{color:var(--mut)}
-@media (prefers-reduced-motion:reduce){.hdr-clouds .cl{animation:none!important;opacity:.4!important}}
+.section,.app-page,.wizard,.trust,.stage-hero{background:transparent}
+.hero-copy h1,.hero-copy .sub{text-shadow:0 2px 18px rgba(246,241,232,.85);color:var(--ink)}
+.hero-copy .sub{color:var(--ink);opacity:.92}
+.stage-hero{min-height:100svh}
+
+/* Калькулятор: овалы вместо квадратов */
+.opt{
+  border-radius:999px;
+  border:1.5px solid var(--line);
+  background:var(--tile);
+  color:var(--ink);
+  padding:.7rem 1.1rem;
+}
+.opt.on{background:var(--gold);color:#fff;border-color:var(--gold)}

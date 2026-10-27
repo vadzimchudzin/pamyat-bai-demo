@@ -1,6 +1,6 @@
 /* ===== ПАМЯТЬ.БАЙ — new sections & premium typography ===== */
-:root{--serif:"Cormorant Garamond",Georgia,"Times New Roman",serif;--night:#12110e;--night2:#1a1814;--cream:#f3ede3;--gold2:#c9a35e;--ez:cubic-bezier(.2,.7,.1,1)}
-h1,h2,h3,.logo,.quote p,.hero-copy h1{font-family:var(--serif);font-weight:500;letter-spacing:-.005em}
+:root{--serif:"Playfair Display",Georgia,"Times New Roman",serif;--night:#efe7d8;--night2:#f6f1e8;--cream:#2a241c;--gold2:#9a7436;--ez:cubic-bezier(.2,.7,.1,1)}
+h1,h2,h3,.logo,.quote p,.hero-copy h1{font-family:var(--serif);font-weight:600;letter-spacing:.04em;font-style:normal;text-transform:uppercase}
 h2{font-size:clamp(36px,4.4vw,58px);line-height:1.04}
 .hero-copy h1{font-size:clamp(56px,7.2vw,108px);line-height:.98;font-weight:500}
 .logo{font-size:23px;font-weight:600;letter-spacing:.08em}
@@ -20,8 +20,8 @@ h2{font-size:clamp(36px,4.4vw,58px);line-height:1.04}
 
 /* ================= STORY ================= */
 .stage-hero{transition:opacity .08s linear}
-.story{position:relative;height:calc(6 * 165vh + 240vh);background:var(--night);color:var(--cream);margin-top:-18vh;padding-top:18vh}
-.story-pin{--e:0;--o:0;--p:0;position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;background:radial-gradient(120% 80% at 50% 0%,#211d17 0,var(--night) 60%)}
+.story{position:relative;height:calc(6 * 165vh + 240vh);background:var(--bg);color:var(--ink);margin-top:-18vh;padding-top:18vh}
+.story-pin{--e:0;--o:0;--p:0;position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;background:radial-gradient(120% 80% at 50% 0%,#f3ead8 0,var(--bg) 60%)}
 .story-intro{position:absolute;z-index:4;left:0;right:0;top:calc(72px + 4vh);text-align:center;padding:0 6vw;pointer-events:none;opacity:clamp(0,calc(1 - var(--e)*1.6),1);transform:translateY(calc(var(--e)*-60px))}
 .story-intro .eyebrow{color:var(--gold2)}
 .story-intro h2{font-size:clamp(40px,5.4vw,80px);color:var(--cream);margin-bottom:10px}

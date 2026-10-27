@@ -8,7 +8,7 @@
     root.style.setProperty('--flicker', intensity.toFixed(3));
     root.style.setProperty('--fx', ((Math.random() - 0.5) * 11).toFixed(2) + 'px');
     root.style.setProperty('--fy', ((Math.random() - 0.5) * 9).toFixed(2) + 'px');
-    setTimeout(flicker, 65 + Math.random() * 145);
+    setTimeout(flicker, 4200 + Math.random() * 900);
   }
   flicker();
 })();
