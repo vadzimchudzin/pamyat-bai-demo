@@ -194,7 +194,7 @@ h2{font-size:clamp(36px,4.4vw,58px);line-height:1.04}
 .top.dark .btn-outline{color:var(--cream);background:rgba(255,255,255,.06);border-color:rgba(201,163,94,.7)}
 .top .logo,.top .menu a.link,.top .btn-outline{transition:color .4s,background .4s,border-color .4s}
 
-.top{position:sticky;top:0;z-index:20;background:linear-gradient(180deg,rgba(246,241,232,.7),rgba(246,241,232,.2));backdrop-filter:blur(8px);transition:background .4s,box-shadow .4s,transform .6s var(--ez)}
+.top{transition:background .4s,box-shadow .4s,transform .6s var(--ez)}
 .top.immersive{transform:translateY(-100%)}
 
 .menu .btn-outline{white-space:nowrap}

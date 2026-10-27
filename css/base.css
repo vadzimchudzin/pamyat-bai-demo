@@ -64,18 +64,18 @@ h2{font-size:clamp(30px,3.6vw,44px);margin-bottom:16px}
 .cl{position:absolute;width:130%;aspect-ratio:3168/1344;left:-15%;background-size:100% 100%;background-repeat:no-repeat;mix-blend-mode:screen;opacity:0;animation:drift var(--T,160s) linear infinite;animation-delay:var(--d,0s);will-change:transform,opacity}
 .a1,.a2{background-image:var(--cA);--o:.55}
 .b1,.b2{background-image:var(--cB);--o:.5}
-.a1{--T:90s;--d:-10s;top:-6%}
-.a2{--T:100s;--d:-55s;top:8%;scale:-1 1}
-.b1{--T:70s;--d:-8s;top:-46%}
-.b2{--T:80s;--d:-40s;top:-38%;scale:-1 1}
+.a1{--T:170s;--d:-40s;top:-6%}
+.a2{--T:170s;--d:-125s;top:8%;scale:-1 1}
+.b1{--T:120s;--d:-20s;top:-46%}
+.b2{--T:120s;--d:-80s;top:-38%;scale:-1 1}
 @keyframes drift{0%{transform:translateX(-30%);opacity:0}12%{opacity:var(--o,.8)}88%{opacity:var(--o,.8)}100%{transform:translateX(30%);opacity:0}}
 .sun{position:absolute;left:63.1%;top:38.6%;width:0;height:0;mix-blend-mode:screen}
 .sun i{position:absolute;left:0;top:0;translate:-50% -50%;border-radius:50%;display:block}
 .halo{width:calc(var(--cw)*.46);height:calc(var(--cw)*.46);background:radial-gradient(circle,rgba(255,226,170,.42) 0,rgba(255,206,150,.2) 35%,transparent 68%);animation:breathe 9s ease-in-out infinite}
 .glow{width:calc(var(--cw)*.2);height:calc(var(--cw)*.2);background:radial-gradient(circle,rgba(255,246,220,.95) 0,rgba(255,226,168,.55) 28%,rgba(255,200,140,.18) 55%,transparent 72%);animation:pulse 5.5s ease-in-out infinite}
 .core{width:calc(var(--cw)*.045);height:calc(var(--cw)*.045);background:radial-gradient(circle,#fff 0,rgba(255,250,235,.9) 30%,transparent 70%);animation:pulse 3.2s ease-in-out infinite -1s}
-.rays{width:calc(var(--cw)*.9);height:calc(var(--cw)*.9);background:repeating-conic-gradient(from 0deg,rgba(255,238,200,.7) 0 .45deg,transparent .45deg 5.5deg);-webkit-mask-image:radial-gradient(circle,#000 2%,transparent 62%);mask-image:radial-gradient(circle,#000 2%,transparent 62%);opacity:.48;animation:spin 90s linear infinite}
-.rays.r2{background:repeating-conic-gradient(from 2deg,rgba(255,228,185,.6) 0 .9deg,transparent .9deg 11deg);opacity:.34;animation:spin 150s linear infinite reverse}
+.rays{width:calc(var(--cw)*.9);height:calc(var(--cw)*.9);background:repeating-conic-gradient(from 0deg,rgba(255,238,200,.55) 0 .5deg,transparent .5deg 5.5deg);-webkit-mask-image:radial-gradient(circle,#000 2%,transparent 62%);mask-image:radial-gradient(circle,#000 2%,transparent 62%);opacity:.32;animation:spin 120s linear infinite}
+.rays.r2{background:repeating-conic-gradient(from 2deg,rgba(255,228,185,.5) 0 .9deg,transparent .9deg 11deg);opacity:.24;animation:spin 200s linear infinite reverse}
 @keyframes pulse{0%,100%{transform:scale(.9);opacity:.82}50%{transform:scale(1.12);opacity:1}}
 @keyframes breathe{0%,100%{transform:scale(.95);opacity:.7}50%{transform:scale(1.06);opacity:1}}
 @keyframes spin{to{transform:rotate(360deg)}}
