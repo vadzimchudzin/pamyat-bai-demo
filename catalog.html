@@ -176,7 +176,7 @@ if($("tg"))$("tg").onclick=function(){var r=document.documentElement,dk=r.getAtt
 (function(){var id=location.hash.slice(1);var t=T.filter(function(x){return x.id==id})[0];if(t)openCat(t);})();
 /* в окне каталога на главной: «Заказать» передаёт модель в калькулятор */
 document.addEventListener("click",function(e){var a=e.target.closest&&e.target.closest('a[href^="/?model="]');if(!a||window.parent===window)return;
- e.preventDefault();var code=a.getAttribute("href").split("model=")[1].split("#")[0];window.parent.postMessage({pamyatModel:code},"*")});
+ e.preventDefault();var code=a.getAttribute("href").split("model=")[1].split("#")[0];window.parent.postMessage({pamyatModel:code},"*")},true);
 /* дрожание лампады */
 (function f(){var r=Math.random(),k=.82+Math.random()*.19;if(r>.78)k=.70+Math.random()*.12;if(r>.95)k=1.02+Math.random()*.10;
  var s=document.documentElement.style;s.setProperty("--flicker",k.toFixed(3));s.setProperty("--fx",((Math.random()-.5)*11).toFixed(2)+"px");s.setProperty("--fy",((Math.random()-.5)*9).toFixed(2)+"px");setTimeout(f,65+Math.random()*145)})();
