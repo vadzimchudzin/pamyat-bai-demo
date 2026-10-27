@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Каталог — ПАМЯТЬ.БАЙ</title>
+<link rel="stylesheet" href="/css/base.css?v=s1">
+<link rel="stylesheet" href="/css/site.css?v=s1">
+<link rel="stylesheet" href="/css/app.css?v=s1">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+<header class="top" id="top">
+  <div class="wrap bar-h">
+    <a class="logo" href="/">ПАМЯТЬ<span>.БАЙ</span></a>
+    <nav class="menu">
+      <a class="link" href="/catalog">Каталог</a>
+      <a class="link" href="/calc">Расчёт</a>
+      <a class="link" href="/#story">Установка</a>
+      <a class="link" href="/#contact">Контакты</a>
+      <a class="btn btn-outline btn-sm" href="/calc">Рассчитать <span>→</span></a>
+    </nav>
+  </div>
+</header>
+<main class="app-page">
+  <div class="wrap">
+    <h1>Каталог памятников</h1>
+    <p class="app-lead">Карточки моделей. Цена «от» — ориентир до замера. Нажмите фото, чтобы увеличить.</p>
+    <div class="filters" id="filters"></div>
+    <div class="grid-cards" id="grid"></div>
+  </div>
+</main>
+<div id="lb" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:80;align-items:center;justify-content:center;padding:2rem" onclick="this.style.display='none'">
+  <div id="lbInner" style="color:#f3e6c4;font-family:Cormorant Garamond,serif;font-size:2rem;text-align:center"></div>
+</div>
+<script src="/js/catalog-data.js?v=s1"></script>
+<script>
+const CATS=[{id:'all',name:'Все'}].concat(PAMYAT_CATS);
+let cur='all';
+const f=document.getElementById('filters');
+CATS.forEach(c=>{
+  const b=document.createElement('button'); b.className='chip'+(c.id==='all'?' on':''); b.textContent=c.name;
+  b.onclick=()=>{cur=c.id; [...f.children].forEach(x=>x.classList.toggle('on',x===b)); draw();};
+  f.appendChild(b);
+});
+function draw(){
+  const list=PAMYAT_CATALOG.filter(x=>cur==='all'||x.cat===cur);
+  document.getElementById('grid').innerHTML=list.map(x=>`
+    <article class="card-m">
+      <div class="ph" onclick="openLb('${x.title}')">${x.title}</div>
+      <div class="body">
+        <strong>${x.title}</strong>
+        <span class="meta">${x.form} · ${x.stone} · ${x.size}</span>
+        <p class="meta">${x.desc}</p>
+        <span class="price">от ${x.price} BYN</span>
+        <div class="row">
+          <a class="btn btn-gold btn-sm" href="/calc?model=${x.id}">В расчёт</a>
+        </div>
+      </div>
+    </article>`).join('');
+}
+function openLb(t){ const el=document.getElementById('lb'); el.style.display='flex'; document.getElementById('lbInner').textContent=t; }
+draw();
+</script>
+</body>
+</html>

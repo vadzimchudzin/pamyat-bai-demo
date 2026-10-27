@@ -1,0 +1,31 @@
+.app-page{padding:5.5rem 0 4rem}
+.app-page h1{font-family:Cormorant Garamond,serif;font-size:clamp(2rem,5vw,3.2rem);margin:0 0 .4rem}
+.app-lead{color:#5c5348;max-width:40rem;margin:0 0 1.6rem}
+.filters{display:flex;flex-wrap:wrap;gap:.5rem;margin:0 0 1.4rem}
+.chip{border:1px solid #c9b48a;background:#fffdf8;color:#3d3428;padding:.35rem .8rem;border-radius:999px;cursor:pointer;font:inherit}
+.chip.on,.chip:hover{background:#c9a227;color:#fff;border-color:#c9a227}
+.grid-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:1rem}
+.card-m{background:#fff;border:1px solid #e6dcc8;border-radius:12px;overflow:hidden;display:flex;flex-direction:column}
+.card-m .ph{height:160px;background:linear-gradient(160deg,#2b2b2b,#111);display:flex;align-items:flex-end;padding:1rem;color:#f3e6c4;font-family:Cormorant Garamond,serif;font-size:1.3rem}
+.card-m .body{padding:1rem;display:flex;flex-direction:column;gap:.35rem;flex:1}
+.card-m .meta{font-size:.85rem;color:#6b6256}
+.card-m .price{font-weight:600;color:#8a6d1f;margin-top:auto}
+.card-m .row{display:flex;gap:.5rem;margin-top:.6rem}
+.wizard{display:grid;gap:1.2rem}
+.step-nav{display:flex;flex-wrap:wrap;gap:.4rem}
+.step-nav b{display:inline-flex;align-items:center;justify-content:center;min-width:2rem;height:2rem;border-radius:999px;border:1px solid #c9b48a;font-size:.85rem}
+.step-nav b.on{background:#c9a227;color:#fff;border-color:#c9a227}
+.opts{display:flex;flex-wrap:wrap;gap:.6rem}
+.opt{border:2px solid #e6dcc8;border-radius:999px;padding:.55rem 1rem;background:#fffdf8;cursor:pointer}
+.opt.on{border-color:#c9a227;box-shadow:0 0 0 1px #c9a227}
+.calc-sum{background:#fff;border:1px solid #e6dcc8;border-radius:12px;padding:1.2rem}
+.note{font-size:.9rem;color:#6b6256}
+.form-grid{display:grid;gap:.7rem;max-width:28rem}
+.form-grid input,.form-grid textarea,.form-grid select{width:100%;padding:.7rem .8rem;border:1px solid #d8ccb4;border-radius:8px;font:inherit;background:#fff}
+.ok{background:#eef6ea;border:1px solid #b7d4a8;padding:.8rem 1rem;border-radius:8px}
+.admin{max-width:960px;margin:0 auto}
+.table{width:100%;border-collapse:collapse;font-size:.92rem}
+.table th,.table td{border-bottom:1px solid #e6dcc8;padding:.55rem .4rem;text-align:left;vertical-align:top}
+.table th{color:#6b6256;font-weight:500}
+.pill{display:inline-block;padding:.15rem .5rem;border-radius:999px;background:#f3ead6;font-size:.8rem}
+@media(max-width:700px){.grid-cards{grid-template-columns:1fr}}

@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Админка — ПАМЯТЬ.БАЙ</title>
+<link rel="stylesheet" href="/css/base.css?v=s1">
+<link rel="stylesheet" href="/css/site.css?v=s1">
+<link rel="stylesheet" href="/css/app.css?v=s1">
+</head>
+<body>
+<main class="app-page">
+  <div class="wrap admin">
+    <h1>Админка</h1>
+    <p class="app-lead">Черновик спринта 1. Заявки хранятся в браузере, пока нет БД. Пароль: pamyat</p>
+    <form id="login" class="form-grid">
+      <input name="pass" type="password" placeholder="Пароль" required>
+      <button class="btn btn-gold" type="submit">Войти</button>
+    </form>
+    <div id="panel" hidden>
+      <p>Роли позже: администратор / менеджер / сотрудник. 2FA — код на почту.</p>
+      <h2>Заявки</h2>
+      <table class="table" id="tbl"><thead><tr><th>Когда</th><th>Имя</th><th>Телефон</th><th>Сумма</th><th>Статус</th></tr></thead><tbody></tbody></table>
+      <h2>Цены калькулятора</h2>
+      <pre id="prices" style="background:#fff;padding:1rem;border:1px solid #e6dcc8;overflow:auto"></pre>
+    </div>
+  </div>
+</main>
+<script src="/js/catalog-data.js?v=s1"></script>
+<script>
+document.getElementById('login').onsubmit=e=>{
+  e.preventDefault();
+  if(e.target.pass.value!=='pamyat'){ alert('Неверный пароль'); return; }
+  e.target.hidden=true; document.getElementById('panel').hidden=false;
+  const leads=JSON.parse(localStorage.getItem('pamyat_leads')||'[]');
+  document.querySelector('#tbl tbody').innerHTML=leads.map(l=>`<tr>
+    <td>${(l.at||'').slice(0,16)}</td><td>${l.name||''}</td><td>${l.phone||''}</td>
+    <td>${l.price||'—'}</td><td><span class="pill">новая</span></td></tr>`).join()||'<tr><td colspan="5">Пока пусто — отправьте расчёт</td></tr>';
+  document.getElementById('prices').textContent=JSON.stringify(PAMYAT_PRICES,null,2);
+};
+</script>
+</body>
+</html>
