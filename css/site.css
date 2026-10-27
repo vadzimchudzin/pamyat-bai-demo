@@ -19,7 +19,8 @@ h2{font-size:clamp(36px,4.4vw,58px);line-height:1.04}
 @keyframes cue{0%{transform:translateY(0);opacity:0}30%{opacity:1}80%{transform:translateY(14px);opacity:0}100%{opacity:0}}
 
 /* ================= STORY ================= */
-.story{position:relative;height:calc(6 * 165vh + 240vh);background:var(--night);color:var(--cream)}
+.stage-hero{transition:opacity .08s linear}
+.story{position:relative;height:calc(6 * 165vh + 240vh);background:var(--night);color:var(--cream);margin-top:-18vh;padding-top:18vh}
 .story-pin{--e:0;--o:0;--p:0;position:sticky;top:0;height:100vh;height:100svh;overflow:hidden;background:radial-gradient(120% 80% at 50% 0%,#211d17 0,var(--night) 60%)}
 .story-intro{position:absolute;z-index:4;left:0;right:0;top:calc(72px + 4vh);text-align:center;padding:0 6vw;pointer-events:none;opacity:clamp(0,calc(1 - var(--e)*1.6),1);transform:translateY(calc(var(--e)*-60px))}
 .story-intro .eyebrow{color:var(--gold2)}

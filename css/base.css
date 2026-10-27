@@ -8,7 +8,10 @@ a{color:inherit;text-decoration:none}
 img{display:block;max-width:100%}
 .wrap{width:min(1120px,92vw);margin:0 auto}
 .eyebrow{font-size:13px;letter-spacing:.18em;text-transform:uppercase;color:var(--accent);margin-bottom:18px}
-.top{position:fixed;top:0;left:0;right:0;z-index:10;transition:background .4s,box-shadow .4s}
+.top{position:fixed;top:0;left:0;right:0;z-index:10;transition:background .4s,box-shadow .4s;overflow:hidden}
+.hdr-sky{position:absolute;inset:0;pointer-events:none;overflow:hidden;opacity:.85;mix-blend-mode:screen}
+.hdr-sky .cl{position:absolute;width:140%;aspect-ratio:3168/1344;left:-20%;background-size:100% 100%;background-repeat:no-repeat;mix-blend-mode:screen;opacity:0;animation:drift var(--T,110s) linear infinite;animation-delay:var(--d,0s)}
+.bar-h{position:relative;z-index:1}
 .top.scrolled{background:rgba(246,241,232,.94);backdrop-filter:blur(8px);box-shadow:0 1px 0 var(--line)}
 .bar-h{height:72px;display:flex;align-items:center;justify-content:space-between}
 .logo{font-family:Georgia,serif;font-size:20px;letter-spacing:.06em}
@@ -64,10 +67,10 @@ h2{font-size:clamp(30px,3.6vw,44px);margin-bottom:16px}
 .cl{position:absolute;width:130%;aspect-ratio:3168/1344;left:-15%;background-size:100% 100%;background-repeat:no-repeat;mix-blend-mode:screen;opacity:0;animation:drift var(--T,160s) linear infinite;animation-delay:var(--d,0s);will-change:transform,opacity}
 .a1,.a2{background-image:var(--cA);--o:.55}
 .b1,.b2{background-image:var(--cB);--o:.5}
-.a1{--T:170s;--d:-40s;top:-6%}
-.a2{--T:170s;--d:-125s;top:8%;scale:-1 1}
-.b1{--T:120s;--d:-20s;top:-46%}
-.b2{--T:120s;--d:-80s;top:-38%;scale:-1 1}
+.a1{--T:110s;--d:-40s;top:-6%}
+.a2{--T:110s;--d:-125s;top:8%;scale:-1 1}
+.b1{--T:78s;--d:-20s;top:-46%}
+.b2{--T:78s;--d:-80s;top:-38%;scale:-1 1}
 @keyframes drift{0%{transform:translateX(-30%);opacity:0}12%{opacity:var(--o,.8)}88%{opacity:var(--o,.8)}100%{transform:translateX(30%);opacity:0}}
 .sun{position:absolute;left:63.1%;top:38.6%;width:0;height:0;mix-blend-mode:screen}
 .sun i{position:absolute;left:0;top:0;translate:-50% -50%;border-radius:50%;display:block}

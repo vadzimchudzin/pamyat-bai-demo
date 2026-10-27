@@ -15,6 +15,19 @@
   };
   onS(); window.addEventListener('scroll', onS, { passive: true });
 
+  var hero = document.getElementById('hero');
+  var storyEl = document.getElementById('story');
+  var blend = function () {
+    if (!hero || !storyEl) return;
+    var sr = storyEl.getBoundingClientRect();
+    var vh = window.innerHeight || 1;
+    var into = Math.max(0, Math.min(1, (vh - sr.top) / (vh * 0.85)));
+    hero.style.opacity = String(1 - into * 0.92);
+    storyEl.style.setProperty('--blend', into.toFixed(3));
+  };
+  blend();
+  window.addEventListener('scroll', function () { requestAnimationFrame(blend); }, { passive: true });
+
   // split headings into words for staggered reveal
   [].forEach.call(document.querySelectorAll('.split'), function (el) {
     var html = el.innerHTML.split(/(<br\s*\/?>)/i).map(function (part) {
