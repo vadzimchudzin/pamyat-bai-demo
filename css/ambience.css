@@ -70,9 +70,21 @@ em,i,cite{font-style:normal}
   background:transparent;border:0;backdrop-filter:none;padding:0
 }
 .section,.app-page,.wizard,.trust,.stage-hero{background:transparent}
-.hero-copy h1,.hero-copy .sub{text-shadow:0 2px 18px rgba(246,241,232,.85);color:var(--ink)}
-.hero-copy .sub{color:var(--ink);opacity:.92}
+.hero-copy{
+  z-index:3;
+}
+.hero-copy h1,.hero-copy .sub{color:#2a241c;text-shadow:none}
+.hero-copy .sub{color:#3d3428;opacity:1}
+.hero-copy h1,.hero-copy .sub,.hero-copy .btn-gold,.hero-copy .rule{
+  background:rgba(246,241,232,.82);
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+.hero-copy h1{display:inline-block;padding:.35rem .7rem;border-radius:8px}
+.hero-copy .sub{display:inline-block;padding:.45rem .7rem;border-radius:8px}
 .stage-hero{min-height:100svh}
+.app-page,.wizard{background:var(--bg)!important;color:var(--ink)!important}
+.top{background:rgba(246,241,232,.55)}
 
 /* Калькулятор: овалы вместо квадратов */
 .opt{
