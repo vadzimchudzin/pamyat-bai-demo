@@ -95,3 +95,8 @@ em,i,cite{font-style:normal}
   padding:.7rem 1.1rem;
 }
 .opt.on{background:var(--gold);color:#fff;border-color:var(--gold)}
+
+/* Шапка: облака на бежевой подложке (без чёрного у JPG) */
+.hdr-sky{background:linear-gradient(180deg,#efe5d4,#f6f1e8);mix-blend-mode:normal}
+.top.scrolled .hdr-sky{opacity:1}
+.top.scrolled{box-shadow:0 1px 0 var(--line)}
