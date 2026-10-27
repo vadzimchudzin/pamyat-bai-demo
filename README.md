@@ -38,3 +38,5 @@ Vercel сам добавит переменную `DATABASE_URL` (или `POSTGR
 - `admin.html`, `css/admin.css`, `js/admin.js` — админка.
 - `api/` — серверные функции: `auth`, `content`, `upload`, `img`, `lead`, `tg`, `log`.
 - `preview.html` — превью всего сайта одним файлом.
+
+<!-- GitHub deployment refresh: commit identity comes from the connected GitHub account. -->
