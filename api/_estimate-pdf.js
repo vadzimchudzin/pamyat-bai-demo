@@ -47,7 +47,7 @@ function makeEstimatePdf(estimate, company) {
       {text:'ПАМЯТЬ.БАЙ',style:'brand'},
       {text:'СМЕТА №'+estimate.id,style:'title'},
       {text:'Расчёт стоимости работ и материалов',style:'subtitle'},
-      {table:{widths:['auto','*'],body:meta},layout:{hLineColor:'#e7ded0',vLineColor:'#e7ded0',paddingLeft:8,paddingRight:8,paddingTop:4,paddingBottom:4}},
+      {table:{widths:['auto','*'],body:meta},layout:{hLineColor:'#e7ded0',vLineColor:'#e7ded0',paddingLeft:()=>8,paddingRight:()=>8,paddingTop:()=>4,paddingBottom:()=>4}},
       {text:'Состав сметы',style:'section'},
       {table:{
         headerRows:1,keepWithHeaderRows:1,
@@ -64,7 +64,7 @@ function makeEstimatePdf(estimate, company) {
       },layout:{
         fillColor:(row)=>row===0?'#ede2d2':(row%2===0?'#faf7f2':null),
         hLineColor:'#d8c7ad',vLineColor:'#e7ded0',
-        paddingLeft:5,paddingRight:5,paddingTop:5,paddingBottom:5
+        paddingLeft:()=>5,paddingRight:()=>5,paddingTop:()=>5,paddingBottom:()=>5
       }},
       {text:'Сумма позиций: '+money(subtotal),alignment:'right',margin:[0,10,0,2]},
       {text:'Скидка: '+money(discount),alignment:'right',margin:[0,0,0,2]},
