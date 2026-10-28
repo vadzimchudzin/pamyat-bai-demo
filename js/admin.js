@@ -192,10 +192,12 @@
     var lead=LEADS.find(function(x){return String(x.id)===String(id);});
     if(lead && lead.status!==zone.dataset.dropStatus) leadStatus(id,zone.dataset.dropStatus);
   });
+  // Poll only the active board; update cards without reloading the page.
+  // The request guard prevents overlapping calls if Neon/Vercel responds slowly.
   setInterval(function () {
     if (!$('#app').hidden && document.visibilityState === 'visible' &&
         $('#p-leads').classList.contains('on') && !draggedLeadId) loadLeads({silent:true});
-  }, 2500);
+  }, 1500);
   document.addEventListener('visibilitychange', function () {
     if (document.visibilityState === 'visible' && !$('#app').hidden &&
         $('#p-leads').classList.contains('on')) loadLeads({silent:true});
