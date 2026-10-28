@@ -328,6 +328,7 @@
   }
   $('#catEd').addEventListener('input', function (e) {
     var inp = e.target;
+    if (inp.name === 'kv' && !inp.disabled) inp.dataset.individualValue = inp.value;
     if (inp.name === 'commonSize') {
       var K = C.catalog || {};
       K.commonSize = inp.value;
