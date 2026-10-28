@@ -7,6 +7,7 @@
   $('#print').addEventListener('click',function(){window.print();});
   var token=new URLSearchParams(location.search).get('token');
   if(!token){$('#quote').innerHTML='<p class="error">В ссылке отсутствует токен сметы.</p>';return;}
+  $('#downloadWord').href='/api/estimate-file?token='+encodeURIComponent(token);
   fetch('/api/finance?token='+encodeURIComponent(token),{headers:{accept:'application/json'},cache:'no-store'})
     .then(function(r){return r.json().then(function(d){if(!r.ok||!d.ok)throw new Error(d.error||'Смета не найдена');return d;});})
     .then(function(d){
