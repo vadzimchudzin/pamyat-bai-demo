@@ -143,6 +143,33 @@ function textRows(text) {
     return [line];
   });
 }
+function stripHtml(html) {
+  return String(html || '')
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/p\s*>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;|&#160;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'")
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+function rowsFromDocxHtml(html) {
+  const tables = String(html || '').match(/<table\b[\s\S]*?<\/table>/gi) || [];
+  const rows = [];
+  tables.forEach(table => {
+    const trs = table.match(/<tr\b[\s\S]*?<\/tr>/gi) || [];
+    trs.forEach(tr => {
+      const cells = tr.match(/<t[dh]\b[\s\S]*?<\/t[dh]>/gi) || [];
+      const values = cells.map(cell => stripHtml(cell));
+      if (values.some(v => v !== '')) rows.push(values);
+    });
+  });
+  return rows;
+}
 async function parsePricebookFile({fileName, base64, mimeType}) {
   const filename = String(fileName || 'catalog').slice(0,200);
   const ext = (filename.match(/\.([^.]+)$/) || [,''])[1].toLowerCase();
@@ -161,8 +188,12 @@ async function parsePricebookFile({fileName, base64, mimeType}) {
     if (!first) throw new Error('В файле нет листа с данными.');
     rows = XLSX.utils.sheet_to_json(workbook.Sheets[first],{header:1,defval:'',raw:false});
   } else if (ext === 'docx') {
-    const result = await mammoth.extractRawText({buffer});
-    rows = textRows(result.value);
+    const converted = await mammoth.convertToHtml({buffer});
+    rows = rowsFromDocxHtml(converted.value);
+    if (!rows.length) {
+      const result = await mammoth.extractRawText({buffer});
+      rows = textRows(result.value);
+    }
   } else if (ext === 'pdf') {
     const result = await pdfParse(buffer);
     if (!String(result.text || '').trim()) throw new Error('PDF выглядит как скан без текстового слоя. Сохраните его с распознанным текстом (OCR) или экспортируйте таблицу в Excel.');
