@@ -29,8 +29,8 @@
 
   /* ---------- навигация ---------- */
   function activatePane(name) {
-    $('#nav button').forEach(function (x) { x.classList.toggle('on', x.dataset.p === name); });
-    $('.pane').forEach(function (p) { p.classList.toggle('on', p.id === 'p-' + name); });
+    $$('#nav button').forEach(function (x) { x.classList.toggle('on', x.dataset.p === name); });
+    $$('.pane').forEach(function (p) { p.classList.toggle('on', p.id === 'p-' + name); });
     if (name === 'log') loadLog();
     if (name === 'leads') loadLeads();
     if (name === 'pricebook') loadPricebook();
