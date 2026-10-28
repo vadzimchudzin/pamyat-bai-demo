@@ -37,6 +37,7 @@ module.exports = async (req, res) => {
     if (action === 'save_pricebook') {
       const items = Array.isArray(b.items) ? b.items.slice(0, 3000).map((x, i) => ({
         id: clean(x.id, 80) || 'price-' + (i + 1),
+        article: clean(x.article, 80),
         category: clean(x.category, 120),
         name: clean(x.name, 220) || 'Позиция без названия',
         unit: clean(x.unit, 40) || 'шт.',
@@ -66,6 +67,7 @@ module.exports = async (req, res) => {
       const id = Number(b.id);
       if (!Number.isInteger(id) || id <= 0) return L.send(res, 400, {ok:false,error:'Не указан номер сметы'});
       const rows = Array.isArray(b.items) ? b.items.slice(0, 500).map((x, i) => ({
+        article: clean(x.article, 80) || '—',
         name: clean(x.name, 240) || ('Позиция ' + (i + 1)),
         unit: clean(x.unit, 40) || 'шт.',
         qty: Math.max(0, number(x.qty, 0)),
