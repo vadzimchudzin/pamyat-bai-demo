@@ -1,5 +1,6 @@
 /* Telegram: таблица заявки, управление статусом и создание смет кнопками в группе. */
 const L = require('./_lib');
+const { makeEstimateDocx } = require('./_estimate-docx');
 const STATUS_BY_CODE = {
   n:'новая',
   w:'взята в работу',
@@ -16,17 +17,42 @@ function whoFrom(cb) {
 }
 function money(v) { return Number(v || 0).toLocaleString('ru-RU') + ' BYN'; }
 function quoteText(e) {
-  const rows = Array.isArray(e.items) ? e.items : [];
-  const table = rows.map((x, i) => {
-    const sum = Number(x.qty || 0) * Number(x.price || 0);
-    return (i + 1) + '. ' + String(x.name || 'Позиция').slice(0, 70) + '\n   ' +
-      String(x.qty || 0) + ' ' + String(x.unit || 'шт.') + ' × ' + money(x.price) + ' = ' + money(sum) +
-      (x.note ? '\n   ' + String(x.note).slice(0,100) : '');
-  }).join('\n');
-  return '<b>🧾 СМЕТА №' + e.id + ' · ПАМЯТЬ.БАЙ</b>\n' +
-    '<pre>' + L.esc((e.client_name || 'Клиент') + '\n' + (e.client_phone || '') + '\n\n' + (table || 'Позиции не добавлены').slice(0,2400)) + '</pre>\n' +
-    '<b>Итого: ' + money(e.total) + '</b>' +
-    (e.notes ? '\n\n<b>Примечание:</b> ' + L.esc(String(e.notes).slice(0,500)) : '');
+  const rows = Array.isArray(e.items) ? e.items : (typeof e.items === 'string' ? JSON.parse(e.items || '[]') : []);
+  function fit(value, width) {
+    const text = String(value == null ? '—' : value).replace(/[\\r\\n]+/g, ' ').trim();
+    const chars = Array.from(text);
+    const short = chars.length > width ? chars.slice(0,width-1).join('') + '…' : text;
+    return short + ' '.repeat(Math.max(0,width-Array.from(short).length));
+  }
+  const widths = [3, 27, 6, 7, 12, 12];
+  const headers = ['№','Позиция','Ед.','Кол-во','Цена','Сумма'];
+  const tableRows = rows.slice(0, 16).map((x,i)=>[
+    String(i+1),x.name || 'Позиция',x.unit || 'шт.',
+    Number(x.qty || 0).toLocaleString('ru-RU',{maximumFractionDigits:2}),
+    money(x.price),money(Number(x.qty || 0)*Number(x.price || 0))
+  ]);
+  function line(row) { return '│ ' + row.map((x,i)=>fit(x,widths[i])).join(' │ ') + ' │'; }
+  const top = '┌' + widths.map(w=>'─'.repeat(w+2)).join('┬') + '┐';
+  const mid = '├' + widths.map(w=>'─'.repeat(w+2)).join('┼') + '┤';
+  const bottom = '└' + widths.map(w=>'─'.repeat(w+2)).join('┴') + '┘';
+  const nl = String.fromCharCode(10);
+  const printedRows = [top,line(headers),mid].concat(tableRows.map(line));
+  if (rows.length > tableRows.length) printedRows.push('… см. полную таблицу в Word-файле');
+  printedRows.push(bottom);
+  const subtotal = rows.reduce((sum,x)=>sum+Number(x.qty || 0)*Number(x.price || 0),0);
+  const discount = Math.min(subtotal,Math.max(0,Number(e.discount || 0)));
+  const total = Math.max(0,subtotal-discount);
+  const lines = [
+    '<b>ПАМЯТЬ.БАЙ · СМЕТА №' + e.id + '</b>',
+    '<pre>' + L.esc(printedRows.join(nl)) + '</pre>',
+    '<b>Клиент:</b> ' + L.esc(e.client_name || '—'),
+    '<b>Телефон:</b> ' + L.esc(e.client_phone || '—'),
+    '<b>Сумма позиций:</b> ' + money(subtotal),
+    '<b>Скидка:</b> ' + money(discount),
+    '<b>ИТОГО:</b> ' + money(total)
+  ];
+  if (e.notes) lines.push('<b>Примечание:</b> ' + L.esc(String(e.notes).slice(0,500)));
+  return lines.join(nl);
 }
 module.exports = async (req, res) => {
   try {
@@ -47,9 +73,22 @@ module.exports = async (req, res) => {
             [{text:'📄 Открыть смету / PDF',url:url}],
             [{text:'📤 Отметить «Смета отправлена»',callback_data:'status:q:' + e.lead_id}]
           ]}});
-        await L.tg(t.token, 'answerCallbackQuery', { callback_query_id:cb.id, text:sent.ok ? ('Черновик сметы №' + e.id + ' создан') : 'Смета создана, но не удалось отправить сообщение' });
-        await L.log(req, 'Telegram', 'создан черновик сметы №' + e.id + ' по заявке №' + estimateMatch[1] + ' · ' + who, sent.ok);
-        return L.send(res,200,{ok:true});
+        let docSent = false, docError = '';
+        if (sent.ok) {
+          try {
+            const doc = await makeEstimateDocx(e, c.contacts || {});
+            const form = new FormData();
+            form.append('chat_id', String(cb.message.chat.id));
+            form.append('document', new Blob([doc], { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), 'smeta-' + e.id + '.docx');
+            const upload = await fetch('https://api.telegram.org/bot' + t.token + '/sendDocument', { method:'POST', body:form });
+            const result = await upload.json();
+            docSent = !!result.ok;
+            if (!docSent) docError = result.description || 'Telegram не принял Word-файл';
+          } catch (error) { docError = String(error && error.message || error); }
+        }
+        await L.tg(t.token, 'answerCallbackQuery', { callback_query_id:cb.id, text:sent.ok ? (docSent ? ('Смета №' + e.id + ' и Word-файл отправлены') : ('Смета отправлена, DOCX: ' + docError.slice(0,100))) : 'Не удалось отправить смету' });
+        await L.log(req, 'Telegram', 'смета №' + e.id + ' по заявке №' + estimateMatch[1] + ': сообщение ' + (sent.ok?'ок':'ошибка') + ', Word ' + (docSent?'ок':docError || 'не отправлен') + ' · ' + who, sent.ok && docSent);
+        return L.send(res,200,{ok:true,document:docSent});
       }
 
       let leadId = 0, st = '', actionName = '';
