@@ -8,6 +8,14 @@
 
   /* ---------- шапка + тепло лампады по скроллу ---------- */
   var top = $('#top'), hero = $('#hero');
+  /* меню на телефоне */
+  (function () {
+    var b = $('#burger'), tp = $('#top'); if (!b || !tp) return;
+    b.addEventListener('click', function () { var o = tp.classList.toggle('open'); b.setAttribute('aria-expanded', o); });
+    $$('.menu a', tp).forEach(function (a) { a.addEventListener('click', function () { tp.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); }); });
+    document.addEventListener('click', function (e) { if (!tp.contains(e.target)) tp.classList.remove('open'); });
+  })();
+
   /* фон — одно полотно: верх светлый, середина — переход в сумерки.
      Каждый блок берёт цвет фона под собой и выбирает режим, где текст контрастнее: tone-l (тёмный текст,
      светлое стекло) или tone-d (светлый текст, тёмное стекло). Никаких «серых на сером» в переходе. */
@@ -236,7 +244,7 @@
   /* ---------- данные: каталог и калькулятор (из админки, иначе — по умолчанию) ---------- */
   var CAT = window.PAMYAT_CATALOG_DEFAULT || { categories: [], items: [] };
   var CALC = [
-    { id: 'foundation', name: 'Основание', type: 'radio', sub: 'Выберите один вариант.', items: [
+    { id: 'foundation', name: 'Основание', type: 'radio', sub: 'Если основание уже есть — выберите только установку. Не нужно — пропустите шаг.', items: [
       { id: 'concrete', name: 'Армированный бетонный фундамент', price: 1000 }, { id: 'ready', name: 'Установка на готовое основание', price: 300 }] },
     { id: 'engraving', name: 'Гравировка', type: 'radio', sub: 'Базовая гравировка (ФИО, даты) уже включена.', items: [
       { id: 'base', name: 'Базовая (ФИО, даты)', price: 0, note: 'включено' }, { id: 'art', name: 'Художественная (портрет, пейзаж)', price: 200 },
@@ -262,7 +270,7 @@
     var old = S; S = {};
     STEPS.forEach(function (s) {
       if (s.type === 'contact') return;
-      var keep = old[s.id], ok = s.type === 'multi' ? (keep || []).filter(function (id) { return item(s, id); }) : (item(s, keep) ? keep : (s.items[0] ? s.items[0].id : ''));
+      var keep = old[s.id], ok = s.type === 'multi' ? (keep || []).filter(function (id) { return item(s, id); }) : (item(s, keep) ? keep : '');
       S[s.id] = ok;
     });
     var mc = MODEL_CAT || (MODEL && catOf(MODEL));
@@ -290,7 +298,8 @@
   var lastTotal = '';
   function drawTotal() {
     var tv = $('#tv'); if (!tv) return;
-    var txt = individual() ? 'Индивидуально' : 'от ' + fmt(total()) + ' BYN';
+    var any = STEPS.some(function (s) { return s.type !== 'contact' && (s.type === 'multi' ? S[s.id].length : S[s.id]); });
+    var txt = individual() ? 'Индивидуально' : any ? 'от ' + fmt(total()) + ' BYN' : '0 BYN';
     if (txt !== lastTotal) { tv.textContent = txt; tv.classList.remove('bump'); void tv.offsetWidth; tv.classList.add('bump'); lastTotal = txt; }
   }
   function render() {
@@ -324,7 +333,7 @@
         var act = function () {
           var id = el.dataset.id;
           if (s.type === 'multi') { var a = S[s.id], j = a.indexOf(id); j > -1 ? a.splice(j, 1) : a.push(id); }
-          else { if (s.catalog && S[s.id] !== id) MODEL = ''; S[s.id] = id; }
+          else { if (s.catalog && S[s.id] !== id) MODEL = ''; S[s.id] = S[s.id] === id ? '' : id; }
           render();
         };
         el.addEventListener('click', act); el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });

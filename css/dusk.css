@@ -434,3 +434,71 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
 .cat-back{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:26px}
 .cc .go{margin-top:auto;padding-top:16px}
 .cc .inc{margin-bottom:0}
+
+/* шрифты: ровные цифры (у Playfair по умолчанию «прыгающие» старостильные), без искусственного жирного/курсива */
+html{font-synthesis:none;text-rendering:optimizeLegibility}
+body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportional-nums;font-feature-settings:"lnum" 1}
+.live b{font:600 26px/1.1 var(--sans);letter-spacing:-.01em}
+.prl b,.cc .pr,.radio .p,.tog .p{font-variant-numeric:lining-nums tabular-nums}
+
+/* ================= адаптив: меню-бургер, телефоны и планшеты ================= */
+.burger{display:none;width:44px;height:44px;border-radius:50%;border:1px solid currentColor;background:transparent;place-items:center;align-content:center;gap:4px;opacity:.85;transition:transform .35s var(--ez),opacity .3s}
+.burger i{display:block;width:18px;height:1.6px;background:currentColor;border-radius:2px;transition:transform .35s var(--ez),opacity .25s}
+.top.open .burger i:nth-child(1){transform:translateY(5.6px) rotate(45deg)}
+.top.open .burger i:nth-child(2){opacity:0}
+.top.open .burger i:nth-child(3){transform:translateY(-5.6px) rotate(-45deg)}
+@media (max-width:980px){
+  .burger{display:grid}
+  .menu{position:absolute;top:calc(100% + 8px);left:0;right:0;display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:12px;border-radius:20px;
+    background:rgba(250,245,237,.97);color:#241e17;box-shadow:0 24px 60px rgba(30,20,10,.28);-webkit-backdrop-filter:blur(16px);backdrop-filter:blur(16px);
+    opacity:0;transform:translateY(-8px);pointer-events:none;transition:opacity .3s var(--ez),transform .35s var(--ez)}
+  .top.open .menu{opacity:1;transform:none;pointer-events:auto}
+  .menu a.l,.top .menu a.l{display:block;font-size:17px;opacity:1;padding:13px 14px;border-radius:12px}
+  .menu a.l:active,.menu a.l:hover{background:rgba(154,116,54,.1)}
+  .top .menu .socs{display:flex;justify-content:center;gap:12px;padding:12px 0 4px;margin-top:6px;border-top:1px solid rgba(70,52,32,.14);color:#6b4f24}
+  .top .menu .soc{width:44px;height:44px;opacity:1}
+  .bar{height:64px}
+}
+@media (max-width:720px){
+  .section{padding-top:64px;padding-bottom:64px}
+  h2{font-size:clamp(26px,7.4vw,36px)!important;line-height:1.12}
+  .lead{font-size:16px}
+  .cats{grid-template-columns:1fr;gap:16px}
+  .cc .cover{aspect-ratio:4/3}
+  .mgrid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .mc{padding:6px 6px 10px;border-radius:14px}
+  .mc .t{padding:8px 4px 0;font-size:12px}
+  .mc .t span{display:none}
+  .panel{padding:20px 16px}
+  .stepnav{flex-wrap:nowrap;overflow-x:auto;margin:0 -16px 18px;padding:0 16px 4px;scrollbar-width:none}
+  .stepnav::-webkit-scrollbar{display:none}
+  .stepnav button{flex:0 0 auto}
+  .radio,.tog{padding:14px 14px;gap:12px}
+  .radio .t,.tog .t{font-size:15px}
+  .summary{position:static}
+  .live b{font-size:22px}
+  .cnav .btn,.qcontact .row2 .btn{flex:1 1 auto}
+  .cat-info{gap:14px}
+  .clb{padding:0;align-items:flex-end}
+  .clb .box{max-height:92svh;border-radius:22px 22px 0 0;padding:16px;gap:14px}
+  .clb .pic{min-height:0;aspect-ratio:1/1}
+  .clb .pic img{max-height:46svh}
+  .clb h2{font-size:22px}
+  .clb .acts .btn{flex:1 1 auto}
+  .cta2{padding:6px 6px 6px 20px;font-size:14px}
+  .back{padding:8px 14px;font-size:13px}
+}
+@media (max-width:380px){
+  .mgrid{grid-template-columns:repeat(2,1fr)}
+  .wrap{width:94vw}
+}
+.calc > *, .calc .panel, #q{min-width:0}
+@media (max-width:720px){
+  .clb .pic{aspect-ratio:auto;height:40svh;min-height:240px}
+  .clb .pic img{max-height:92%;max-width:86%;width:auto;height:auto;object-fit:contain}
+  .clb .nv{top:calc(16px + 20svh)}
+}
+.clb .pic{position:relative;overflow:hidden}
+.clb .pic img{position:absolute;inset:0;margin:auto;max-width:86%;max-height:90%;width:auto;height:auto;object-fit:contain}
+@media (min-width:721px){.clb .pic{min-height:440px}}
+.clb .x{z-index:3}
