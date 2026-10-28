@@ -39,7 +39,7 @@
   function load() {
     api('/api/content?full=1').then(function (d) {
       if (!d.ok) return toast(d.error || 'Не удалось загрузить данные', true);
-      C = d.content; drawCalc(); drawWorks(); drawTexts(); drawContacts(); drawTg();
+      C = d.content; drawCatalog(); drawCalc(); drawWorks(); drawTexts(); drawContacts(); drawTg();
     });
     loadLeads();
   }
@@ -53,6 +53,7 @@
     b.addEventListener('click', function () {
       var s = b.dataset.save;
       if (s === 'calc') return save('calc', readCalc());
+      if (s === 'catalog') { readCatalog(); return save('catalog', C.catalog); }
       if (s === 'works') return save('works', C.works);
       if (s === 'texts') return save('texts', readForm('#textsEd'));
       if (s === 'contacts') return save('contacts', readForm('#contactsEd'));
@@ -102,7 +103,7 @@
 
   /* ---------- калькулятор ---------- */
   function drawCalc() {
-    var steps = (C.calc && C.calc.steps) || [];
+    var steps = ((C.calc && C.calc.steps) || []).filter(function (s) { return s.id !== 'monument'; });
     $('#calcEd').innerHTML = steps.map(function (s, si) {
       return '<div class="card step" data-si="' + si + '" data-id="' + esc(s.id) + '">' +
         '<div class="step-head">' + field('name', 'Шаг ' + (si + 1) + ' — название вкладки', s.name) + field('sub', 'Подсказка под заголовком', s.sub) +
@@ -141,6 +142,98 @@
   $('#addStep').addEventListener('click', function () {
     var cal = readCalc(); cal.steps.push({ id: slug('step'), name: 'Новый шаг', type: 'radio', sub: '', items: [{ id: slug('item'), name: 'Вариант', price: 0 }] });
     C.calc = cal; drawCalc();
+  });
+
+  /* ---------- каталог: разделы, обложки, модели — всё редактируется ---------- */
+  var openCats = {};
+  function catImg(src) { return src ? '<img src="' + esc(src) + '" alt="">' : '<span>✦</span>'; }
+  function drawCatalog() {
+    var K = C.catalog || { categories: [], items: [] };
+    $('#catGranite').value = K.granite || '';
+    $('#catEd').innerHTML = K.categories.map(function (c, ci) {
+      var its = K.items.filter(function (x) { return x.cat === c.id; }), cv = c.cover || {};
+      return '<div class="card catc" data-ci="' + ci + '">' +
+        '<div class="top"><div class="cov"><div class="ph">' + catImg(cv.img) + '</div>' +
+          '<label class="btn line sm">Обложка<input type="file" accept="image/*" data-up="cover" hidden></label>' +
+          '<label>Масштаб обложки <input type="range" min="0.8" max="2.2" step="0.05" name="zoom" value="' + (cv.zoom || 1) + '"></label></div>' +
+        '<div><div class="f">' + field('name', 'Название раздела', c.name) + field('short', 'Короткое (для калькулятора)', c.short) +
+          field('price', 'Цена «от», BYN', c.price == null ? '' : c.price, { type: 'number', ph: 'инд.' }) + '</div>' +
+          '<div class="f2">' + field('inc', 'Что входит (через запятую)', c.inc) + field('desc', 'Описание', c.desc, { area: true, rows: 2 }) + '</div>' +
+          '<div style="margin-top:10px"><b style="font-size:13px">Комплект и размеры</b>' + (c.kit || []).map(function (k, ki) {
+            return '<div class="kitrow" data-ki="' + ki + '"><input name="kn" value="' + esc(k[0]) + '" placeholder="Элемент"><input name="kv" value="' + esc(k[1] || '') + '" placeholder="Размер, напр. 100 × 60 × 5 см"><button class="ic del" data-c="kit-del">✕</button></div>';
+          }).join('') + '<button class="link" data-c="kit-add" style="margin-top:6px">+ строка комплекта</button></div>' +
+          '<div class="bar"><label class="chk"><input type="checkbox" name="visible"' + (c.visible !== false ? ' checked' : '') + '> Показывать на сайте</label>' +
+          '<div class="acts"><button class="ic" data-c="up" title="Выше">↑</button><button class="ic" data-c="down" title="Ниже">↓</button><button class="ic del" data-c="del" title="Удалить раздел">✕</button></div></div>' +
+        '</div></div>' +
+        '<details' + (openCats[c.id] ? ' open' : '') + ' data-id="' + esc(c.id) + '"><summary>Модели: ' + its.length + '</summary>' +
+          '<div class="acts" style="margin-top:10px"><label class="btn line sm">+ Загрузить модели<input type="file" accept="image/*" multiple data-up="items" hidden></label></div>' +
+          (openCats[c.id] ? '<div class="mods">' + its.map(function (m) {
+            var gi = K.items.indexOf(m);
+            return '<div class="mod" data-gi="' + gi + '"><div class="ph"><img loading="lazy" src="' + esc(m.img) + '" alt=""></div>' +
+              '<input name="code" value="' + esc(m.code) + '" title="Артикул">' +
+              '<div class="row"><select name="mcat" title="Раздел">' + K.categories.map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === c.id ? ' selected' : '') + '>' + esc(x.short || x.name) + '</option>'; }).join('') + '</select>' +
+              '<button class="ic" data-c="as-cover" title="Сделать обложкой">★</button><button class="ic del" data-c="m-del" title="Удалить">✕</button></div></div>';
+          }).join('') + '</div>' : '') + '</details></div>';
+    }).join('');
+  }
+  function readCatalog() {
+    var K = C.catalog;
+    K.granite = $('#catGranite').value.trim();
+    $$('#catEd .catc').forEach(function (el) {
+      var c = K.categories[+el.dataset.ci], v = function (n) { var i = $('[name=' + n + ']', el); return i ? i.value.trim() : ''; };
+      c.name = v('name') || 'Раздел'; c.short = v('short'); c.inc = v('inc'); c.desc = v('desc');
+      var p = v('price'); c.price = p === '' ? null : Math.max(0, Math.round(+p));
+      c.visible = $('[name=visible]', el).checked;
+      c.cover = c.cover || {}; c.cover.zoom = +$('[name=zoom]', el).value;
+      c.kit = $$('.kitrow', el).map(function (r) { return [$('[name=kn]', r).value.trim(), $('[name=kv]', r).value.trim()]; }).filter(function (k) { return k[0]; });
+      $$('.mod', el).forEach(function (m) {
+        var it = K.items[+m.dataset.gi]; if (!it) return;
+        it.code = $('[name=code]', m).value.trim() || it.code; it.cat = $('[name=mcat]', m).value;
+      });
+    });
+  }
+  $('#catEd').addEventListener('toggle', function (e) {
+    var d = e.target; if (d.tagName !== 'DETAILS') return;
+    var was = !!openCats[d.dataset.id]; openCats[d.dataset.id] = d.open;
+    if (d.open && !was) { readCatalog(); drawCatalog(); }
+  }, true);
+  $('#catEd').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-c]'); if (!b) return;
+    e.preventDefault(); readCatalog();
+    var K = C.catalog, el = b.closest('.catc'), ci = +el.dataset.ci, c = K.categories[ci], a = b.dataset.c;
+    if (a === 'kit-add') c.kit = (c.kit || []).concat([['', '']]);
+    if (a === 'kit-del') c.kit.splice(+b.closest('.kitrow').dataset.ki, 1);
+    if (a === 'up' && ci > 0) { K.categories.splice(ci - 1, 0, K.categories.splice(ci, 1)[0]); }
+    if (a === 'down' && ci < K.categories.length - 1) { K.categories.splice(ci + 1, 0, K.categories.splice(ci, 1)[0]); }
+    if (a === 'del') {
+      var n = K.items.filter(function (x) { return x.cat === c.id; }).length;
+      if (!confirm('Удалить раздел «' + c.name + '»' + (n ? ' и ' + n + ' моделей в нём' : '') + '?')) return;
+      K.items = K.items.filter(function (x) { return x.cat !== c.id; }); K.categories.splice(ci, 1);
+    }
+    if (a === 'm-del') { var gi = +b.closest('.mod').dataset.gi; if (!confirm('Удалить модель ' + K.items[gi].code + '?')) return; K.items.splice(gi, 1); }
+    if (a === 'as-cover') { var it = K.items[+b.closest('.mod').dataset.gi]; c.cover = c.cover || {}; c.cover.img = it.img; toast('Обложка выбрана — не забудьте «Сохранить»'); }
+    drawCatalog();
+  });
+  $('#catEd').addEventListener('change', function (e) {
+    var inp = e.target; if (!inp.dataset.up) return;
+    readCatalog();
+    var K = C.catalog, el = inp.closest('.catc'), c = K.categories[+el.dataset.ci], files = [].slice.call(inp.files || []);
+    inp.value = ''; if (!files.length) return;
+    toast('Загружаем ' + files.length + ' фото…');
+    var prefix = (c.short || c.name || 'M').trim().charAt(0).toUpperCase();
+    files.reduce(function (p, f) {
+      return p.then(function () { return compress(f); }).then(function (data) { return api('/api/upload', { method: 'POST', body: { data: data } }); })
+        .then(function (d) {
+          if (!d.ok) return toast(d.error || 'Фото не загрузилось', true);
+          if (inp.dataset.up === 'cover') { c.cover = c.cover || {}; c.cover.img = d.url; }
+          else { var n = K.items.filter(function (x) { return x.cat === c.id; }).length + 1; K.items.push({ code: prefix + '-' + n, cat: c.id, img: d.url }); openCats[c.id] = true; }
+        });
+    }, Promise.resolve()).then(function () { drawCatalog(); return save('catalog', C.catalog); });
+  });
+  $('#addCat').addEventListener('click', function () {
+    readCatalog();
+    C.catalog.categories.push({ id: slug('cat'), name: 'Новый раздел', short: 'Новый', price: null, inc: '', desc: '', kit: [], cover: { img: '', zoom: 1 }, visible: true });
+    drawCatalog(); toast('Раздел добавлен — заполните и нажмите «Сохранить»');
   });
 
   /* ---------- примеры работ ---------- */

@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/admin.css?v=a1">
+<link rel="stylesheet" href="/css/admin.css?v=a3">
 </head>
 <body>
 <div class="bg" aria-hidden="true"></div>
@@ -32,6 +32,7 @@
     <a class="logo" href="/" target="_blank">Память<span>.бай</span></a>
     <nav id="nav">
       <button data-p="leads" class="on">Заявки <b id="newCount"></b></button>
+      <button data-p="catalog">Каталог</button>
       <button data-p="calc">Калькулятор</button>
       <button data-p="works">Примеры работ</button>
       <button data-p="texts">Тексты</button>
@@ -50,10 +51,18 @@
       <div class="card"><div class="tbl" id="leadsTbl"></div></div>
     </section>
 
+    <!-- каталог -->
+    <section class="pane" id="p-catalog">
+      <header><h2>Каталог</h2><div class="acts"><button class="btn line sm" id="addCat">+ Раздел</button><button class="btn gold sm" data-save="catalog">Сохранить</button></div></header>
+      <p class="hint">Разделы каталога = первый шаг калькулятора (название для калькулятора — «Короткое»; цена — «от»). Пустая цена = «Индивидуальный расчёт». Обложка — один элемент крупным планом; «Масштаб» приближает его. Модели внутри раздела открываются по клику.</p>
+      <div class="card"><label class="wide">Примечание о граните (показывается в каталоге)<textarea id="catGranite" rows="2"></textarea></label></div>
+      <div id="catEd"></div>
+    </section>
+
     <!-- калькулятор -->
     <section class="pane" id="p-calc">
       <header><h2>Калькулятор</h2><div class="acts"><button class="btn line sm" id="addStep">+ Шаг</button><button class="btn gold sm" data-save="calc">Сохранить</button></div></header>
-      <p class="hint">Шаги — это вкладки калькулятора на сайте. «Один вариант» — круглые переключатели, «несколько» — овальные тумблеры. Пустая цена = «индивидуальный расчёт». Подпись вместо цены — например «включено».</p>
+      <p class="hint"><b>Шаг 1 «Памятник» берётся из раздела «Каталог» автоматически.</b> Ниже — остальные шаги. «Один вариант» — круглые переключатели, «несколько» — овальные тумблеры. Пустая цена = «индивидуальный расчёт». Подпись вместо цены — например «включено».</p>
       <div id="calcEd"></div>
     </section>
 
@@ -118,6 +127,6 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="/js/admin.js?v=a1"></script>
+<script src="/js/admin.js?v=a2"></script>
 </body>
 </html>

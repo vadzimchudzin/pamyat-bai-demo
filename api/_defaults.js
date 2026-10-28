@@ -24,15 +24,10 @@ module.exports = {
     { img: '/assets/img/work-2.jpg', caption: 'Крест из габбро-диабаза' },
     { img: '/assets/img/work-3.jpg', caption: 'Стела с крестом' }
   ],
+  catalog: require('./_catalog.json'),
   calc: {
+    /* шаг 1 «Памятник» берётся из каталога автоматически */
     steps: [
-      { id: 'monument', name: 'Памятник', type: 'radio', sub: 'Форма памятника. В комплект входят стела, тумба и цветник.', items: [
-        { id: 'vertical', name: 'Вертикальный', price: 950 },
-        { id: 'horizontal', name: 'Горизонтальный', price: 1700 },
-        { id: 'cross', name: 'В форме креста', price: 1800 },
-        { id: 'complex', name: 'Мемориальный комплекс', price: 3300 },
-        { id: 'exclusive', name: 'Эксклюзивный', price: null, note: 'инд. расчёт' }
-      ] },
       { id: 'foundation', name: 'Основание', type: 'radio', sub: 'Выберите один вариант.', items: [
         { id: 'concrete', name: 'Армированный бетонный фундамент', price: 1000 },
         { id: 'ready', name: 'Установка на готовое основание', price: 300 }

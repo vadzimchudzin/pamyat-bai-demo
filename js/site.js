@@ -8,20 +8,24 @@
 
   /* ---------- шапка + тепло лампады по скроллу ---------- */
   var top = $('#top'), hero = $('#hero');
-  /* фон — одно полотно: верх светлый, ниже ~47% страницы — сумерки. Тема текста секции по месту на полотне */
-  var EDGE = 0.47;
+  /* фон — одно полотно: верх светлый, ~38–60% страницы — переход в сумерки.
+     Цвет текста и стекла каждого блока плавно смешивается по его месту на полотне (без резкой смены). */
+  var EDGE = 0.47, T0 = 0.38, T1 = 0.6, CATPAGE = document.body.classList.contains('catpage');
   function themes() {
     var H = document.documentElement.scrollHeight;
-    $$('main > section:not(.hero)').forEach(function (sec) {
-      var y = sec.getBoundingClientRect().top + scrollY + Math.min(sec.offsetHeight, innerHeight) * 0.5;
-      sec.classList.toggle('tl', y / H < EDGE);
+    $$('main > section:not(.hero), main .head, main .glass, main .note, footer').forEach(function (el) {
+      var r = el.getBoundingClientRect(), y = r.top + scrollY + Math.min(r.height, innerHeight) * 0.5;
+      var t = CATPAGE ? (y - (H - 560)) / 260 : (y / H - T0) / (T1 - T0);
+      t = Math.min(1, Math.max(0, t));
+      el.classList.add('tone'); el.style.setProperty('--tp', t.toFixed(3));
     });
   }
   function onScroll() {
     var h = hero ? hero.offsetHeight : 600;
     if (top) {
       top.classList.toggle('scrolled', scrollY > h * 0.55);
-      top.classList.toggle('dk', (scrollY + 40) / document.documentElement.scrollHeight > EDGE + 0.03);
+      var SH = document.documentElement.scrollHeight;
+      top.classList.toggle('dk', CATPAGE ? scrollY + 40 > SH - 420 : (scrollY + 40) / SH > EDGE + 0.03);
     }
   }
   themes(); onScroll();
@@ -205,12 +209,9 @@
     size(); tick();
   })();
 
-  /* ---------- содержимое из админки (тексты, контакты, работы, калькулятор) ---------- */
-  var DEF_CALC = { steps: [
-    { id: 'monument', name: 'Памятник', type: 'radio', sub: 'Форма памятника. В комплект входят стела, тумба и цветник.', items: [
-      { id: 'vertical', name: 'Вертикальный', price: 950 }, { id: 'horizontal', name: 'Горизонтальный', price: 1700 },
-      { id: 'cross', name: 'В форме креста', price: 1800 }, { id: 'complex', name: 'Мемориальный комплекс', price: 3300 },
-      { id: 'exclusive', name: 'Эксклюзивный', price: null, note: 'инд. расчёт' }] },
+  /* ---------- данные: каталог и калькулятор (из админки, иначе — по умолчанию) ---------- */
+  var CAT = window.PAMYAT_CATALOG_DEFAULT || { categories: [], items: [] };
+  var CALC = [
     { id: 'foundation', name: 'Основание', type: 'radio', sub: 'Выберите один вариант.', items: [
       { id: 'concrete', name: 'Армированный бетонный фундамент', price: 1000 }, { id: 'ready', name: 'Установка на готовое основание', price: 300 }] },
     { id: 'engraving', name: 'Гравировка', type: 'radio', sub: 'Базовая гравировка (ФИО, даты) уже включена.', items: [
@@ -221,75 +222,130 @@
       { id: 'paving', name: 'Тротуарная плитка', price: 400 }, { id: 'fence', name: 'Ограда из гранита', price: 1200 }] },
     { id: 'decor', name: 'Декор', type: 'multi', sub: 'Дополните композицию вазой, искусственной травой или белым щебнем.', items: [
       { id: 'vase', name: 'Гранитная ваза / лампада', price: 200 }, { id: 'grass', name: 'Искусственная трава / белый щебень', price: 80 }] }
-  ] };
-  var STEPS = DEF_CALC.steps, S = {}, step = 0, MODEL = new URLSearchParams(location.search).get('model') || '';
-  function resetSel() {
-    S = {}; STEPS.forEach(function (s) { S[s.id] = s.type === 'multi' ? [] : (s.items[0] ? s.items[0].id : ''); });
+  ];
+  var Q = new URLSearchParams(location.search);
+  var STEPS = [], S = {}, step = 0, MODEL = Q.get('model') || '', MODEL_CAT = Q.get('cat') || '';
+  function visibleCats() { return (CAT.categories || []).filter(function (c) { return c.visible !== false; }); }
+  function catOf(code) { var it = (CAT.items || []).filter(function (x) { return x.code === code; })[0]; return it ? it.cat : ''; }
+  function build() {
+    // шаг 1 «Памятник» = разделы каталога; дальше — шаги из админки; последний — контакты
+    var first = { id: 'monument', name: 'Памятник', type: 'radio', sub: 'Выберите тип — как в каталоге. Гранит и размеры согласуем лично.', catalog: true,
+      items: visibleCats().map(function (c) { return { id: c.id, name: c.short || c.name, price: c.price == null ? null : +c.price }; }) };
+    STEPS = [first].concat(CALC.filter(function (s) { return s.id !== 'monument' && s.items && s.items.length; }))
+      .concat([{ id: '__contact', name: 'Контакты', type: 'contact' }]);
+    var old = S; S = {};
+    STEPS.forEach(function (s) {
+      if (s.type === 'contact') return;
+      var keep = old[s.id], ok = s.type === 'multi' ? (keep || []).filter(function (id) { return item(s, id); }) : (item(s, keep) ? keep : (s.items[0] ? s.items[0].id : ''));
+      S[s.id] = ok;
+    });
+    var mc = MODEL_CAT || (MODEL && catOf(MODEL));
+    if (mc && item(first, mc)) S.monument = mc;
     if (step >= STEPS.length) step = 0;
   }
   function fmt(n) { return Number(n).toLocaleString('ru-RU'); }
-  function item(s, id) { return s.items.filter(function (x) { return x.id === id; })[0]; }
+  function item(s, id) { return (s.items || []).filter(function (x) { return x.id === id; })[0]; }
   function priceLabel(it) { if (it.note) return it.note; if (it.price == null) return 'инд. расчёт'; return 'от ' + fmt(it.price); }
-  function individual() { return STEPS.some(function (s) { return s.type !== 'multi' && item(s, S[s.id]) && item(s, S[s.id]).price == null; }); }
+  function individual() { return STEPS.some(function (s) { return s.type === 'radio' && item(s, S[s.id]) && item(s, S[s.id]).price == null; }); }
   function total() {
     var t = 0;
     STEPS.forEach(function (s) {
+      if (s.type === 'contact') return;
       (s.type === 'multi' ? S[s.id] : [S[s.id]]).forEach(function (id) { var it = item(s, id); if (it && it.price) t += +it.price; });
     });
     return t;
   }
   function summary() {
-    return STEPS.map(function (s) {
+    return STEPS.filter(function (s) { return s.type !== 'contact'; }).map(function (s) {
       var ids = s.type === 'multi' ? S[s.id] : [S[s.id]];
-      var names = ids.map(function (id) { var it = item(s, id); return it ? it.name : ''; }).filter(Boolean);
-      return s.name + ': ' + (names.join(', ') || '—');
+      return s.name + ': ' + (ids.map(function (id) { var it = item(s, id); return it ? it.name : ''; }).filter(Boolean).join(', ') || '—');
     }).join('; ') + (MODEL ? '; Модель: ' + MODEL : '');
+  }
+  var lastTotal = '';
+  function drawTotal() {
+    var tv = $('#tv'); if (!tv) return;
+    var txt = individual() ? 'Индивидуально' : 'от ' + fmt(total()) + ' BYN';
+    if (txt !== lastTotal) { tv.textContent = txt; tv.classList.remove('bump'); void tv.offsetWidth; tv.classList.add('bump'); lastTotal = txt; }
   }
   function render() {
     if (!$('#q') || !STEPS.length) return;
     var s = STEPS[step];
-    // вкладки шагов — кликабельные
     $('#snav').innerHTML = STEPS.map(function (x, i) {
       return '<button type="button" data-step="' + i + '" class="' + (i === step ? 'on' : i < step ? 'done' : '') + '">' + (i + 1) + '. ' + x.name + '</button>';
     }).join('');
     $$('#snav button').forEach(function (b) { b.addEventListener('click', function () { step = +b.dataset.step; render(); }); });
-    $('#q').innerHTML = '<div class="qtitle">' + s.name + '</div><div class="qsub">' + (s.sub || '') + '</div>' + s.items.map(function (o) {
-      var on = s.type === 'multi' ? S[s.id].indexOf(o.id) > -1 : S[s.id] === o.id;
-      return s.type === 'multi'
-        ? '<div class="tog' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="switch" aria-checked="' + on + '" tabindex="0"><span class="sw"></span><span class="t">' + o.name + '</span><span class="p">' + priceLabel(o) + '</span></div>'
-        : '<div class="radio' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="radio" aria-checked="' + on + '" tabindex="0"><i></i><span class="t">' + o.name + '</span><span class="p">' + priceLabel(o) + '</span></div>';
-    }).join('');
-    $$('[data-id]', $('#q')).forEach(function (el) {
-      var act = function () { var id = el.dataset.id; if (s.type === 'multi') { var a = S[s.id], j = a.indexOf(id); j > -1 ? a.splice(j, 1) : a.push(id); } else S[s.id] = id; render(); };
-      el.addEventListener('click', act); el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
-    });
+    if (s.type === 'contact') {
+      $('#q').innerHTML = '<div class="qtitle">Куда прислать расчёт?</div><div class="qsub">Оставьте имя и телефон — перезвоним, уточним детали и зафиксируем смету.</div>' +
+        '<form class="form qcontact" id="cform"><input required name="name" placeholder="Имя" autocomplete="name"><input required name="phone" type="tel" placeholder="+375 (XX) XXX-XX-XX" autocomplete="tel">' +
+        '<textarea name="c" rows="2" placeholder="Комментарий (необязательно)"></textarea><button class="btn btn-gold" type="submit">Отправить заявку <span class="arr">→</span></button>' +
+        '<p class="muted">Нажимая кнопку, вы соглашаетесь с политикой обработки персональных данных.</p></form><div class="ok" id="cok">Спасибо! Перезвоним в рабочее время и уточним детали.</div>';
+      bindForm('#cform', '#cok', 'calc');
+    } else {
+      var pick = s.catalog && S.monument && S.monument !== 'individual'
+        ? '<a class="pick" href="/catalog#' + S.monument + '">' + (MODEL ? 'Модель ' + MODEL + ' · выбрать другую' : 'Выбрать модель в каталоге') + ' →</a>' : '';
+      $('#q').innerHTML = '<div class="qtitle">' + s.name + '</div><div class="qsub">' + (s.sub || '') + '</div>' + s.items.map(function (o) {
+        var on = s.type === 'multi' ? S[s.id].indexOf(o.id) > -1 : S[s.id] === o.id;
+        return s.type === 'multi'
+          ? '<div class="tog' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="switch" aria-checked="' + on + '" tabindex="0"><span class="sw"></span><span class="t">' + o.name + '</span><span class="p">' + priceLabel(o) + '</span></div>'
+          : '<div class="radio' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="radio" aria-checked="' + on + '" tabindex="0"><i></i><span class="t">' + o.name + '</span><span class="p">' + priceLabel(o) + '</span></div>';
+      }).join('') + pick;
+      $$('[data-id]', $('#q')).forEach(function (el) {
+        var act = function () {
+          var id = el.dataset.id;
+          if (s.type === 'multi') { var a = S[s.id], j = a.indexOf(id); j > -1 ? a.splice(j, 1) : a.push(id); }
+          else { if (s.catalog && S[s.id] !== id) MODEL = ''; S[s.id] = id; }
+          render();
+        };
+        el.addEventListener('click', act); el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
+      });
+    }
     $('#prev').style.visibility = step ? 'visible' : 'hidden';
-    $('#next').textContent = step === STEPS.length - 1 ? 'Рассчитать' : 'Далее →';
+    $('#next').style.display = s.type === 'contact' ? 'none' : '';
+    $('#next').innerHTML = 'Далее <span class="arr">→</span>';
     var rows = [];
     STEPS.forEach(function (x, i) {
+      if (x.type === 'contact') return;
       var ids = x.type === 'multi' ? S[x.id] : [S[x.id]];
       rows.push([x.name, ids.map(function (id) { var it = item(x, id); return it ? it.name : ''; }).filter(Boolean).join(', ') || '—']);
-      if (i === 0 && MODEL) rows.push(['Модель из каталога', MODEL]);
+      if (i === 0 && MODEL) rows.push(['Модель', MODEL]);
     });
     $('#sum').innerHTML = rows.map(function (r) { return '<li><span>' + r[0] + '</span><span>' + r[1] + '</span></li>'; }).join('');
+    drawTotal();
   }
   if ($('#q')) {
     $('#prev').onclick = function () { if (step > 0) { step--; render(); } };
-    $('#next').onclick = function () {
-      if (step < STEPS.length - 1) { step++; render(); return; }
-      $('#tv').textContent = individual() ? 'Индивидуальный расчёт' : 'от ' + fmt(total()) + ' BYN';
-      $('#total').classList.add('on');
-    };
-    resetSel(); render();
+    $('#next').onclick = function () { if (step < STEPS.length - 1) { step++; render(); } };
   }
-  // выбор модели из каталога
-  window.pamyatPickModel = function (code, kind) {
-    MODEL = code;
-    var first = STEPS[0]; if (kind && first && item(first, kind)) S[first.id] = kind;
-    step = 0; render();
+  window.pamyatPickModel = function (code, cat) {
+    MODEL = code; MODEL_CAT = cat || catOf(code) || MODEL_CAT; build(); step = 0; render();
     var c = $('#calc'); if (c) c.scrollIntoView({ behavior: 'smooth' });
   };
 
+  /* ---------- каталог на главной: крупно один элемент на раздел ---------- */
+  function coverHtml(c) {
+    var cv = c.cover || {};
+    if (!cv.img) return '<div class="cover ind">✦<span>По вашему эскизу</span></div>';
+    return '<div class="cover"><img src="' + cv.img + '" alt="' + c.name + '" loading="lazy" style="--z:' + (cv.zoom || 1) + ';--pos:' + (cv.pos || '50% 50%') + '"></div>';
+  }
+  function drawTeaser() {
+    var box = $('#catTeaser'); if (!box) return;
+    box.innerHTML = visibleCats().map(function (c) {
+      var n = (CAT.items || []).filter(function (x) { return x.cat === c.id; }).length;
+      return '<a class="cc glass rv in" href="/catalog#' + c.id + '">' + coverHtml(c) + '<h3>' + c.name + '</h3>' +
+        '<div class="pr">' + (c.price == null ? 'Индивидуальный расчёт' : 'от ' + fmt(c.price) + ' BYN') + '</div>' +
+        '<p class="inc">' + (c.inc ? 'Входит: ' + c.inc : (c.desc || '')) + '</p>' +
+        '<div class="go"><span>' + (n ? n + ' моделей' : 'Обсудить проект') + '</span><b>Открыть →</b></div></a>';
+    }).join('');
+  }
+
+  function socialUrl(k, v) {
+    if (!v) return '';
+    if (k === 'telegram') return /^https?:/.test(v) ? v : 'https://t.me/' + v.replace(/^@/, '');
+    if (k === 'viber') return 'viber://chat?number=' + encodeURIComponent(v.replace(/[^\d+]/g, ''));
+    if (k === 'whatsapp') return 'https://wa.me/' + v.replace(/\D/g, '');
+    if (k === 'instagram') return /^https?:/.test(v) ? v : 'https://instagram.com/' + v.replace(/^@/, '');
+    return v;
+  }
   function applyContent(c) {
     if (!c) return;
     var T = c.texts || {};
@@ -297,10 +353,14 @@
     var C = c.contacts || {};
     var tel = (C.phone || '').replace(/[^\d+]/g, '');
     if ($('#cPhone') && C.phone) { $('#cPhone').textContent = C.phone; $('#cPhone').href = tel.replace(/\D/g, '').length >= 7 ? 'tel:' + tel : '#contact'; }
-    function link(id, url) { var a = $(id); if (!a) return; if (url) { a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.hidden = false; } else a.hidden = !!c.__live; }
-    link('#cTg', C.telegram ? (/^https?:/.test(C.telegram) ? C.telegram : 'https://t.me/' + C.telegram.replace(/^@/, '')) : '');
-    link('#cViber', C.viber ? 'viber://chat?number=' + encodeURIComponent(C.viber.replace(/[^\d+]/g, '')) : '');
-    link('#cWa', C.whatsapp ? 'https://wa.me/' + C.whatsapp.replace(/\D/g, '') : '');
+    [['#cTg', 'telegram'], ['#cViber', 'viber'], ['#cWa', 'whatsapp'], ['#cIg', 'instagram']].forEach(function (p) {
+      var a = $(p[0]), url = socialUrl(p[1], C[p[1]]); if (!a) return;
+      if (url) { a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.hidden = false; } else a.hidden = !!c.__live;
+    });
+    $$('.soc[data-soc]').forEach(function (a) {
+      var url = socialUrl(a.dataset.soc, C[a.dataset.soc]);
+      if (url) { a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.hidden = false; } else a.hidden = !!c.__live;
+    });
     if ($('#cLegal') && (C.company || C.unp)) $('#cLegal').textContent = [C.company, C.unp ? 'УНП ' + C.unp : ''].filter(Boolean).join(' · ');
     if (Array.isArray(c.works) && c.works.length && $('#worksGrid')) {
       $('#worksGrid').innerHTML = c.works.map(function (w) {
@@ -308,8 +368,12 @@
       }).join('');
       bindWorks();
     }
-    if (c.calc && Array.isArray(c.calc.steps) && c.calc.steps.length) { STEPS = c.calc.steps.filter(function (s) { return s.items && s.items.length; }); resetSel(); render(); }
+    if (c.catalog && Array.isArray(c.catalog.categories)) { CAT = c.catalog; window.PAMYAT_CATALOG = CAT; document.dispatchEvent(new CustomEvent('pamyat:catalog', { detail: CAT })); }
+    if (c.calc && Array.isArray(c.calc.steps)) CALC = c.calc.steps;
+    drawTeaser(); build(); render(); themes();
   }
+  window.PAMYAT_CATALOG = CAT; window.pamyatThemes = themes;
+  drawTeaser(); build(); render(); themes();
   if (!window.PAMYAT_DEMO) {
     fetch('/api/content', { headers: { accept: 'application/json' } }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) { if (d && d.ok) { d.content.__live = true; applyContent(d.content); } }).catch(function () { });
@@ -329,7 +393,7 @@
   }
 
   /* ---------- формы → заявка (база + Telegram) ---------- */
-  function bind(formSel, okSel, type) {
+  function bindForm(formSel, okSel, type) {
     var f = $(formSel); if (!f) return;
     f.addEventListener('submit', function (e) {
       e.preventDefault();
@@ -349,5 +413,5 @@
         .catch(function () { btn.disabled = false; btn.textContent = 'Отправить ещё раз'; alert('Нет связи. Позвоните нам, пожалуйста.'); });
     });
   }
-  bind('#cform', '#cok', 'calc'); bind('#lform', '#lok', 'contact');
+  bindForm('#lform', '#lok', 'contact');
 })();
