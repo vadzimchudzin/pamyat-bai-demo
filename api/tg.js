@@ -19,17 +19,17 @@ function money(v) { return Number(v || 0).toLocaleString('ru-RU') + ' BYN'; }
 function quoteText(e) {
   const rows = Array.isArray(e.items) ? e.items : (typeof e.items === 'string' ? JSON.parse(e.items || '[]') : []);
   function fit(value, width) {
-    const text = String(value == null ? '—' : value).replace(/[\r\n]+/g, ' ').trim();
+    const text = String(value == null ? '—' : value).replace(/[\\r\\n]+/g, ' ').trim();
     const chars = Array.from(text);
     const short = chars.length > width ? chars.slice(0,width-1).join('') + '…' : text;
     return short + ' '.repeat(Math.max(0,width-Array.from(short).length));
   }
-  const widths = [3, 27, 6, 7, 12, 12];
-  const headers = ['№','Позиция','Ед.','Кол-во','Цена','Сумма'];
+  const widths = [2, 10, 20, 4, 4, 9, 9];
+  const headers = ['№','Артикул','Позиция','Ед.','Кол.','Цена','Сумма'];
   const tableRows = rows.slice(0, 16).map((x,i)=>[
-    String(i+1),x.name || 'Позиция',x.unit || 'шт.',
+    String(i+1), x.article || '—', x.name || 'Позиция', x.unit || 'шт.',
     Number(x.qty || 0).toLocaleString('ru-RU',{maximumFractionDigits:2}),
-    money(x.price),money(Number(x.qty || 0)*Number(x.price || 0))
+    money(x.price), money(Number(x.qty || 0)*Number(x.price || 0))
   ]);
   function line(row) { return '│ ' + row.map((x,i)=>fit(x,widths[i])).join(' │ ') + ' │'; }
   const top = '┌' + widths.map(w=>'─'.repeat(w+2)).join('┬') + '┐';
@@ -37,13 +37,14 @@ function quoteText(e) {
   const bottom = '└' + widths.map(w=>'─'.repeat(w+2)).join('┴') + '┘';
   const nl = String.fromCharCode(10);
   const printedRows = [top,line(headers),mid].concat(tableRows.map(line));
-  if (rows.length > tableRows.length) printedRows.push('… см. полную таблицу в Word-файле');
+  if (rows.length > tableRows.length) printedRows.push('… остальные строки — в Word-файле');
   printedRows.push(bottom);
   const subtotal = rows.reduce((sum,x)=>sum+Number(x.qty || 0)*Number(x.price || 0),0);
   const discount = Math.min(subtotal,Math.max(0,Number(e.discount || 0)));
   const total = Math.max(0,subtotal-discount);
   const lines = [
     '<b>ПАМЯТЬ.БАЙ · СМЕТА №' + e.id + '</b>',
+    '<b>Статус сметы: ' + L.esc(({draft:'Черновик',sent:'Отправлена',approved:'Согласована',rejected:'Отклонена'})[e.status] || e.status || 'Черновик') + '</b>',
     '<pre>' + L.esc(printedRows.join(nl)) + '</pre>',
     '<b>Клиент:</b> ' + L.esc(e.client_name || '—'),
     '<b>Телефон:</b> ' + L.esc(e.client_phone || '—'),
@@ -54,6 +55,7 @@ function quoteText(e) {
   if (e.notes) lines.push('<b>Примечание:</b> ' + L.esc(String(e.notes).slice(0,500)));
   return lines.join(nl);
 }
+
 module.exports = async (req, res) => {
   try {
     const action = req.query && req.query.action;
