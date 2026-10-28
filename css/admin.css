@@ -102,6 +102,13 @@ tr.new td:first-child{box-shadow:inset 3px 0 0 #9a3a24}
 .catc .f2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
 .catc .bar{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:12px;flex-wrap:wrap}
 .catc .kitrow{display:grid;grid-template-columns:1fr 1fr 34px;gap:8px;margin-top:6px}
+.catc .kitrow.with-common-size{grid-template-columns:30px minmax(120px,1fr) minmax(140px,1fr) 34px}
+.catc .kit-common-check{display:flex;align-items:center;justify-content:center;padding:0}
+.catc .kit-common-check input{width:16px;height:16px;accent-color:#a8823f}
+.catc .kitrow input:disabled{background:#eee6d8;color:#746a58;cursor:not-allowed}
+.kit-shared-toggle{margin-top:9px;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:rgba(154,116,54,.05)}
+.kit-shared-toggle .chk{font-size:12px!important}
+.kit-shared-toggle .hint{margin:4px 0 0 24px;font-size:11px;line-height:1.45}
 .catc details{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
 .catc summary{cursor:pointer;font-weight:600;font-size:14px}
 .mods{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin-top:12px}
@@ -113,7 +120,7 @@ tr.new td:first-child{box-shadow:inset 3px 0 0 #9a3a24}
 .mod .ic{width:28px;height:28px;font-size:13px}
 .chk{display:flex!important;align-items:center;gap:8px;color:var(--ink)!important}
 .chk input{width:auto}
-@media(max-width:860px){.catc .top{grid-template-columns:1fr}.catc .f,.catc .f2{grid-template-columns:1fr}}
+@media(max-width:860px){.catc .top{grid-template-columns:1fr}.catc .f,.catc .f2{grid-template-columns:1fr}.catc .kitrow.with-common-size{grid-template-columns:28px minmax(80px,1fr) minmax(100px,1fr) 32px}}
 .catc .cov{align-content:start}
 .catc .cov .btn{justify-self:start;width:100%;text-align:center}
 .catc .cov input[type=range]{accent-color:#a8823f;padding:0;margin-top:6px}
