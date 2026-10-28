@@ -169,13 +169,13 @@ function leadText(L) {
   const bottom = '└' + widths.map(w=>'─'.repeat(w+2)).join('┴') + '┘';
   const lines = [
     '<b>ПАМЯТЬ.БАЙ · НОВАЯ ЗАЯВКА №' + L.id + '</b>',
-    '<pre>' + esc([top,line(headers),bar,line(values),bottom].join('\\n')) + '</pre>',
+    '<pre>' + esc([top,line(headers),bar,line(values),bottom].join(String.fromCharCode(10))) + '</pre>',
     '<b>Тип:</b> ' + esc(type)
   ];
   if (L.config && L.config.summary) lines.push('<b>Состав расчёта</b>', '<pre>' + esc(String(L.config.summary).slice(0, 1500)) + '</pre>');
   if (L.comment) lines.push('<b>Комментарий:</b> ' + esc(String(L.comment).slice(0, 700)));
   if (L.taken_by) lines.push('<b>Ответственный:</b> ' + esc(L.taken_by));
-  return lines.join('\\n');
+  return lines.join(String.fromCharCode(10));
 }
 
 /* ---------- каталог цен и сметы ---------- */
