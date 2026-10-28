@@ -627,6 +627,16 @@
     var data=currentEstimate?readEstimateForm():{items:[]};data.items.push({name:'',unit:'шт.',qty:1,price:0,note:''});drawEstimateItems(data.items);updateEstimateTotal();
   });
   $('#estimateSave').addEventListener('click',function(){saveEstimate(false);});
+  $('#estimateNew').addEventListener('click',function(){
+    api('/api/finance',{method:'POST',body:{action:'create_blank_estimate'}}).then(function(d){
+      if(!d.ok){toast(d.error||'Не удалось создать смету',true);return;}
+      currentEstimate=d.estimate;
+      activatePane('estimates');
+      drawEstimateEditor(currentEstimate);
+      loadEstimates();
+      toast('Создана новая смета №'+currentEstimate.id);
+    }).catch(function(){toast('Ошибка создания сметы',true);});
+  });
   $('#estimatesReload').addEventListener('click',loadEstimates);
   $('#estimatesList').addEventListener('click',function(e){
     var b=e.target.closest('[data-open-estimate],[data-print-estimate]');if(!b)return;
