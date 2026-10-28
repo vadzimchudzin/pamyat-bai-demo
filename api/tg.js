@@ -79,12 +79,7 @@ module.exports = async (req, res) => {
         return L.send(res,200,{ok:true,pdf:sent.ok});
       }
 
-        await L.tg(t.token, 'answerCallbackQuery', { callback_query_id:cb.id, text:sent.ok ? (docSent ? ('Смета №' + e.id + ' и Word-файл отправлены') : ('Смета отправлена, DOCX: ' + docError.slice(0,100))) : 'Не удалось отправить смету' });
-        await L.log(req, 'Telegram', 'смета №' + e.id + ' по заявке №' + estimateMatch[1] + ': сообщение ' + (sent.ok?'ок':'ошибка') + ', Word ' + (docSent?'ок':docError || 'не отправлен') + ' · ' + who, sent.ok && docSent);
-        return L.send(res,200,{ok:true,document:docSent});
-      }
-
-      const quoteStatusMatch = /^quote-status:(sent|approved|rejected):(\d+)$/.exec(data);
+const quoteStatusMatch = /^quote-status:(sent|approved|rejected):(\d+)$/.exec(data);
       if (quoteStatusMatch) {
         const estimateId = Number(quoteStatusMatch[2]);
         const newEstimateStatus = quoteStatusMatch[1];
