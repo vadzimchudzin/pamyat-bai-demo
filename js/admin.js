@@ -326,7 +326,7 @@
     if (inp.name === 'commonSize') {
       var K = C.catalog || {};
       K.commonSize = inp.value;
-      $('#catEd .catc').forEach(function (el) {
+      $$('#catEd .catc').forEach(function (el) {
         var c = K.categories[+el.dataset.ci];
         var sectionInput = $('[name=categorySize]', el);
         if (sectionInput && !(c && c.sizeOverride)) sectionInput.value = inp.value;
