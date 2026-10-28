@@ -220,12 +220,18 @@ async function getSiteContent() {
   const c = await getContent();
   return applySitePriceBook(c, await getPriceBook());
 }
-function leadKeyboard(id) {
+function leadKeyboard(id, currentStatus) {
+  const current = String(currentStatus || 'новая');
+  const button = (status, label, callback) => ({
+    text: current === status ? '▶ ' + label + ' · ТЕКУЩИЙ' : label,
+    callback_data: callback + id
+  });
   return { inline_keyboard: [
-    [{ text: '✅ Взять в работу', callback_data: 'take:' + id }, { text: '🧾 Получить смету', callback_data: 'quote:' + id }],
-    [{ text: '📞 Связались', callback_data: 'status:c:' + id }, { text: '📐 Назначить замер', callback_data: 'status:m:' + id }],
-    [{ text: '📄 Смета отправлена', callback_data: 'status:q:' + id }, { text: '🤝 Договор', callback_data: 'status:d:' + id }],
-    [{ text: '✔️ Завершена', callback_data: 'status:f:' + id }, { text: '✖️ Отказ', callback_data: 'skip:' + id }]
+    [button('новая', '🟡 Новая', 'status:n:'), button('взята в работу', '✅ Взять в работу', 'status:w:')],
+    [button('связались', '📞 Связались', 'status:c:'), button('назначен замер', '📐 Назначить замер', 'status:m:')],
+    [button('отправлена смета', '📄 Смета отправлена', 'status:q:'), button('заключён договор', '🤝 Договор', 'status:d:')],
+    [button('завершена', '✔️ Завершена', 'status:f:'), button('отказ', '✖️ Отказ', 'status:x:')],
+    [{ text:'🧾 Получить смету', callback_data:'quote:' + id }]
   ] };
 }
 async function createEstimateFromLead(leadId, by) {
