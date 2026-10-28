@@ -161,13 +161,13 @@ function leadText(L) {
     ['Дата', time],
     ['Статус', L.status || 'новая']
   ];
-  const table = rows.map(([k, v]) => (String(k).padEnd(9, ' ') + ' │ ' + String(v).replace(/[\\r\\n]+/g, ' ').slice(0, 48))).join('\\n');
-  const summary = L.config && L.config.summary ? String(L.config.summary).split(/;\\s*/).slice(0, 12).map(x => '• ' + x).join('\\n').slice(0, 1200) : '';
+  const table = rows.map(([k, v]) => (String(k).padEnd(9, ' ') + ' │ ' + String(v).replace(/[\r\n]+/g, ' ').slice(0, 48))).join('\n');
+  const summary = L.config && L.config.summary ? String(L.config.summary).split(/;\s*/).slice(0, 12).map(x => '• ' + x).join('\n').slice(0, 1200) : '';
   const lines = ['<b>ПАМЯТЬ.БАЙ · ЗАЯВКА №' + L.id + '</b>', '<pre>' + esc(table) + '</pre>'];
   if (summary) lines.push('<b>Состав расчёта</b>', '<pre>' + esc(summary) + '</pre>');
   if (L.comment) lines.push('<b>Комментарий:</b> ' + esc(String(L.comment).slice(0, 700)));
   if (L.taken_by) lines.push('<b>Ответственный:</b> ' + esc(L.taken_by));
-  return lines.join('\\n');
+  return lines.join('\n');
 }
 
 /* ---------- каталог цен и сметы ---------- */
