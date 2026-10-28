@@ -514,32 +514,33 @@
     row.push(val.trim()); if(row.some(function(x){return x!=='';})) rows.push(row);
     return rows;
   }
-  $('#priceCsv').addEventListener('change',function(e) {
+  $('#priceFile').addEventListener('change',function(e) {
     var file=e.target.files && e.target.files[0]; e.target.value=''; if(!file) return;
+    if(file.size > 3 * 1024 * 1024) return toast('Файл больше 3 МБ. Уменьшите его или сохраните каталог в Excel.',true);
     var fr=new FileReader();
     fr.onload=function(){
-      var rows=parseCsv(String(fr.result||''));
-      if(!rows.length) return toast('CSV-файл пустой',true);
-      var first=rows[0].map(function(x){return x.toLocaleLowerCase('ru-RU');});
-      var hasHeader=first.some(function(x){return /назван|name|наимен/.test(x);});
-      var ix={category:0,name:1,unit:2,price:3,target:4,article:-1}, data=rows;
-      if(hasHeader){
-        function find(re, fallback){var i=first.findIndex(function(x){return re.test(x);});return i<0?fallback:i;}
-        ix.category=find(/катег|category|групп/,0);ix.name=find(/назван|name|наимен/,1);
-        ix.article=find(/артик|sku|article|код\\b/,-1);
-        ix.unit=find(/ед\\.?изм|единиц|unit/,2);ix.price=find(/цен|price|стоим/,3);ix.target=find(/привяз|target|сайт/,4);
-        data=rows.slice(1);
-      }
-      var parsed=data.map(function(r,i){
-        var raw=String(r[ix.price]||'').replace(/\s/g,'').replace(',','.');
-        return {id:slug('price'),category:String(r[ix.category]||'').trim(),name:String(r[ix.name]||'').trim(),article:ix.article>=0?String(r[ix.article]||'').trim():'',
-          unit:String(r[ix.unit]||'шт.').trim(),price:raw===''?null:Math.max(0,Number(raw)||0),siteTarget:String(r[ix.target]||'').trim()};
-      }).filter(function(x){return x.name;});
-      if(!parsed.length) return toast('Не нашёл строк с названиями. Нужны колонки: Категория; Название; Ед.; Цена.',true);
-      if(!confirm('Заменить текущий каталог цен на ' + parsed.length + ' позиций из «' + file.name + '»?')) return;
-      PRICEBOOK.items=parsed; drawPricebook(); toast('Файл разобран. Нажмите «Сохранить каталог», чтобы записать в базу.');
+      var dataUrl=String(fr.result||''), comma=dataUrl.indexOf(',');
+      if(comma<0) return toast('Не удалось прочитать файл',true);
+      toast('Разбираем каталог: '+file.name);
+      api('/api/finance',{method:'POST',body:{
+        action:'import_pricebook',
+        fileName:file.name,
+        mimeType:file.type || 'application/octet-stream',
+        base64:dataUrl.slice(comma+1)
+      }}).then(function(d){
+        if(!d.ok) return toast(d.error || 'Не удалось разобрать каталог',true);
+        var noPrice=Number(d.warnings||0);
+        var note='Распознано строк: '+d.count+(noPrice?'\nБез цены: '+noPrice:'')+'\n\nЗаменить текущий каталог данными из «'+file.name+'»?';
+        if(!confirm(note)) return;
+        PRICEBOOK.items=(d.items||[]).map(function(x,i){
+          return Object.assign({},x,{id:x.id || slug('price')});
+        });
+        drawPricebook();
+        toast('Импортировано '+PRICEBOOK.items.length+' позиций. Проверьте артикулы и цены, затем нажмите «Сохранить каталог».');
+      }).catch(function(err){toast(err && err.message || 'Ошибка импорта каталога',true);});
     };
-    fr.onerror=function(){toast('Не удалось прочитать файл',true);}; fr.readAsText(file,'utf-8');
+    fr.onerror=function(){toast('Не удалось прочитать файл',true);};
+    fr.readAsDataURL(file);
   });
 
   /* ---------- сметы ---------- */
@@ -692,6 +693,13 @@
       if(d.ok&&win){win.location='/estimate.html?token='+encodeURIComponent(d.estimate.public_token);}
       else {if(win)win.close();toast('Не удалось подготовить смету для печати',true);}
     }).catch(function(){if(win)win.close();toast('Ошибка сохранения сметы',true);});
+  });
+  $('#estimateDownloadWord').addEventListener('click',function(){
+    saveEstimate(true).then(function(d){
+      if(!d || !d.ok) return toast('Сначала сохраните смету',true);
+      window.location.href='/api/estimate-file?token='+encodeURIComponent(d.estimate.public_token);
+      toast('Готовим Word-файл сметы №'+d.estimate.id);
+    }).catch(function(){toast('Не удалось подготовить Word-файл',true);});
   });
 
   /* ---------- пароль ---------- */
