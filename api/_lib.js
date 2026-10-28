@@ -198,7 +198,7 @@ function applySitePriceBook(content, book) {
   book.items.forEach(function (p) {
     if (p.price === null || p.price === '' || !Number.isFinite(Number(p.price))) return;
     const target = String(p.siteTarget || '');
-    const price = Math.max(0, Math.round(Number(p.price)));
+    const price = Math.round(Math.max(0, Number(p.price)) * 100) / 100;
     let m = /^catalog:(.+)$/.exec(target);
     if (m && c.catalog && Array.isArray(c.catalog.categories)) {
       const cat = c.catalog.categories.find(x => x.id === m[1]);
