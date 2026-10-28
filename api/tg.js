@@ -95,7 +95,7 @@ module.exports = async (req, res) => {
           const editLead = await L.tg(t.token,'editMessageText',{
             chat_id:t.chat || cb.message.chat.id,message_id:updatedLead.tg_msg_id,
             text:L.leadText(updatedLead),parse_mode:'HTML',disable_web_page_preview:true,
-            reply_markup:L.leadKeyboard(updatedLead.id)
+            reply_markup:L.leadKeyboard(updatedLead.id, updatedLead.status)
           });
           leadMessageUpdated = !!editLead.ok;
         }
@@ -149,7 +149,7 @@ module.exports = async (req, res) => {
         const edit = await L.tg(t.token, 'editMessageText', {
           chat_id:cb.message.chat.id, message_id:cb.message.message_id,
           text:L.leadText(lead), parse_mode:'HTML', disable_web_page_preview:true,
-          reply_markup:L.leadKeyboard(leadId)
+          reply_markup:L.leadKeyboard(leadId, lead.status)
         });
         messageUpdated = !!edit.ok;
         if (!edit.ok) messageError = String(edit.description || 'Не удалось обновить сообщение');
