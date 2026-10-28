@@ -1,8 +1,7 @@
 /* Telegram: таблица заявки, управление статусом и создание смет кнопками в группе. */
 const L = require('./_lib');
 const { makeEstimateDocx } = require('./_estimate-docx');
-const { quoteText, quoteKeyboard, statusLabel } = require('./_estimate-telegram');
-const { makeEstimateTablePng } = require('./_estimate-table');
+const { quoteText, quoteRichMessage, quoteKeyboard, statusLabel } = require('./_estimate-telegram');
 const STATUS_BY_CODE = {
   n:'новая',
   w:'взята в работу',
@@ -18,58 +17,47 @@ function whoFrom(cb) {
     [cb.from && cb.from.first_name, cb.from && cb.from.last_name].filter(Boolean).join(' ') || 'Telegram';
 }
 
-async function sendNewQuotePhoto(token, chatId, estimate, leadStatus, png, caption) {
-  const form = new FormData();
-  form.append('chat_id', String(chatId));
-  form.append('photo', new Blob([png], { type:'image/png' }), 'smeta-' + estimate.id + '.png');
-  form.append('caption', caption);
-  form.append('parse_mode', 'HTML');
-  form.append('reply_markup', JSON.stringify(quoteKeyboard(estimate)));
-  const response = await fetch('https://api.telegram.org/bot' + token + '/sendPhoto', { method:'POST', body:form });
-  return response.json();
-}
-async function sendOrUpdateQuotePhoto(token, chatId, estimate, leadStatus) {
-  const png = makeEstimateTablePng(estimate, leadStatus);
-  const caption = quoteText(estimate, leadStatus);
+async function sendOrUpdateQuoteMessage(token, chatId, estimate, leadStatus) {
+  const richMessage = quoteRichMessage(estimate, leadStatus);
+  const keyboard = quoteKeyboard(estimate);
   const oldMessageId = estimate.telegram_message_id;
   const oldChatId = estimate.telegram_chat_id || chatId;
   if (oldMessageId && oldChatId) {
-    const form = new FormData();
-    form.append('chat_id', String(oldChatId));
-    form.append('message_id', String(oldMessageId));
-    form.append('media', JSON.stringify({ type:'photo', media:'attach://photo', caption:caption, parse_mode:'HTML' }));
-    form.append('reply_markup', JSON.stringify(quoteKeyboard(estimate)));
-    form.append('photo', new Blob([png], { type:'image/png' }), 'smeta-' + estimate.id + '.png');
-    try {
-      const response = await fetch('https://api.telegram.org/bot' + token + '/editMessageMedia', { method:'POST', body:form });
-      const result = await response.json();
-      if (result.ok || /message is not modified/i.test(String(result.description || ''))) {
-        return { ok:true, result:{ message_id:oldMessageId } };
-      }
-    } catch (e) { /* send a fresh message below */ }
+    const edited = await L.tg(token, 'editMessageText', {
+      chat_id:String(oldChatId), message_id:oldMessageId,
+      rich_message:richMessage, reply_markup:keyboard
+    });
+    if (edited.ok || /message is not modified/i.test(String(edited.description || ''))) {
+      return {ok:true,result:{message_id:oldMessageId}};
+    }
   }
-  const sent = await sendNewQuotePhoto(token, chatId, estimate, leadStatus, png, caption);
-  // A previous version may be a text-only message. Remove it only after the replacement photo was sent.
+  const sent = await L.tg(token, 'sendRichMessage', {
+    chat_id:String(chatId), rich_message:richMessage, reply_markup:keyboard
+  });
   if (sent.ok && oldMessageId && oldChatId) {
-    try { await L.tg(token, 'deleteMessage', { chat_id:String(oldChatId), message_id:oldMessageId }); } catch (e) {}
+    try { await L.tg(token, 'deleteMessage', {chat_id:String(oldChatId), message_id:oldMessageId}); } catch (e) {}
   }
   return sent;
 }
 async function editQuoteMessage(token, chatId, messageId, estimate, leadStatus) {
-  const caption = quoteText(estimate, leadStatus);
-  const keyboard = quoteKeyboard(estimate);
-  const edited = await L.tg(token, 'editMessageCaption', {
-    chat_id:chatId, message_id:messageId, caption:caption,
-    parse_mode:'HTML', reply_markup:keyboard
+  const richMessage = quoteRichMessage(estimate, leadStatus);
+  const edited = await L.tg(token, 'editMessageText', {
+    chat_id:chatId, message_id:messageId,
+    rich_message:richMessage, reply_markup:quoteKeyboard(estimate)
   });
   if (edited.ok || /message is not modified/i.test(String(edited.description || ''))) {
-    return { ok:true, result:edited.result || { message_id:messageId } };
+    return {ok:true,result:edited.result || {message_id:messageId}};
   }
-  // Compatibility with old text-only quote messages that predate the table photo.
-  return L.tg(token, 'editMessageText', {
-    chat_id:chatId, message_id:messageId, text:caption,
-    parse_mode:'HTML', disable_web_page_preview:true, reply_markup:keyboard
+  // Upgrade older text/photo estimate messages to the native table format if in-place editing is not possible.
+  const sent = await L.tg(token, 'sendRichMessage', {
+    chat_id:String(chatId), rich_message:richMessage, reply_markup:quoteKeyboard(estimate)
   });
+  if (sent.ok) {
+    try { await L.tg(token, 'deleteMessage', {chat_id:String(chatId), message_id:messageId}); } catch (e) {}
+    const newId = sent.result && sent.result.message_id;
+    if (newId) await L.q('update estimates set telegram_message_id=$1, telegram_chat_id=$2 where id=$3', [newId, String(chatId), estimate.id]);
+  }
+  return sent;
 }
 
 module.exports = async (req, res) => {
@@ -87,7 +75,7 @@ module.exports = async (req, res) => {
         const leadResult = e.lead_id ? await L.q('select status from leads where id=$1 limit 1', [e.lead_id]) : {rows:[]};
         const leadStatus = leadResult.rows[0] ? leadResult.rows[0].status : '';
         const chatId = e.telegram_chat_id || String(cb.message.chat.id);
-        const sent = await sendOrUpdateQuotePhoto(t.token, chatId, e, leadStatus);
+        const sent = await sendOrUpdateQuoteMessage(t.token, chatId, e, leadStatus);
         if (sent.ok) {
           const messageId = sent.result && sent.result.message_id ? sent.result.message_id : e.telegram_message_id;
           if (messageId) await L.q('update estimates set telegram_message_id=$1, telegram_chat_id=$2 where id=$3', [messageId, String(chatId), e.id]);
