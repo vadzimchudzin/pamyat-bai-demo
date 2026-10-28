@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/admin.css?v=a5">
+<link rel="stylesheet" href="/css/admin.css?v=a6">
 </head>
 <body>
 <div class="bg" aria-hidden="true"></div>
@@ -127,7 +127,7 @@
 
     <!-- сметы -->
     <section class="pane" id="p-estimates">
-      <header><h2>Сметы</h2><button class="btn line sm" id="estimatesReload">Обновить</button></header>
+      <header><h2>Сметы</h2><div class="acts"><button class="btn line sm" id="estimatesReload">Обновить</button><button class="btn gold sm" id="estimateNew">+ Новая смета</button></div></header>
       <div class="card"><div class="tbl" id="estimatesList"></div></div>
       <section class="card estimate-editor" id="estimateEditor" hidden>
         <header><h2 id="estimateTitle">Новая смета</h2><div class="acts">
@@ -170,6 +170,6 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="/js/admin.js?v=a5"></script>
+<script src="/js/admin.js?v=a6"></script>
 </body>
 </html>
