@@ -44,6 +44,8 @@ module.exports = async (req, res) => {
     const s = await L.requireAdmin(req, res); if (!s) return;
     if (req.method === 'GET') {
       const r = await L.q(`select * from leads order by id desc limit 500`);
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
       return L.send(res, 200, { ok: true, leads: r.rows, statuses: STATUSES });
     }
     if (req.method === 'PATCH') {
