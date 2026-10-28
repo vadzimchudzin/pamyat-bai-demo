@@ -2,6 +2,11 @@
   "name": "pamyat-bai",
   "private": true,
   "description": "ПАМЯТЬ.БАЙ — сайт и админка",
-  "engines": { "node": ">=18" },
-  "dependencies": { "pg": "^8.13.0" }
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "pg": "^8.13.0",
+    "docx": "^9.15.0"
+  }
 }
