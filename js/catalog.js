@@ -33,8 +33,23 @@
   function kitHtml(c) {
     var h = '';
     if (c.price != null && c.price !== '') h += '<div class="prl"><span>Стоимость</span><b>' + price(c) + '</b></div>';
-    if (c.kit && c.kit.length) h += '<ul class="kit">' + c.kit.map(function (k) { return '<li><b>' + k[0] + '</b><span>' + (k[1] || '') + '</span></li>'; }).join('') + '</ul>';
-    else if (c.inc) h += '<ul class="kit">' + c.inc.split(/,\s*/).map(function (k) { return '<li><b>' + k.charAt(0).toUpperCase() + k.slice(1) + '</b></li>'; }).join('') + '</ul>';
+    var sharedSize = CAT.sameSizeAll ? String(c.sizeOverride || CAT.commonSize || '').trim() : '';
+    var sizeApplied = false;
+    if (c.kit && c.kit.length) {
+      h += '<ul class="kit">' + c.kit.map(function (k) {
+        var name = String(k[0] || '');
+        var primary = /стел|памят|плита|крест|ограда|комплекс/i.test(name);
+        var value = k[1] || '';
+        if (sharedSize && primary && !sizeApplied) { value = sharedSize; sizeApplied = true; }
+        return '<li><b>' + k[0] + '</b><span>' + value + '</span></li>';
+      }).join('') +
+      (sharedSize && !sizeApplied ? '<li><b>Размер / габариты</b><span>' + sharedSize.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span></li>' : '') +
+      '</ul>';
+    } else if (c.inc || sharedSize) {
+      h += '<ul class="kit">' + (c.inc ? c.inc.split(/,\s*/).map(function (k) { return '<li><b>' + k.charAt(0).toUpperCase() + k.slice(1) + '</b></li>'; }).join('') : '') +
+        (sharedSize ? '<li><b>Размер / габариты</b><span>' + sharedSize.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</span></li>' : '') +
+        '</ul>';
+    }
     return h;
   }
 

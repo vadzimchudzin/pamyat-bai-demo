@@ -252,7 +252,14 @@
   function drawCatalog() {
     var K = C.catalog || { categories: [], items: [] };
     $('#catGranite').value = K.granite || '';
-    $('#catEd').innerHTML = K.categories.map(function (c, ci) {
+    var sameSizeAll = K.sameSizeAll === true;
+    var commonSize = K.commonSize || '';
+    $('#catEd').innerHTML = '<div class="card size-global">' +
+      '<div class="size-global-head"><div><b>Одинаковые размеры для всех разделов</b><p class="hint">Включите, чтобы задать один размер сразу для всего каталога. В конкретном разделе его можно изменить вручную.</p></div>' +
+      '<label class="chk"><input type="checkbox" name="sameSizeAll"' + (sameSizeAll ? ' checked' : '') + '> Использовать общий размер</label></div>' +
+      (sameSizeAll ? '<div class="size-global-field">' + field('commonSize', 'Общий размер / габариты', commonSize, { wide:true, ph:'Например: 100 × 50 × 5 см' }) +
+        '<p class="hint">Изменение общего размера обновит разделы без индивидуальной правки.</p></div>' : '') +
+      '</div>' + K.categories.map(function (c, ci) {
       var its = K.items.filter(function (x) { return x.cat === c.id; }), cv = c.cover || {};
       return '<div class="card catc" data-ci="' + ci + '">' +
         '<div class="top"><div class="cov"><div class="ph">' + catImg(cv.img) + '</div>' +
@@ -261,6 +268,8 @@
         '<div><div class="f">' + field('name', 'Название раздела', c.name) + field('short', 'Короткое (для калькулятора)', c.short) +
           field('price', 'Цена «от», BYN', c.price == null ? '' : c.price, { type: 'number', ph: 'инд.' }) + '</div>' +
           '<div class="f2">' + field('inc', 'Что входит (через запятую)', c.inc) + field('desc', 'Описание', c.desc, { area: true, rows: 2 }) + '</div>' +
+          (sameSizeAll ? '<div class="cat-size-override">' + field('categorySize', 'Размер / габариты этого раздела', c.sizeOverride || commonSize, { wide:true, ph:'Общий размер или свой для этого раздела' }) +
+            '<p class="hint">Оставьте общий размер или укажите свой. Остальные размеры комплекта ниже не меняются.</p></div>' : '') +
           '<div style="margin-top:10px"><b style="font-size:13px">Комплект и размеры</b>' + (c.kit || []).map(function (k, ki) {
             return '<div class="kitrow" data-ki="' + ki + '"><input name="kn" value="' + esc(k[0]) + '" placeholder="Элемент"><input name="kv" value="' + esc(k[1] || '') + '" placeholder="Размер, напр. 100 × 60 × 5 см"><button class="ic del" data-c="kit-del">✕</button></div>';
           }).join('') + '<button class="link" data-c="kit-add" style="margin-top:6px">+ строка комплекта</button></div>' +
@@ -281,6 +290,11 @@
   }
   function readCatalog() {
     var K = C.catalog;
+    var sharedToggle = $('#catEd [name=sameSizeAll]');
+    if (sharedToggle) K.sameSizeAll = sharedToggle.checked;
+    var sharedInput = $('#catEd [name=commonSize]');
+    if (sharedInput) K.commonSize = sharedInput.value.trim();
+    if (K.commonSize == null) K.commonSize = '';
     K.granite = $('#catGranite').value.trim();
     $$('#catEd .catc').forEach(function (el) {
       var c = K.categories[+el.dataset.ci], v = function (n) { var i = $('[name=' + n + ']', el); return i ? i.value.trim() : ''; };
@@ -289,13 +303,43 @@
       c.visible = $('[name=visible]', el).checked;
       c.calc = $('[name=incalc]', el).checked;
       c.cover = c.cover || {}; c.cover.zoom = +$('[name=zoom]', el).value;
-      c.kit = $$('.kitrow', el).map(function (r) { return [$('[name=kn]', r).value.trim(), $('[name=kv]', r).value.trim()]; }).filter(function (k) { return k[0]; });
+      var categorySizeInput = $('[name=categorySize]', el);
+      if (categorySizeInput) {
+        var categorySizeValue = categorySizeInput.value.trim();
+        c.sizeOverride = categorySizeValue && categorySizeValue !== String(K.commonSize || '').trim() ? categorySizeValue : '';
+      }
+      c.kit = $('.kitrow', el).map(function (r) { return [$('[name=kn]', r).value.trim(), $('[name=kv]', r).value.trim()]; }).filter(function (k) { return k[0]; });
       $$('.mod', el).forEach(function (m) {
         var it = K.items[+m.dataset.gi]; if (!it) return;
         it.code = $('[name=code]', m).value.trim() || it.code; it.cat = $('[name=mcat]', m).value;
       });
     });
   }
+  $('#catEd').addEventListener('input', function (e) {
+    var inp = e.target;
+    if (inp.name === 'commonSize') {
+      var K = C.catalog || {};
+      K.commonSize = inp.value;
+      $('#catEd .catc').forEach(function (el) {
+        var c = K.categories[+el.dataset.ci];
+        var sectionInput = $('[name=categorySize]', el);
+        if (sectionInput && !(c && c.sizeOverride)) sectionInput.value = inp.value;
+      });
+      return;
+    }
+    if (inp.name === 'categorySize') {
+      var el = inp.closest('.catc');
+      if (!el) return;
+      var c = C.catalog.categories[+el.dataset.ci];
+      var value = inp.value.trim();
+      c.sizeOverride = value && value !== String(C.catalog.commonSize || '').trim() ? value : '';
+    }
+  });
+  $('#catEd').addEventListener('change', function (e) {
+    if (!e.target || e.target.name !== 'sameSizeAll') return;
+    readCatalog();
+    drawCatalog();
+  });
   $('#catEd').addEventListener('toggle', function (e) {
     var d = e.target; if (d.tagName !== 'DETAILS') return;
     var was = !!openCats[d.dataset.id]; openCats[d.dataset.id] = d.open;

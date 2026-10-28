@@ -300,3 +300,15 @@ tr.new td:first-child{box-shadow:inset 3px 0 0 #9a3a24}
 
 .price-table .price-article{min-width:130px}
 .estimate-table .estimate-article{min-width:100px;max-width:135px}
+
+/* Shared catalog size defaults with individual category overrides */
+.size-global{margin-bottom:16px;border-color:rgba(154,116,54,.32);background:linear-gradient(135deg,rgba(154,116,54,.08),rgba(255,255,255,.015))}
+.size-global-head{display:flex;justify-content:space-between;align-items:flex-start;gap:20px;flex-wrap:wrap}
+.size-global-head b{font-size:14px}
+.size-global-head .hint{margin:5px 0 0;max-width:650px}
+.size-global-head .chk{white-space:nowrap}
+.size-global-field{margin-top:14px;max-width:560px}
+.size-global-field .hint,.cat-size-override .hint{margin:5px 0 0}
+.cat-size-override{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:rgba(154,116,54,.045)}
+.cat-size-override label{max-width:560px}
+@media(max-width:680px){.size-global-head{display:block}.size-global-head .chk{margin-top:12px;white-space:normal}}
