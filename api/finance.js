@@ -41,7 +41,7 @@ module.exports = async (req, res) => {
         category: clean(x.category, 120),
         name: clean(x.name, 220) || 'Позиция без названия',
         unit: clean(x.unit, 40) || 'шт.',
-        price: x.price === '' || x.price === null || x.price === undefined ? null : Math.max(0, Math.round(number(x.price, 0))),
+        price: x.price === '' || x.price === null || x.price === undefined ? null : Math.round(Math.max(0, number(x.price, 0)) * 100) / 100,
         siteTarget: clean(x.siteTarget, 220)
       })) : [];
       await L.q(`update price_catalog set items=$1::jsonb, site_sync=$2, updated_at=now(), updated_by=$3 where id=1`,
