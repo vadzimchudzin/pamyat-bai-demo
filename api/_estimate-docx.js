@@ -13,7 +13,7 @@ function money(value) {
 function paragraph(text, opts) {
   return new Paragraph({
     alignment: opts && opts.center ? AlignmentType.CENTER : AlignmentType.LEFT,
-    spacing: { before: opts && opts.before || 0, after: opts && opts.after == null ? 100 : opts.after },
+    spacing: { before: opts && opts.before || 0, after: !opts || opts.after == null ? 100 : opts.after },
     children: [new TextRun({
       text: clean(text),
       font: 'Arial',
