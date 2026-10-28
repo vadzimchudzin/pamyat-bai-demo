@@ -319,8 +319,7 @@
           ? '<div class="tog' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="switch" aria-checked="' + on + '" tabindex="0"><span class="sw"></span><span class="t">' + o.name + '</span><span class="p">' + priceLabel(o) + '</span></div>'
           : '<div class="radio' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="radio" aria-checked="' + on + '" tabindex="0"><i></i><span class="t">' + o.name + '</span><span class="p">' + priceLabel(o) + '</span></div>';
       }).join('') + pick + (s.catalog && individual()
-        ? '<div class="indcall"><p>Индивидуальный проект считаем лично: по эскизу или фото подберём гранит и размеры. Калькулятор здесь не нужен — просто закажите звонок.</p><button class="btn btn-gold" type="button" id="indgo">Заказать звонок <span class="arr">→</span></button></div>' : '');
-      if ($('#indgo')) $('#indgo').onclick = function () { step = STEPS.length - 1; render(); };
+        ? '<div class="indcall"><p>Индивидуальный проект считаем лично: по эскизу или фото подберём гранит и размеры. Нажмите «Заказать звонок» — перезвоним и всё обсудим.</p></div>' : '');
       $$('[data-id]', $('#q')).forEach(function (el) {
         var act = function () {
           var id = el.dataset.id;
@@ -333,11 +332,12 @@
     }
     var navbar = $('#prev').parentNode;
     navbar.style.display = s.type === 'contact' ? 'none' : '';
-    $('#prev').style.visibility = step ? 'visible' : 'hidden';
+    $('#prev').style.display = step ? '' : 'none';
     $('#next').innerHTML = (s.catalog && individual() ? 'Заказать звонок' : 'Далее') + ' <span class="arr">→</span>';
     var html = '';
+    var indiv = individual();
     STEPS.forEach(function (x, i) {
-      if (x.type === 'contact') return;
+      if (x.type === 'contact' || (indiv && i > 0)) return;
       var ids = x.type === 'multi' ? S[x.id] : [S[x.id]];
       var its = ids.map(function (id) { return item(x, id); }).filter(Boolean);
       var rws = its.length ? its.map(function (it) {
@@ -422,7 +422,7 @@
     ['Что входит в «под ключ»?', 'Изготовление, доставка, фундамент, установка, благоустройство и уборка участка. Всё прописываем в договоре.'],
     ['Работаете ли вы зимой?', 'Изготовление идёт круглый год. Бетонные работы делаем в тёплый сезон, памятник на готовое основание можно установить и зимой.'],
     ['Можно выбрать другой гранит?', 'Да. Памятник может быть изготовлен из любого гранита по вашему выбору — подберём под бюджет и участок.'],
-    ['Какая гарантия?', 'До 5 лет на фундамент и установку. Срок и условия указываем в договоре.']
+    ['Какая гарантия?', '2 года — на фундамент и установку, 10 лет — на камень. Срок и условия указываем в договоре.']
   ];
   if ($('#qa')) {
     $('#qa').innerHTML = QA.map(function (x) { return '<div class="qa"><button type="button">' + x[0] + '<i></i></button><div class="a"><div><p>' + x[1] + '</p></div></div></div>'; }).join('');
