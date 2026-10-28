@@ -46,6 +46,8 @@ async function init() {
       updated_at timestamptz default now(),
       created_by text not null default ''
     )`);
+    await q(`alter table estimates add column if not exists telegram_message_id bigint`);
+    await q(`alter table estimates add column if not exists telegram_chat_id text`);
   })();
   try { await ready; } catch (e) { ready = null; throw e; }
   return ready;
