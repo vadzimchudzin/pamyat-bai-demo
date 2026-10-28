@@ -195,3 +195,20 @@ tr.new td:first-child{box-shadow:inset 3px 0 0 #9a3a24}
 @media(prefers-reduced-motion:reduce){
   .kan-col.status-new .kan-head,.kan-col.status-new .kan-head b,.kan-card.status-new{animation:none}
 }
+
+
+/* Layout safety: wide kanban scrolls inside its card, never expands the whole page */
+.app{grid-template-columns:240px minmax(0,1fr);width:100%;max-width:100%;overflow-x:hidden}
+.side{min-width:0}
+.side nav{min-width:0}
+.main{min-width:0;max-width:none;overflow-x:hidden}
+.kanban-wrap{display:block;width:100%;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;overscroll-behavior-x:contain;scrollbar-gutter:stable;contain:inline-size}
+.kanban{width:max-content;min-width:2000px;grid-template-columns:repeat(8,minmax(235px,1fr));}
+.kan-col{min-width:235px}
+.kan-list{min-width:0}
+.kan-card{width:100%;min-width:0}
+@media(max-width:860px){
+  .app{grid-template-columns:minmax(0,1fr)}
+  .main{min-width:0;width:100%;padding-left:12px;padding-right:12px}
+  .kanban-wrap{max-width:calc(100vw - 48px)}
+}
