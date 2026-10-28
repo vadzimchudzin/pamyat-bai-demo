@@ -310,15 +310,14 @@
       var previousKit = Array.isArray(c.kit) ? c.kit : [];
       var sectionCommonToggle = $('[name=useCommonKitSize]', el);
       if (sectionCommonToggle) c.useCommonKitSize = sectionCommonToggle.checked;
-      if (c.useCommonKitSize !== true) c.kit = previousKit.map(function (k) { return [k[0], k[1], false]; });
-      else c.kit = $$('.kitrow', el).map(function (r) {
+      c.kit = $$('.kitrow', el).map(function (r) {
         var index = +r.dataset.ki, old = previousKit[index] || [];
         var commonToggle = $('[name=commonKitRow]', r), sizeInput = $('[name=kv]', r);
-        var selected = commonToggle ? commonToggle.checked : old[2] === true;
-        var individualSize = commonToggle && commonToggle.checked
+        var wasChecked = commonToggle ? commonToggle.checked : old[2] === true;
+        var selected = c.useCommonKitSize === true && wasChecked;
+        var individualSize = wasChecked
           ? (sizeInput.dataset.individualValue || old[1] || '')
           : (sizeInput.value || '').trim();
-        if (!commonToggle && old[2] === true) individualSize = old[1] || '';
         return [$('[name=kn]', r).value.trim(), individualSize, selected];
       }).filter(function (k) { return k[0]; });
       $$('.mod', el).forEach(function (m) {
