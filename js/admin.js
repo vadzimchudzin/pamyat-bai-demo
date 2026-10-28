@@ -28,18 +28,24 @@
   api('/api/auth').then(function (d) { d.ok ? showApp(d.user) : showLogin(); });
 
   /* ---------- навигация ---------- */
+  function activatePane(name) {
+    $('#nav button').forEach(function (x) { x.classList.toggle('on', x.dataset.p === name); });
+    $('.pane').forEach(function (p) { p.classList.toggle('on', p.id === 'p-' + name); });
+    if (name === 'log') loadLog();
+    if (name === 'leads') loadLeads();
+    if (name === 'pricebook') loadPricebook();
+    if (name === 'estimates') loadEstimates();
+  }
   $('#nav').addEventListener('click', function (e) {
     var b = e.target.closest('button'); if (!b) return;
-    $$('#nav button').forEach(function (x) { x.classList.toggle('on', x === b); });
-    $$('.pane').forEach(function (p) { p.classList.toggle('on', p.id === 'p-' + b.dataset.p); });
-    if (b.dataset.p === 'log') loadLog();
-    if (b.dataset.p === 'leads') loadLeads();
+    activatePane(b.dataset.p);
   });
 
   function load() {
     api('/api/content?full=1').then(function (d) {
       if (!d.ok) return toast(d.error || 'Не удалось загрузить данные', true);
       C = d.content; drawCatalog(); drawCalc(); drawWorks(); drawTexts(); drawContacts(); drawTg();
+      loadPricebook(); loadEstimates();
     });
     loadLeads();
   }
@@ -68,36 +74,108 @@
     return '<label class="' + (opt.wide ? 'wide' : '') + '">' + label + inp + '</label>';
   }
 
-  /* ---------- заявки ---------- */
-  var STATUSES = [];
+  /* ---------- заявки: канбан, статусы и получение сметы ---------- */
+  var STATUSES = [], LEADS = [];
+  var STATUS_KEYS = {
+    'новая':'new','взята в работу':'working','связались':'contacted','назначен замер':'measure',
+    'отправлена смета':'estimate','заключён договор':'contract','отказ':'rejected','завершена':'done'
+  };
+  function statusKey(s) { return STATUS_KEYS[s] || 'new'; }
+  function leadStatus(id, status) {
+    return api('/api/lead', {method:'PATCH', body:{id:Number(id),status:status}}).then(function (d) {
+      if (d.ok) { toast('Статус заявки №' + id + ': ' + status); return loadLeads(); }
+      toast(d.error || 'Статус не обновлён', true);
+    });
+  }
+  function estimateFromLead(id) {
+    toast('Готовим смету…');
+    return api('/api/finance', {method:'POST',body:{action:'create_estimate',leadId:Number(id)}}).then(function (d) {
+      if (!d.ok) return toast(d.error || 'Не удалось создать смету', true);
+      currentEstimate = d.estimate;
+      activatePane('estimates');
+      drawEstimateEditor(currentEstimate);
+      loadEstimates();
+      toast('Создан черновик сметы №' + currentEstimate.id);
+    });
+  }
+  function drawKanban(leads) {
+    var board = $('#leadsBoard');
+    if (!board) return;
+    if (!leads.length) { board.innerHTML = '<p class="empty">Заявок пока нет — новые заявки появятся здесь и в Telegram.</p>'; return; }
+    board.innerHTML = '<div class="kanban">' + STATUSES.map(function (st) {
+      var list = leads.filter(function (l) { return (l.status || 'новая') === st; });
+      var key = statusKey(st);
+      return '<section class="kan-col status-' + key + '" data-column-status="' + esc(st) + '">' +
+        '<header class="kan-head"><span>' + esc(st) + '</span><b>' + list.length + '</b></header>' +
+        '<div class="kan-list" data-drop-status="' + esc(st) + '">' + (list.map(function (l) {
+          var detail = l.config && l.config.summary ? l.config.summary : '';
+          if (l.comment) detail += (detail ? '\n\n' : '') + l.comment;
+          var price = l.price == null ? 'индивидуально' : Number(l.price).toLocaleString('ru-RU') + ' BYN';
+          var opts = STATUSES.map(function (x) { return '<option value="' + esc(x) + '"' + (x === (l.status || 'новая') ? ' selected' : '') + '>' + esc(x) + '</option>'; }).join('');
+          return '<article class="kan-card status-' + key + '" draggable="true" data-lead-id="' + l.id + '">' +
+            '<div class="kan-top"><span class="kan-id">№' + l.id + ' · ' + esc(new Date(l.created_at).toLocaleString('ru-RU')) + '</span><span class="status-pill">' + esc(l.status || 'новая') + '</span></div>' +
+            '<div class="client">' + esc(l.name || 'Без имени') + '</div>' +
+            '<a class="phone" href="tel:' + esc((l.phone || '').replace(/[^\d+]/g, '')) + '">' + esc(l.phone || 'Телефон не указан') + '</a>' +
+            '<div class="detail">' + esc((l.type === 'calc' ? 'Расчёт' : 'Звонок') + (detail ? '\n' + detail : '')) + '</div>' +
+            '<div class="kan-price">' + esc(price) + '</div>' +
+            (l.taken_by ? '<small>Ответственный: ' + esc(l.taken_by) + '</small>' : '') +
+            '<div class="kan-actions"><select aria-label="Изменить статус заявки №' + l.id + '" data-lead-status="' + l.id + '">' + opts + '</select>' +
+            '<button class="btn gold sm" data-get-estimate="' + l.id + '">Получить смету</button>' +
+            '<button class="ic del" title="Удалить заявку" data-del-lead="' + l.id + '">✕</button></div></article>';
+        }).join('') || '<p class="empty">Нет заявок</p>') + '</div></section>';
+    }).join('') + '</div>';
+  }
   function loadLeads() {
-    api('/api/lead').then(function (d) {
+    return api('/api/lead').then(function (d) {
       if (!d.ok) return;
-      STATUSES = d.statuses;
-      var n = d.leads.filter(function (l) { return l.status === 'новая'; }).length;
+      STATUSES = d.statuses || ['новая','взята в работу','связались','назначен замер','отправлена смета','заключён договор','отказ','завершена'];
+      LEADS = d.leads || [];
+      var n = LEADS.filter(function (l) { return l.status === 'новая'; }).length;
       $('#newCount').textContent = n ? n : '';
-      if (!d.leads.length) { $('#leadsTbl').innerHTML = '<p class="empty">Заявок пока нет. Они появятся здесь и в Telegram-группе.</p>'; return; }
-      $('#leadsTbl').innerHTML = '<table><thead><tr><th>№</th><th>Когда</th><th>Клиент</th><th>Что</th><th>Сумма</th><th>Статус</th><th></th></tr></thead><tbody>' +
-        d.leads.map(function (l) {
-          var what = l.type === 'calc' ? 'Расчёт' : 'Звонок';
-          var det = (l.config && l.config.summary ? l.config.summary : '') + (l.comment ? (l.config && l.config.summary ? ' · ' : '') + l.comment : '');
-          return '<tr class="' + (l.status === 'новая' ? 'new' : '') + '"><td>' + l.id + '</td><td>' + new Date(l.created_at).toLocaleString('ru-RU') + '</td>' +
-            '<td><b>' + esc(l.name || '—') + '</b><small><a href="tel:' + esc((l.phone || '').replace(/[^\d+]/g, '')) + '">' + esc(l.phone) + '</a></small></td>' +
-            '<td>' + what + (det ? '<small>' + esc(det) + '</small>' : '') + (l.taken_by ? '<small>Взял: ' + esc(l.taken_by) + '</small>' : '') + '</td>' +
-            '<td>' + (l.price ? 'от ' + Number(l.price).toLocaleString('ru-RU') : '—') + '</td>' +
-            '<td><select data-lead="' + l.id + '">' + STATUSES.map(function (s) { return '<option' + (s === l.status ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></td>' +
-            '<td><button class="ic del" title="Удалить" data-del-lead="' + l.id + '">✕</button></td></tr>';
-        }).join('') + '</tbody></table>';
+      drawKanban(LEADS);
     });
   }
   $('#leadsReload').addEventListener('click', loadLeads);
-  $('#leadsTbl').addEventListener('change', function (e) {
-    var s = e.target.closest('[data-lead]'); if (!s) return;
-    api('/api/lead', { method: 'PATCH', body: { id: +s.dataset.lead, status: s.value } }).then(function (d) { d.ok ? (toast('Статус обновлён'), loadLeads()) : toast(d.error, true); });
+  $('#leadsBoard').addEventListener('change', function (e) {
+    var s = e.target.closest('[data-lead-status]'); if (!s) return;
+    leadStatus(s.dataset.leadStatus, s.value);
   });
-  $('#leadsTbl').addEventListener('click', function (e) {
-    var b = e.target.closest('[data-del-lead]'); if (!b || !confirm('Удалить заявку №' + b.dataset.delLead + '?')) return;
-    api('/api/lead?id=' + b.dataset.delLead, { method: 'DELETE' }).then(loadLeads);
+  $('#leadsBoard').addEventListener('click', function (e) {
+    var q = e.target.closest('[data-get-estimate]');
+    if (q) { e.preventDefault(); estimateFromLead(q.dataset.getEstimate); return; }
+    var del = e.target.closest('[data-del-lead]');
+    if (del && confirm('Удалить заявку №' + del.dataset.delLead + '?')) {
+      api('/api/lead?id=' + del.dataset.delLead, {method:'DELETE'}).then(function (d) {
+        if (d.ok) { toast('Заявка удалена'); loadLeads(); } else toast(d.error || 'Не удалось удалить',true);
+      });
+    }
+  });
+  var draggedLeadId = '';
+  $('#leadsBoard').addEventListener('dragstart', function (e) {
+    var card = e.target.closest('[data-lead-id]'); if (!card) return;
+    draggedLeadId = card.dataset.leadId;
+    card.classList.add('dragging');
+    if (e.dataTransfer) { e.dataTransfer.setData('text/plain', draggedLeadId); e.dataTransfer.effectAllowed = 'move'; }
+  });
+  $('#leadsBoard').addEventListener('dragend', function (e) {
+    var card=e.target.closest('[data-lead-id]'); if(card) card.classList.remove('dragging');
+    $$('#leadsBoard .drop-target').forEach(function(x){x.classList.remove('drop-target');});
+  });
+  $('#leadsBoard').addEventListener('dragover', function (e) {
+    var zone=e.target.closest('[data-drop-status]'); if(!zone) return;
+    e.preventDefault(); zone.classList.add('drop-target');
+    if(e.dataTransfer) e.dataTransfer.dropEffect='move';
+  });
+  $('#leadsBoard').addEventListener('dragleave', function (e) {
+    var zone=e.target.closest('[data-drop-status]'); if(zone && !zone.contains(e.relatedTarget)) zone.classList.remove('drop-target');
+  });
+  $('#leadsBoard').addEventListener('drop', function (e) {
+    var zone=e.target.closest('[data-drop-status]'); if(!zone) return;
+    e.preventDefault(); zone.classList.remove('drop-target');
+    var id=(e.dataTransfer && e.dataTransfer.getData('text/plain')) || draggedLeadId;
+    if(!id) return;
+    var lead=LEADS.find(function(x){return String(x.id)===String(id);});
+    if(lead && lead.status!==zone.dataset.dropStatus) leadStatus(id,zone.dataset.dropStatus);
   });
   setInterval(function () { if (!$('#app').hidden) loadLeads(); }, 60000);
 
