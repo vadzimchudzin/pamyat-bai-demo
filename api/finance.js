@@ -1,6 +1,7 @@
 /* Финансовый отдел: актуальный прайс, сметы и публичная печатная ссылка по случайному токену. */
 const L = require('./_lib');
 const crypto = require('crypto');
+const { parsePricebookFile } = require('./_pricebook-import');
 function clean(s, n) { return String(s == null ? '' : s).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n); }
 function number(v, fallback) { const n = Number(v); return Number.isFinite(n) ? n : fallback; }
 function shapeEstimate(row) {
@@ -34,6 +35,15 @@ module.exports = async (req, res) => {
     }
     if (req.method !== 'POST') return L.send(res, 405, {ok:false,error:'Method not allowed'});
     const b = L.body(req), action = String(b.action || '');
+    if (action === 'import_pricebook') {
+      const parsed = await parsePricebookFile({
+        fileName: b.fileName,
+        base64: b.base64,
+        mimeType: b.mimeType
+      });
+      await L.log(req, 'Финансы', 'файл «' + clean(parsed.source,180) + '» разобран: ' + parsed.count + ' позиций, без цены: ' + parsed.warnings + ' · ' + session.u);
+      return L.send(res, 200, { ok:true, items:parsed.items, source:parsed.source, count:parsed.count, warnings:parsed.warnings });
+    }
     if (action === 'save_pricebook') {
       const items = Array.isArray(b.items) ? b.items.slice(0, 3000).map((x, i) => ({
         id: clean(x.id, 80) || 'price-' + (i + 1),
