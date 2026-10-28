@@ -36,11 +36,16 @@ module.exports = async (req, res) => {
     if (req.method !== 'POST') return L.send(res, 405, {ok:false,error:'Method not allowed'});
     const b = L.body(req), action = String(b.action || '');
     if (action === 'import_pricebook') {
-      const parsed = await parsePricebookFile({
-        fileName: b.fileName,
-        base64: b.base64,
-        mimeType: b.mimeType
-      });
+      let parsed;
+      try {
+        parsed = await parsePricebookFile({
+          fileName: b.fileName,
+          base64: b.base64,
+          mimeType: b.mimeType
+        });
+      } catch (e) {
+        return L.send(res, 400, { ok:false, error:String(e && e.message || 'Не удалось разобрать файл').slice(0,400) });
+      }
       await L.log(req, 'Финансы', 'файл «' + clean(parsed.source,180) + '» разобран: ' + parsed.count + ' позиций, без цены: ' + parsed.warnings + ' · ' + session.u);
       return L.send(res, 200, { ok:true, items:parsed.items, source:parsed.source, count:parsed.count, warnings:parsed.warnings });
     }
