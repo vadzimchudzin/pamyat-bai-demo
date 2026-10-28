@@ -117,3 +117,81 @@ tr.new td:first-child{box-shadow:inset 3px 0 0 #9a3a24}
 .catc .cov{align-content:start}
 .catc .cov .btn{justify-self:start;width:100%;text-align:center}
 .catc .cov input[type=range]{accent-color:#a8823f;padding:0;margin-top:6px}
+
+
+/* Навигация разделена: настройки сайта отдельно от финансов */
+.nav-label{padding:10px 12px 3px;color:var(--dim);font:600 10px var(--sans);letter-spacing:.14em;text-transform:uppercase}
+.side nav .nav-label:not(:first-child){margin-top:7px;border-top:1px solid var(--line);padding-top:14px}
+.side nav button{min-width:0}
+.price-sync{display:flex!important;align-items:center;gap:8px;color:var(--ink)!important;font-size:12px!important}
+.price-sync input{width:auto}
+
+/* Канбан заявок */
+.kanban-wrap{overflow-x:auto;padding-bottom:10px}
+.kanban{display:grid;grid-template-columns:repeat(4,minmax(230px,1fr));gap:12px;align-items:start;min-width:960px}
+.kan-col{--status:#9a7436;border:1px solid color-mix(in srgb,var(--status) 24%,transparent);border-radius:15px;background:color-mix(in srgb,var(--status) 5%,rgba(255,252,246,.72));min-height:230px;overflow:hidden}
+.kan-head{position:relative;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--ink);border-bottom:1px solid color-mix(in srgb,var(--status) 22%,transparent);background:color-mix(in srgb,var(--status) 10%,transparent)}
+.kan-head b{font-size:12px;border-radius:99px;padding:2px 8px;background:var(--status);color:#fff}
+.kan-list{display:grid;gap:9px;padding:9px;min-height:170px;transition:background .18s}
+.kan-list.drop-target{background:color-mix(in srgb,var(--status) 12%,transparent);outline:2px dashed var(--status);outline-offset:-4px}
+.kan-card{position:relative;background:rgba(255,252,246,.95);border:1px solid var(--line);border-left:4px solid var(--status);border-radius:12px;padding:11px;box-shadow:0 5px 16px rgba(74,58,29,.06);cursor:grab;min-width:0}
+.kan-card:active{cursor:grabbing}
+.kan-card.dragging{opacity:.45}
+.kan-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:5px}
+.kan-id{font-size:11px;color:var(--mut);font-weight:600}
+.kan-card .client{font-size:14px;font-weight:600;overflow-wrap:anywhere}
+.kan-card .phone{font-size:12px;display:block;margin:2px 0 8px}
+.kan-card .detail{font-size:12px;color:var(--mut);white-space:pre-wrap;overflow-wrap:anywhere;margin:6px 0 9px;max-height:150px;overflow:auto}
+.kan-card .kan-price{font-size:14px;font-weight:700;color:var(--ink);margin:7px 0}
+.kan-card .kan-actions{display:flex;gap:5px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.kan-card .kan-actions .btn{padding:6px 9px;font-size:11px;white-space:normal}
+.kan-card .kan-actions select{flex:1;min-width:120px;width:auto;font-size:11px;padding:6px 7px}
+.status-pill{display:inline-flex;align-items:center;gap:5px;font-size:10px;line-height:1.2;border-radius:99px;padding:4px 7px;color:#fff;background:var(--status);white-space:nowrap}
+.status-new{--status:#ac843f}
+.status-working{--status:#4776a7}
+.status-contacted{--status:#8b65a8}
+.status-measure{--status:#258c9a}
+.status-estimate{--status:#c47e32}
+.status-contract{--status:#43825b}
+.status-rejected{--status:#a34435}
+.status-done{--status:#7b827c}
+.kan-col.status-new .kan-head{background:linear-gradient(110deg,#f5dfb0,#c9a46a,#f5dfb0);background-size:220% 100%;animation:newShimmer 3.2s ease-in-out infinite}
+.kan-col.status-new .kan-head b{animation:newPulse 1.7s ease-in-out infinite}
+.kan-card.status-new{animation:newCardGlow 2.6s ease-in-out infinite}
+@keyframes newShimmer{0%,100%{background-position:100% 0}50%{background-position:0 0}}
+@keyframes newPulse{0%,100%{box-shadow:0 0 0 0 rgba(172,132,63,.12)}50%{box-shadow:0 0 0 5px rgba(172,132,63,.2)}}
+@keyframes newCardGlow{0%,100%{box-shadow:0 5px 16px rgba(74,58,29,.06)}50%{box-shadow:0 8px 20px rgba(172,132,63,.14)}}
+
+/* Финансовый прайс-лист и сметы */
+.price-table{min-width:920px}
+.price-table input,.price-table select{min-width:100px;padding:7px 8px;border-radius:8px;font-size:12px}
+.price-table .price-name{min-width:210px}
+.price-table .price-cat{min-width:150px}
+.price-table .price-val{min-width:105px}
+.price-table .price-target{min-width:210px}
+.price-table td:last-child{width:40px}
+.pricebook-on{color:#2c7148;font-weight:600}
+.estimate-table{min-width:900px}
+.estimate-table input{padding:7px 8px;border-radius:8px;min-width:70px;font-size:12px}
+.estimate-table .estimate-name{min-width:240px}
+.estimate-table .estimate-note{min-width:180px}
+.estimate-table .qty,.estimate-table .price{max-width:100px}
+.estimate-editor{margin-top:18px}
+.estimate-editor .form{margin-bottom:16px}
+.estimate-editor header{margin-bottom:14px}
+.estimate-total{text-align:right;font-size:18px;font-weight:700;padding:14px 0;color:var(--ink)}
+.estimate-total small{font-size:12px;font-weight:400;color:var(--mut);display:block}
+.estimate-list-title{font-weight:600}
+.estimate-status{display:inline-block;border-radius:99px;padding:4px 8px;background:rgba(154,116,54,.12);font-size:11px}
+#p-estimates .tbl td{vertical-align:middle}
+#p-estimates .tbl .btn{margin:2px}
+@media(max-width:1100px){.kanban{grid-template-columns:repeat(4,260px);min-width:0}}
+@media(max-width:860px){
+  .side nav .nav-label{width:100%;padding-top:9px}
+  .kanban{grid-template-columns:repeat(4,250px);min-width:0}
+  .price-sync{white-space:normal;max-width:190px}
+  .price-sync input{flex:0 0 auto}
+}
+@media(prefers-reduced-motion:reduce){
+  .kan-col.status-new .kan-head,.kan-col.status-new .kan-head b,.kan-card.status-new{animation:none}
+}
