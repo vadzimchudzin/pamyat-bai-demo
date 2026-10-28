@@ -1,7 +1,7 @@
 /* Telegram: таблица заявки, управление статусом и создание смет кнопками в группе. */
 const L = require('./_lib');
 const { makeEstimateDocx } = require('./_estimate-docx');
-const { quoteText, quoteRichMessage, quoteKeyboard, statusLabel } = require('./_estimate-telegram');
+const { quoteRichMessage, quoteKeyboard, statusLabel } = require('./_estimate-telegram');
 const STATUS_BY_CODE = {
   n:'новая',
   w:'взята в работу',

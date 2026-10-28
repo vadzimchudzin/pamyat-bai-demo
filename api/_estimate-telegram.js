@@ -32,12 +32,12 @@ function quoteText(estimate, leadStatus) {
     '<b>Телефон:</b> ' + L.esc(String(estimate.client_phone || '—').slice(0,50)),
     '<b>Позиций:</b> ' + rows.length,
     '<b>ИТОГО:</b> ' + L.esc(money(total)),
-    '<i>Подробная смета представлена таблицей на изображении. Полная версия — в Word-файле.</i>'
+    '<i>Подробная смета представлена таблицей выше. Полная версия — в Word-файле.</i>'
   ].join(nl);
 }
 function cellText(value, max = 240) {
   return String(value == null || value === '' ? '—' : value)
-    .replace(/[\\u0000-\\u001f]+/g, ' ').replace(/\\s+/g, ' ').trim().slice(0, max) || '—';
+    .replace(/\s+/g, ' ').trim().slice(0, max) || '—';
 }
 function quoteRichMessage(estimate, leadStatus) {
   const rows = Array.isArray(estimate.items) ? estimate.items :
