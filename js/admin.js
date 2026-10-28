@@ -558,24 +558,35 @@
   }
   function estimatePriceItems() {
     var out=[];
+    function matchedTarget(target) {
+      return (PRICEBOOK.items||[]).find(function(p){return String(p.siteTarget||'')===target;}) || null;
+    }
     (PRICEBOOK.items||[]).forEach(function(p){
-      out.push({id:'pricebook:'+p.id,name:p.name,unit:p.unit||'шт.',price:p.price,note:p.price==null?'Индивидуальный расчёт':'',source:'Актуальный прайс'});
+      out.push({id:'pricebook:'+p.id,article:p.article||p.id,name:p.name,unit:p.unit||'шт.',price:p.price,note:p.price==null?'Цена не задана в прайсе':'',source:'Актуальный прайс'});
     });
     ((C&&C.catalog&&C.catalog.categories)||[]).forEach(function(c){
-      out.push({id:'site:catalog:'+c.id,name:c.name,unit:'комплект',price:c.price,note:c.price==null?'Индивидуальный расчёт':'',source:'Каталог сайта'});
+      var target='catalog:'+c.id, bp=PRICEBOOK.siteSync?matchedTarget(target):null;
+      out.push({id:'site:'+target,article:(bp&&bp.article)||c.article||c.sku||('CAT-'+String(c.id).toUpperCase()),
+        name:c.name,unit:'комплект',price:bp&&bp.price!=null?bp.price:c.price,
+        note:c.price==null?'Цена не задана в каталоге':'',source:'Каталог сайта'});
     });
     ((C&&C.calc&&C.calc.steps)||[]).forEach(function(st){
       (st.items||[]).forEach(function(it){
-        out.push({id:'site:calc:'+st.id+':'+it.id,name:st.name+' · '+it.name,unit:'шт.',price:it.price,note:it.price==null?'Индивидуальный расчёт':(it.note||''),source:'Калькулятор сайта'});
+        var target='calc:'+st.id+':'+it.id, bp=PRICEBOOK.siteSync?matchedTarget(target):null;
+        out.push({id:'site:'+target,article:(bp&&bp.article)||it.article||it.sku||it.code||(st.id+'-'+it.id).toUpperCase(),
+          name:st.name+' · '+it.name,unit:it.unit||'шт.',price:bp&&bp.price!=null?bp.price:it.price,
+          note:it.price==null?'Цена не задана в каталоге':(it.note||''),source:'Калькулятор сайта'});
       });
     });
     return out;
   }
-  function estimatePriceOptions(selectedName) {
-    var items=estimatePriceItems(), matched=items.find(function(p){return p.name===selectedName;});
+  function estimatePriceOptions(selectedName, selectedArticle) {
+    var items=estimatePriceItems();
+    var matched=items.find(function(p){return p.name===selectedName && (!selectedArticle || p.article===selectedArticle);}) ||
+      items.find(function(p){return p.name===selectedName;});
     return '<option value="">— выбрать из каталога —</option>' + items.map(function(p) {
-      var priceLabel=p.price==null?'индивидуальный расчёт':Number(p.price).toLocaleString('ru-RU')+' BYN/'+(p.unit||'шт.');
-      return '<option value="'+esc(p.id)+'"'+(matched&&matched.id===p.id?' selected':'')+'>'+esc(p.source+' · '+p.name+' · '+priceLabel)+'</option>';
+      var priceLabel=p.price==null?'цена не задана':Number(p.price).toLocaleString('ru-RU')+' BYN/'+(p.unit||'шт.');
+      return '<option value="'+esc(p.id)+'"'+(matched&&matched.id===p.id?' selected':'')+'>'+esc(p.source+' · '+p.article+' · '+p.name+' · '+priceLabel)+'</option>';
     }).join('');
   }
   function drawEstimateEditor(e) {
@@ -594,8 +605,9 @@
     updateEstimateTotal();
   }
   function drawEstimateItems(rows) {
-    $('#estimateItems').innerHTML='<table class="estimate-table"><thead><tr><th>Позиция из каталога</th><th>Наименование</th><th>Ед.</th><th>Кол-во</th><th>Цена, BYN</th><th>Комментарий</th><th></th></tr></thead><tbody>' +
-      rows.map(function(x,i){return '<tr class="estimate-row" data-ei="'+i+'"><td><select name="priceRef">'+estimatePriceOptions(x.name)+'</select></td>' +
+    $('#estimateItems').innerHTML='<table class="estimate-table"><thead><tr><th>Позиция из каталога</th><th>Артикул</th><th>Наименование</th><th>Ед.</th><th>Кол-во</th><th>Цена, BYN</th><th>Комментарий</th><th></th></tr></thead><tbody>' +
+      rows.map(function(x,i){return '<tr class="estimate-row" data-ei="'+i+'"><td><select name="priceRef">'+estimatePriceOptions(x.name,x.article)+'</select></td>' +
+        '<td><input class="estimate-article" name="earticle" value="'+esc(x.article||'')+'" placeholder="Артикул"></td>' +
         '<td><input class="estimate-name" name="ename" value="'+esc(x.name||'')+'" placeholder="Наименование"></td>' +
         '<td><input name="eunit" value="'+esc(x.unit||'шт.')+'" placeholder="шт."></td>' +
         '<td><input class="qty" name="eqty" type="number" min="0" step="0.1" value="'+(x.qty==null?1:x.qty)+'"></td>' +
@@ -611,8 +623,8 @@
       status:$('#estimateStatus').value,
       discount:Math.max(0,Number($('#estimateDiscount').value)||0),
       notes:$('#estimateNotes').value.trim(),
-      items:$('#estimateItems .estimate-row').map(function(tr){
-        return {name:$('[name=ename]',tr).value.trim(),unit:$('[name=eunit]',tr).value.trim()||'шт.',
+      items:$$('#estimateItems .estimate-row').map(function(tr){
+        return {article:$('[name=earticle]',tr).value.trim()||'—',name:$('[name=ename]',tr).value.trim(),unit:$('[name=eunit]',tr).value.trim()||'шт.',
           qty:Math.max(0,Number($('[name=eqty]',tr).value)||0),price:Math.max(0,Number($('[name=eprice]',tr).value)||0),
           note:$('[name=enote]',tr).value.trim()};
       }).filter(function(x){return x.name;})
@@ -637,6 +649,7 @@
   $('#estimateItems').addEventListener('change',function(e){
     var sel=e.target.closest('[name=priceRef]');if(!sel)return;
     var tr=sel.closest('.estimate-row'),p=estimatePriceItems().find(function(x){return x.id===sel.value;});if(!p)return;
+    $('[name=earticle]',tr).value=p.article||'—';
     $('[name=ename]',tr).value=p.name;
     $('[name=eunit]',tr).value=p.unit||'шт.';
     $('[name=eprice]',tr).value=p.price==null?0:p.price;
