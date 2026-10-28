@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
   try {
     await L.init();
     if (req.method === 'GET' && req.query && req.query.token) {
-      const r = await L.q('select * from estimates where public_token=$1 limit 1', [clean(req.query.token, 100)]);
+      const r = await L.q('select id,lead_id,client_name,client_phone,items,total,discount,notes,status,public_token,created_at,updated_at,created_by from estimates where public_token=$1 limit 1', [clean(req.query.token, 100)]);
       if (!r.rows[0]) return L.send(res, 404, { ok:false, error:'Ссылка на смету недействительна' });
       const c = await L.getContent();
       const e = shapeEstimate(r.rows[0]);
@@ -37,10 +37,11 @@ module.exports = async (req, res) => {
     if (action === 'save_pricebook') {
       const items = Array.isArray(b.items) ? b.items.slice(0, 3000).map((x, i) => ({
         id: clean(x.id, 80) || 'price-' + (i + 1),
+        article: clean(x.article, 80),
         category: clean(x.category, 120),
         name: clean(x.name, 220) || 'Позиция без названия',
         unit: clean(x.unit, 40) || 'шт.',
-        price: x.price === '' || x.price === null || x.price === undefined ? null : Math.max(0, Math.round(number(x.price, 0))),
+        price: x.price === '' || x.price === null || x.price === undefined ? null : Math.round(Math.max(0, number(x.price, 0)) * 100) / 100,
         siteTarget: clean(x.siteTarget, 220)
       })) : [];
       await L.q(`update price_catalog set items=$1::jsonb, site_sync=$2, updated_at=now(), updated_by=$3 where id=1`,
@@ -66,6 +67,7 @@ module.exports = async (req, res) => {
       const id = Number(b.id);
       if (!Number.isInteger(id) || id <= 0) return L.send(res, 400, {ok:false,error:'Не указан номер сметы'});
       const rows = Array.isArray(b.items) ? b.items.slice(0, 500).map((x, i) => ({
+        article: clean(x.article, 80) || '—',
         name: clean(x.name, 240) || ('Позиция ' + (i + 1)),
         unit: clean(x.unit, 40) || 'шт.',
         qty: Math.max(0, number(x.qty, 0)),

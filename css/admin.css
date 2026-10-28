@@ -297,3 +297,6 @@ tr.new td:first-child{box-shadow:inset 3px 0 0 #9a3a24}
   .kanban{grid-template-columns:repeat(8,250px);grid-auto-columns:250px}
   .kan-col{width:250px;min-width:250px;max-width:250px}
 }
+
+.price-table .price-article{min-width:130px}
+.estimate-table .estimate-article{min-width:100px;max-width:135px}

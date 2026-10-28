@@ -1,6 +1,6 @@
 /* Заявки: POST — с сайта (сохраняем в базу + шлём в Telegram) · GET — список (админ) · PATCH {id,status} (админ) */
 const L = require('./_lib');
-const { makeLeadDocx } = require('./_lead-docx');
+const { quoteText, quoteKeyboard } = require('./_estimate-telegram');
 const STATUSES = ['новая', 'взята в работу', 'связались', 'назначен замер', 'отправлена смета', 'заключён договор', 'отказ', 'завершена'];
 function clean(s, n) { return String(s == null ? '' : s).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n); }
 module.exports = async (req, res) => {
@@ -25,17 +25,6 @@ module.exports = async (req, res) => {
           if (m.ok) {
             sent = true;
             await L.q(`update leads set tg_msg_id=$1 where id=$2`, [m.result.message_id, lead.id]);
-            try {
-              const doc = await makeLeadDocx(lead);
-              const form = new FormData();
-              form.append('chat_id', String(t.chat));
-              form.append('document', new Blob([doc], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), 'lead-' + lead.id + '.docx');
-              const upload = await fetch('https://api.telegram.org/bot' + t.token + '/sendDocument', { method: 'POST', body: form });
-              const result = await upload.json();
-              if (!result.ok) await L.log(req, 'Telegram DOCX', 'заявка №' + lead.id + ': ' + (result.description || 'ошибка отправки документа'), false);
-            } catch (docError) {
-              await L.log(req, 'Telegram DOCX', 'заявка №' + lead.id + ': ' + String(docError && docError.message || docError), false);
-            }
           }
         }
       } catch (e) { /* заявка уже в базе — Telegram не критичен */ }
@@ -44,6 +33,8 @@ module.exports = async (req, res) => {
     const s = await L.requireAdmin(req, res); if (!s) return;
     if (req.method === 'GET') {
       const r = await L.q(`select * from leads order by id desc limit 500`);
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0');
+      res.setHeader('Pragma', 'no-cache');
       return L.send(res, 200, { ok: true, leads: r.rows, statuses: STATUSES });
     }
     if (req.method === 'PATCH') {
@@ -53,6 +44,11 @@ module.exports = async (req, res) => {
         [st, JSON.stringify([{ at: new Date().toISOString(), t: st, by: s.u }]), b.id]);
       if (!changed.rows[0]) return L.send(res, 404, { ok:false, error:'Заявка не найдена' });
       const updatedLead = changed.rows[0];
+      if (st === 'отправлена смета') {
+        await L.q("update estimates set status='sent',updated_at=now() where lead_id=$1 and status='draft'", [updatedLead.id]);
+      }
+      const relatedEstimateResult = await L.q('select * from estimates where lead_id=$1 order by id desc limit 1', [updatedLead.id]);
+      const relatedEstimate = relatedEstimateResult.rows[0] || null;
       let telegramSync = null, telegramError = '';
       try {
         const c = await L.getContent(), t = c.telegram || {};
@@ -66,6 +62,21 @@ module.exports = async (req, res) => {
           if (!tgResult.ok) {
             telegramError = String(tgResult.description || 'Telegram отклонил обновление сообщения');
             await L.log(req, 'Telegram sync', 'заявка №' + b.id + ': ' + telegramError, false);
+          }
+        }
+        if (t.enabled && t.token && relatedEstimate && relatedEstimate.telegram_message_id && relatedEstimate.telegram_chat_id) {
+          const quoteResult = await L.tg(t.token, 'editMessageText', {
+            chat_id:relatedEstimate.telegram_chat_id, message_id:relatedEstimate.telegram_message_id,
+            text:quoteText(relatedEstimate, updatedLead.status), parse_mode:'HTML', disable_web_page_preview:true,
+            reply_markup:quoteKeyboard(relatedEstimate)
+          });
+          if (!quoteResult.ok) {
+            telegramSync = false;
+            const issue = 'смета №' + relatedEstimate.id + ': ' + String(quoteResult.description || 'сообщение сметы не обновлено');
+            telegramError = [telegramError, issue].filter(Boolean).join('; ');
+            await L.log(req, 'Telegram sync', issue, false);
+          } else if (telegramSync === null) {
+            telegramSync = true;
           }
         }
       } catch (e) {

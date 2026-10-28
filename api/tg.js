@@ -1,6 +1,7 @@
 /* Telegram: таблица заявки, управление статусом и создание смет кнопками в группе. */
 const L = require('./_lib');
 const { makeEstimateDocx } = require('./_estimate-docx');
+const { quoteText, quoteKeyboard, statusLabel } = require('./_estimate-telegram');
 const STATUS_BY_CODE = {
   n:'новая',
   w:'взята в работу',
@@ -15,45 +16,6 @@ function whoFrom(cb) {
   return cb.from && cb.from.username ? '@' + cb.from.username :
     [cb.from && cb.from.first_name, cb.from && cb.from.last_name].filter(Boolean).join(' ') || 'Telegram';
 }
-function money(v) { return Number(v || 0).toLocaleString('ru-RU') + ' BYN'; }
-function quoteText(e) {
-  const rows = Array.isArray(e.items) ? e.items : (typeof e.items === 'string' ? JSON.parse(e.items || '[]') : []);
-  function fit(value, width) {
-    const text = String(value == null ? '—' : value).replace(/[\r\n]+/g, ' ').trim();
-    const chars = Array.from(text);
-    const short = chars.length > width ? chars.slice(0,width-1).join('') + '…' : text;
-    return short + ' '.repeat(Math.max(0,width-Array.from(short).length));
-  }
-  const widths = [3, 27, 6, 7, 12, 12];
-  const headers = ['№','Позиция','Ед.','Кол-во','Цена','Сумма'];
-  const tableRows = rows.slice(0, 16).map((x,i)=>[
-    String(i+1),x.name || 'Позиция',x.unit || 'шт.',
-    Number(x.qty || 0).toLocaleString('ru-RU',{maximumFractionDigits:2}),
-    money(x.price),money(Number(x.qty || 0)*Number(x.price || 0))
-  ]);
-  function line(row) { return '│ ' + row.map((x,i)=>fit(x,widths[i])).join(' │ ') + ' │'; }
-  const top = '┌' + widths.map(w=>'─'.repeat(w+2)).join('┬') + '┐';
-  const mid = '├' + widths.map(w=>'─'.repeat(w+2)).join('┼') + '┤';
-  const bottom = '└' + widths.map(w=>'─'.repeat(w+2)).join('┴') + '┘';
-  const nl = String.fromCharCode(10);
-  const printedRows = [top,line(headers),mid].concat(tableRows.map(line));
-  if (rows.length > tableRows.length) printedRows.push('… см. полную таблицу в Word-файле');
-  printedRows.push(bottom);
-  const subtotal = rows.reduce((sum,x)=>sum+Number(x.qty || 0)*Number(x.price || 0),0);
-  const discount = Math.min(subtotal,Math.max(0,Number(e.discount || 0)));
-  const total = Math.max(0,subtotal-discount);
-  const lines = [
-    '<b>ПАМЯТЬ.БАЙ · СМЕТА №' + e.id + '</b>',
-    '<pre>' + L.esc(printedRows.join(nl)) + '</pre>',
-    '<b>Клиент:</b> ' + L.esc(e.client_name || '—'),
-    '<b>Телефон:</b> ' + L.esc(e.client_phone || '—'),
-    '<b>Сумма позиций:</b> ' + money(subtotal),
-    '<b>Скидка:</b> ' + money(discount),
-    '<b>ИТОГО:</b> ' + money(total)
-  ];
-  if (e.notes) lines.push('<b>Примечание:</b> ' + L.esc(String(e.notes).slice(0,500)));
-  return lines.join(nl);
-}
 module.exports = async (req, res) => {
   try {
     const action = req.query && req.query.action;
@@ -66,13 +28,28 @@ module.exports = async (req, res) => {
       const estimateMatch = /^quote:(\d+)$/.exec(data);
       if (estimateMatch) {
         const e = await L.createEstimateFromLead(Number(estimateMatch[1]), who);
-        const text = quoteText(e);
-        const url = 'https://pamyat-bai-demo.vercel.app/estimate.html?token=' + encodeURIComponent(e.public_token);
-        const sent = await L.tg(t.token, 'sendMessage', { chat_id: cb.message.chat.id, text, parse_mode:'HTML', disable_web_page_preview:true,
-          reply_markup:{inline_keyboard:[
-            [{text:'📄 Открыть смету / PDF',url:url}],
-            [{text:'📤 Отметить «Смета отправлена»',callback_data:'status:q:' + e.lead_id}]
-          ]}});
+        const leadResult = e.lead_id ? await L.q('select status from leads where id=$1 limit 1', [e.lead_id]) : {rows:[]};
+        const leadStatus = leadResult.rows[0] ? leadResult.rows[0].status : '';
+        const text = quoteText(e, leadStatus);
+        const messageArgs = { chat_id: cb.message.chat.id, text, parse_mode:'HTML', disable_web_page_preview:true, reply_markup:quoteKeyboard(e) };
+        let sent;
+        if (e.telegram_message_id && e.telegram_chat_id) {
+          sent = await L.tg(t.token, 'editMessageText', Object.assign({}, messageArgs, {
+            chat_id:e.telegram_chat_id, message_id:e.telegram_message_id
+          }));
+          if (!sent.ok && /message is not modified/i.test(String(sent.description || ''))) {
+            sent = {ok:true,result:{message_id:e.telegram_message_id}};
+          } else if (!sent.ok) {
+            sent = await L.tg(t.token, 'sendMessage', messageArgs);
+          }
+        } else {
+          sent = await L.tg(t.token, 'sendMessage', messageArgs);
+        }
+        if (sent.ok) {
+          const messageId = sent.result && sent.result.message_id ? sent.result.message_id : e.telegram_message_id;
+          const chatId = e.telegram_chat_id || String(cb.message.chat.id);
+          if (messageId) await L.q('update estimates set telegram_message_id=$1, telegram_chat_id=$2 where id=$3', [messageId, String(chatId), e.id]);
+        }
         let docSent = false, docError = '';
         if (sent.ok) {
           try {
@@ -80,7 +57,7 @@ module.exports = async (req, res) => {
             const form = new FormData();
             form.append('chat_id', String(cb.message.chat.id));
             form.append('document', new Blob([doc], { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), 'smeta-' + e.id + '.docx');
-            const upload = await fetch('https://api.telegram.org/bot' + t.token + '/sendDocument', { method:'POST', body:form });
+            const upload = await fetch('https://api.telegram.org/bot' + t.token + '/sendDocument', { method: 'POST', body: form });
             const result = await upload.json();
             docSent = !!result.ok;
             if (!docSent) docError = result.description || 'Telegram не принял Word-файл';
@@ -89,6 +66,45 @@ module.exports = async (req, res) => {
         await L.tg(t.token, 'answerCallbackQuery', { callback_query_id:cb.id, text:sent.ok ? (docSent ? ('Смета №' + e.id + ' и Word-файл отправлены') : ('Смета отправлена, DOCX: ' + docError.slice(0,100))) : 'Не удалось отправить смету' });
         await L.log(req, 'Telegram', 'смета №' + e.id + ' по заявке №' + estimateMatch[1] + ': сообщение ' + (sent.ok?'ок':'ошибка') + ', Word ' + (docSent?'ок':docError || 'не отправлен') + ' · ' + who, sent.ok && docSent);
         return L.send(res,200,{ok:true,document:docSent});
+      }
+
+      const quoteStatusMatch = /^quote-status:(sent|approved|rejected):(\d+)$/.exec(data);
+      if (quoteStatusMatch) {
+        const estimateId = Number(quoteStatusMatch[2]);
+        const newEstimateStatus = quoteStatusMatch[1];
+        const changedEstimate = await L.q('update estimates set status=$1, updated_at=now() where id=$2 returning *', [newEstimateStatus, estimateId]);
+        if (!changedEstimate.rows[0]) {
+          await L.tg(t.token, 'answerCallbackQuery', {callback_query_id:cb.id,text:'Смета не найдена'});
+          return L.send(res,200,{ok:true});
+        }
+        const estimate = changedEstimate.rows[0];
+        let updatedLead = null;
+        if (estimate.lead_id) {
+          const leadChange = await L.q('update leads set status=$1, history=history || $2::jsonb where id=$3 returning *',
+            ['отправлена смета',JSON.stringify([{at:new Date().toISOString(),t:'отправлена смета №'+estimate.id,by:who}]),estimate.lead_id]);
+          updatedLead = leadChange.rows[0] || null;
+        }
+        const currentLeadStatus = updatedLead ? updatedLead.status : '';
+        const editQuote = await L.tg(t.token,'editMessageText',{
+          chat_id:cb.message.chat.id,message_id:cb.message.message_id,
+          text:quoteText(estimate,currentLeadStatus),parse_mode:'HTML',disable_web_page_preview:true,
+          reply_markup:quoteKeyboard(estimate)
+        });
+        let leadMessageUpdated = null;
+        if (updatedLead && updatedLead.tg_msg_id) {
+          const editLead = await L.tg(t.token,'editMessageText',{
+            chat_id:t.chat || cb.message.chat.id,message_id:updatedLead.tg_msg_id,
+            text:L.leadText(updatedLead),parse_mode:'HTML',disable_web_page_preview:true,
+            reply_markup:L.leadKeyboard(updatedLead.id)
+          });
+          leadMessageUpdated = !!editLead.ok;
+        }
+        await L.tg(t.token,'answerCallbackQuery',{
+          callback_query_id:cb.id,
+          text:editQuote.ok ? 'Смета и статус заявки обновлены' : 'Статус сохранён, но сообщение сметы не обновилось'
+        });
+        await L.log(req,'Telegram','смета №'+estimate.id+': статус '+newEstimateStatus+' · '+who,!!editQuote.ok);
+        return L.send(res,200,{ok:true,estimateUpdated:!!editQuote.ok,leadMessageUpdated:leadMessageUpdated});
       }
 
       let leadId = 0, st = '', actionName = '';
@@ -113,6 +129,21 @@ module.exports = async (req, res) => {
         return L.send(res,200,{ok:true});
       }
       const lead = patch.rows[0];
+      if (st === 'отправлена смета') {
+        await L.q("update estimates set status='sent',updated_at=now() where lead_id=$1 and status='draft'", [leadId]);
+      }
+      const relatedEstimateResult = await L.q('select * from estimates where lead_id=$1 order by id desc limit 1', [leadId]);
+      const relatedEstimate = relatedEstimateResult.rows[0] || null;
+      if (relatedEstimate && relatedEstimate.telegram_message_id && relatedEstimate.telegram_chat_id) {
+        const estimateEdit = await L.tg(t.token, 'editMessageText', {
+          chat_id:relatedEstimate.telegram_chat_id,
+          message_id:relatedEstimate.telegram_message_id,
+          text:quoteText(relatedEstimate, lead.status),
+          parse_mode:'HTML', disable_web_page_preview:true,
+          reply_markup:quoteKeyboard(relatedEstimate)
+        });
+        if (!estimateEdit.ok) await L.log(req, 'Telegram sync', 'смета №' + relatedEstimate.id + ': ' + String(estimateEdit.description || 'не удалось обновить'), false);
+      }
       let messageUpdated = false, messageError = '';
       try {
         const edit = await L.tg(t.token, 'editMessageText', {

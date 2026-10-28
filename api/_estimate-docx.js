@@ -64,7 +64,8 @@ async function makeEstimateDocx(estimate, company) {
     (typeof estimate.items === 'string' ? JSON.parse(estimate.items || '[]') : []);
   const lineRows = rows.map((item, i) => [
     String(i + 1),
-    clean(item.name) + (item.note ? '\n' + clean(item.note) : ''),
+    clean(item.article || '—'),
+    clean(item.name) + (item.note ? ' · ' + clean(item.note) : ''),
     clean(item.unit || 'шт.'),
     Number(item.qty || 0).toLocaleString('ru-RU', { maximumFractionDigits: 2 }),
     money(item.price),
@@ -95,7 +96,7 @@ async function makeEstimateDocx(estimate, company) {
         paragraph('Расчёт стоимости работ и материалов', { center:true, size:21, color:'756B60', after:220 }),
         makeTable(['Реквизит','Значение'], meta, [30,70]),
         paragraph(''),
-        makeTable(['№','Позиция / описание','Ед.','Кол-во','Цена','Сумма'], lineRows, [6,38,9,10,17,20]),
+        makeTable(['№','Артикул','Позиция / описание','Ед.','Кол-во','Цена','Сумма'], lineRows, [5,13,32,8,10,16,16]),
         paragraph(''),
         paragraph('Сумма позиций: ' + money(subtotal), { size:21 }),
         paragraph('Скидка: ' + money(discount), { size:21 }),
