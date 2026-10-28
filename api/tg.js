@@ -19,7 +19,7 @@ function money(v) { return Number(v || 0).toLocaleString('ru-RU') + ' BYN'; }
 function quoteText(e) {
   const rows = Array.isArray(e.items) ? e.items : (typeof e.items === 'string' ? JSON.parse(e.items || '[]') : []);
   function fit(value, width) {
-    const text = String(value == null ? '—' : value).replace(/[\\r\\n]+/g, ' ').trim();
+    const text = String(value == null ? '—' : value).replace(/[\r\n]+/g, ' ').trim();
     const chars = Array.from(text);
     const short = chars.length > width ? chars.slice(0,width-1).join('') + '…' : text;
     return short + ' '.repeat(Math.max(0,width-Array.from(short).length));
