@@ -221,62 +221,126 @@ function leadKeyboard(id) {
 }
 async function createEstimateFromLead(leadId, by) {
   await init();
-  const prev = await q(`select * from estimates where lead_id=$1 and status='draft' order by id desc limit 1`, [leadId]);
-  if (prev.rows[0]) return prev.rows[0];
   const leadResult = await q(`select * from leads where id=$1 limit 1`, [leadId]);
   const lead = leadResult.rows[0];
   if (!lead) throw Object.assign(new Error('Заявка не найдена'), { code: 'NO_LEAD' });
-  const content = await getSiteContent();
+
+  // The public calculator and the estimate use the same active catalogue.
+  // If "site_sync" is enabled, apply the finance price book before calculating.
+  const book = await getPriceBook();
+  const content = applySitePriceBook(await getContent(), book);
   const sel = lead.config && lead.config.sel && typeof lead.config.sel === 'object' ? lead.config.sel : {};
   const rows = [];
   const catalog = content.catalog || { categories: [], items: [] };
+  function articleForTarget(target, fallback) {
+    if (book.siteSync) {
+      const entry = (book.items || []).find(function (p) {
+        return String(p.siteTarget || '') === target && String(p.article || '').trim();
+      });
+      if (entry) return String(entry.article).trim();
+    }
+    return String(fallback || '—');
+  }
+  function priceForTarget(target, fallback) {
+    if (book.siteSync) {
+      const entry = (book.items || []).find(function (p) {
+        return String(p.siteTarget || '') === target && p.price !== null && p.price !== '' &&
+          Number.isFinite(Number(p.price));
+      });
+      if (entry) return Math.max(0, Number(entry.price));
+    }
+    return fallback == null ? 0 : Number(fallback);
+  }
+
   const categoryId = sel.monument || '';
   const category = (catalog.categories || []).find(x => x.id === categoryId);
   if (category) {
     const modelCode = lead.config && lead.config.model;
     const model = modelCode && (catalog.items || []).find(x => x.code === modelCode);
-    rows.push({ name: category.name + (model ? ' · модель ' + model.code : ''), unit: 'комплект', qty: 1,
-      price: category.price == null ? 0 : Number(category.price), note: category.price == null ? 'Индивидуальный расчёт' : '' });
+    const target = 'catalog:' + categoryId;
+    const article = modelCode || articleForTarget(target, category.article || category.sku || ('CAT-' + String(categoryId).toUpperCase()));
+    rows.push({
+      article: String(article),
+      name: category.name + (model ? ' · модель ' + model.code : (modelCode ? ' · модель ' + modelCode : '')),
+      unit: 'комплект', qty: 1,
+      price: priceForTarget(target, category.price),
+      note: category.price == null ? 'Цена не задана в каталоге — подтвердить вручную' : ''
+    });
   }
+
   const missing = [];
   (content.calc && content.calc.steps || []).forEach(function (st) {
     const chosen = sel[st.id];
-    const ids = st.type === 'multi' ? (Array.isArray(chosen) ? chosen : []) : (chosen ? [chosen] : []);
+    // Do not assume a radio/multi shape: legacy leads may store arrays for either.
+    const ids = Array.isArray(chosen) ? chosen : (chosen ? [chosen] : []);
     ids.forEach(function (id) {
       const item = (st.items || []).find(x => x.id === id);
+      const target = 'calc:' + st.id + ':' + id;
       if (!item) {
-        missing.push({ name: st.name + ' · ' + id, unit: 'шт.', qty: 1, price: 0,
-          note: 'Эта позиция была выбрана в заявке, но отсутствует в актуальном каталоге. Проверьте цену.' });
+        missing.push({
+          article: String(st.id + '-' + id).toUpperCase(),
+          name: st.name + ' · ' + id, unit: 'шт.', qty: 1, price: 0,
+          note: 'Позиция выбрана в заявке, но отсутствует в актуальном каталоге. Укажите артикул и цену вручную.'
+        });
         return;
       }
-      rows.push({ name: st.name + ' · ' + item.name, unit: 'шт.', qty: 1,
-        price: item.price == null ? 0 : Number(item.price), note: item.note || (item.price == null ? 'Индивидуальный расчёт' : '') });
+      const fallbackArticle = item.article || item.sku || item.code || (st.id + '-' + item.id).toUpperCase();
+      rows.push({
+        article: articleForTarget(target, fallbackArticle),
+        name: st.name + ' · ' + item.name,
+        unit: item.unit || 'шт.', qty: 1,
+        price: priceForTarget(target, item.price),
+        note: item.note || (item.price == null ? 'Цена не задана в каталоге — подтвердить вручную' : '')
+      });
     });
   });
-  if (!rows.length && !missing.length) rows.push({ name: 'Предварительный расчёт по заявке №' + lead.id, unit: 'комплект', qty: 1,
-    price: lead.price == null ? 0 : Number(lead.price), note: lead.config && lead.config.summary || lead.comment || '' });
+
+  if (!rows.length && !missing.length) rows.push({
+    article: 'LEAD-' + lead.id,
+    name: 'Предварительный расчёт по заявке №' + lead.id,
+    unit: 'комплект', qty: 1,
+    price: lead.price == null ? 0 : Number(lead.price),
+    note: lead.config && lead.config.summary || lead.comment || ''
+  });
   if (missing.length) {
     const knownTotal = rows.reduce((n, x) => n + Number(x.qty || 0) * Number(x.price || 0), 0);
     const residual = lead.price == null ? 0 : Math.max(0, Number(lead.price) - knownTotal);
     if (missing.length === 1 && residual > 0) {
       missing[0].price = residual;
-      missing[0].note = 'Позиция была выбрана в заявке. Цена восстановлена по сохранённой сумме заявки; проверьте её по актуальному прайсу.';
+      missing[0].note = 'Позиция отсутствует в текущем каталоге. Сумма восстановлена из заявки; проверьте артикул и цену перед отправкой клиенту.';
     } else if (missing.length > 1 && residual > 0) {
-      rows.push({ name: 'Корректировка до суммы заявки', unit: 'комплект', qty: 1, price: residual,
-        note: 'В текущем каталоге не найдены: ' + missing.map(x => x.name).join(', ') + '. Разнесите сумму по позициям вручную.' });
+      rows.push({
+        article: 'ADJUST-' + lead.id,
+        name: 'Корректировка до суммы заявки', unit: 'комплект', qty: 1, price: residual,
+        note: 'В каталоге не найдены: ' + missing.map(x => x.name).join(', ') + '. Сумму нужно разнести по позициям вручную.'
+      });
     }
     rows.push.apply(rows, missing);
   }
-  const total = rows.reduce((n, x) => n + Number(x.qty || 0) * Number(x.price || 0), 0);
-  const token = crypto.randomBytes(24).toString('hex');
-  const res = await q(`insert into estimates(lead_id,client_name,client_phone,items,total,discount,notes,status,public_token,created_by)
-    values($1,$2,$3,$4,$5,0,$6,'draft',$7,$8) returning *`,
-    [lead.id, lead.name || '', lead.phone || '', JSON.stringify(rows), total, String((lead.config && lead.config.summary) || lead.comment || ''), token, String(by || 'Telegram').slice(0,80)]);
-  await q(`update leads set history=history || $1::jsonb where id=$2`,
-    [JSON.stringify([{at:new Date().toISOString(),t:'создан черновик сметы №'+res.rows[0].id,by:String(by || 'система')}]), lead.id]);
-  return res.rows[0];
-}
 
+  const total = rows.reduce((n, x) => n + Number(x.qty || 0) * Number(x.price || 0), 0);
+  const notes = String((lead.config && lead.config.summary) || lead.comment || '').slice(0, 3000);
+
+  // Rebuild an existing draft when the button is clicked again, so stale prices/rows never survive.
+  const prev = await q(`select id, public_token from estimates where lead_id=$1 and status='draft' order by id desc limit 1`, [lead.id]);
+  if (prev.rows[0]) {
+    const updated = await q(`update estimates
+      set client_name=$1, client_phone=$2, items=$3::jsonb, total=$4, discount=0, notes=$5, updated_at=now()
+      where id=$6
+      returning *`, [lead.name || '', lead.phone || '', JSON.stringify(rows), total, notes, prev.rows[0].id]);
+    await q(`update leads set history=history || $1::jsonb where id=$2`,
+      [JSON.stringify([{at:new Date().toISOString(),t:'черновик сметы №'+updated.rows[0].id+' пересчитан по актуальному каталогу',by:String(by || 'система')}]), lead.id]);
+    return updated.rows[0];
+  }
+
+  const token = crypto.randomBytes(24).toString('hex');
+  const created = await q(`insert into estimates(lead_id,client_name,client_phone,items,total,discount,notes,status,public_token,created_by)
+    values($1,$2,$3,$4,$5,0,$6,'draft',$7,$8) returning *`,
+    [lead.id, lead.name || '', lead.phone || '', JSON.stringify(rows), total, notes, token, String(by || 'Telegram').slice(0,80)]);
+  await q(`update leads set history=history || $1::jsonb where id=$2`,
+    [JSON.stringify([{at:new Date().toISOString(),t:'создана смета №'+created.rows[0].id+' по актуальному каталогу',by:String(by || 'система')}]), lead.id]);
+  return created.rows[0];
+}
 
 module.exports = { q, init, getContent, getSiteContent, getPriceBook, applySitePriceBook, saveContent, publicContent, merge, checkLogin, setPassword, session, setSession, clearSession,
   log, body, send, fail, requireAdmin, tg, tgSecret, leadText, leadKeyboard, createEstimateFromLead, esc, ip, DEFAULTS };
