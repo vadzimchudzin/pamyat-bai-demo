@@ -151,23 +151,31 @@ async function tg(token, method, payload) {
 function tgSecret() { return crypto.createHmac('sha256', secret()).update('tg-webhook').digest('hex').slice(0, 48); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
 function leadText(L) {
-  const time = new Date(L.created_at || Date.now()).toLocaleString('ru-RU', { timeZone: 'Europe/Minsk' });
-  const amount = L.price == null ? 'индивидуально' : Number(L.price).toLocaleString('ru-RU') + ' BYN';
-  const rows = [
-    ['Клиент', L.name || '—'],
-    ['Телефон', L.phone || '—'],
-    ['Тип', L.type === 'calc' ? 'Расчёт' : 'Звонок'],
-    ['Сумма', amount],
-    ['Дата', time],
-    ['Статус', L.status || 'новая']
+  const time = new Date(L.created_at || Date.now()).toLocaleDateString('ru-RU', { timeZone: 'Europe/Minsk' });
+  function col(value, width) {
+    const text = String(value == null ? '—' : value).replace(/[\\r\\n]+/g, ' ').trim();
+    const chars = Array.from(text);
+    const short = chars.length > width ? chars.slice(0, width - 1).join('') + '…' : text;
+    return short + ' '.repeat(Math.max(0, width - Array.from(short).length));
+  }
+  const type = L.type === 'calc' ? 'Расчёт' : 'Звонок';
+  const amount = L.price == null ? 'инд.' : Number(L.price).toLocaleString('ru-RU') + ' BYN';
+  const widths = [4, 10, 14, 16, 14, 15];
+  const headers = ['№','Дата','Клиент','Телефон','Сумма','Статус'];
+  const values = [String(L.id),time,L.name || '—',L.phone || '—',amount,L.status || 'новая'];
+  const line = row => '│ ' + row.map((x,i)=>col(x,widths[i])).join(' │ ') + ' │';
+  const bar = '├' + widths.map(w=>'─'.repeat(w+2)).join('┼') + '┤';
+  const top = '┌' + widths.map(w=>'─'.repeat(w+2)).join('┬') + '┐';
+  const bottom = '└' + widths.map(w=>'─'.repeat(w+2)).join('┴') + '┘';
+  const lines = [
+    '<b>ПАМЯТЬ.БАЙ · НОВАЯ ЗАЯВКА №' + L.id + '</b>',
+    '<pre>' + esc([top,line(headers),bar,line(values),bottom].join('\\n')) + '</pre>',
+    '<b>Тип:</b> ' + esc(type)
   ];
-  const table = rows.map(([k, v]) => (String(k).padEnd(9, ' ') + ' │ ' + String(v).replace(/[\r\n]+/g, ' ').slice(0, 48))).join('\n');
-  const summary = L.config && L.config.summary ? String(L.config.summary).split(/;\s*/).slice(0, 12).map(x => '• ' + x).join('\n').slice(0, 1200) : '';
-  const lines = ['<b>ПАМЯТЬ.БАЙ · ЗАЯВКА №' + L.id + '</b>', '<pre>' + esc(table) + '</pre>'];
-  if (summary) lines.push('<b>Состав расчёта</b>', '<pre>' + esc(summary) + '</pre>');
+  if (L.config && L.config.summary) lines.push('<b>Состав расчёта</b>', '<pre>' + esc(String(L.config.summary).slice(0, 1500)) + '</pre>');
   if (L.comment) lines.push('<b>Комментарий:</b> ' + esc(String(L.comment).slice(0, 700)));
   if (L.taken_by) lines.push('<b>Ответственный:</b> ' + esc(L.taken_by));
-  return lines.join('\n');
+  return lines.join('\\n');
 }
 
 /* ---------- каталог цен и сметы ---------- */
