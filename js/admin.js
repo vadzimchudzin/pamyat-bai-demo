@@ -8,7 +8,7 @@
   function toast(msg, bad) { var t = $('#toast'); t.textContent = msg; t.className = 'toast' + (bad ? ' bad' : ''); t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(function () { t.hidden = true; }, 3200); }
   function api(path, opt) {
     opt = opt || {};
-    return fetch(path, { method: opt.method || 'GET', credentials: 'same-origin', headers: opt.body ? { 'content-type': 'application/json' } : {}, body: opt.body ? JSON.stringify(opt.body) : undefined })
+    return fetch(path, { method: opt.method || 'GET', credentials: 'same-origin', cache: 'no-store', headers: opt.body ? { 'content-type': 'application/json' } : {}, body: opt.body ? JSON.stringify(opt.body) : undefined })
       .then(function (r) { return r.json().catch(function () { return { ok: false, error: 'Ответ сервера не прочитан' }; }).then(function (d) { d.status = r.status; return d; }); })
       .then(function (d) { if (d.status === 401 && path !== '/api/auth') showLogin(); return d; });
   }
@@ -75,7 +75,7 @@
   }
 
   /* ---------- заявки: канбан, статусы и получение сметы ---------- */
-  var STATUSES = [], LEADS = [];
+  var STATUSES = [], LEADS = [], lastLeadSignature = '', leadsRequestInFlight = false;
   var STATUS_KEYS = {
     'новая':'new','взята в работу':'working','связались':'contacted','назначен замер':'measure',
     'отправлена смета':'estimate','заключён договор':'contract','отказ':'rejected','завершена':'done'
@@ -125,15 +125,30 @@
         }).join('') || '<p class="empty">Нет заявок</p>') + '</div></section>';
     }).join('') + '</div>';
   }
-  function loadLeads() {
+  function leadSignature(leads) {
+    return JSON.stringify((leads || []).map(function (l) {
+      return [l.id,l.status,l.name,l.phone,l.type,l.price,l.comment,l.config,l.taken_by,l.tg_msg_id,l.created_at,l.history];
+    }));
+  }
+  function loadLeads(options) {
+    options = options || {};
+    if (leadsRequestInFlight) return Promise.resolve();
+    leadsRequestInFlight = true;
     return api('/api/lead').then(function (d) {
       if (!d.ok) return;
       STATUSES = d.statuses || ['новая','взята в работу','связались','назначен замер','отправлена смета','заключён договор','отказ','завершена'];
-      LEADS = d.leads || [];
+      var incoming = d.leads || [], signature = leadSignature(incoming);
+      var changed = signature !== lastLeadSignature;
+      LEADS = incoming;
       var n = LEADS.filter(function (l) { return l.status === 'новая'; }).length;
       $('#newCount').textContent = n ? n : '';
-      drawKanban(LEADS);
-    });
+      if (changed || options.force) {
+        lastLeadSignature = signature;
+        drawKanban(LEADS);
+      }
+    }).catch(function () {
+      // Keep the existing board visible during temporary network errors.
+    }).finally(function () { leadsRequestInFlight = false; });
   }
   $('#leadsReload').addEventListener('click', loadLeads);
   $('#leadsBoard').addEventListener('change', function (e) {
@@ -177,7 +192,14 @@
     var lead=LEADS.find(function(x){return String(x.id)===String(id);});
     if(lead && lead.status!==zone.dataset.dropStatus) leadStatus(id,zone.dataset.dropStatus);
   });
-  setInterval(function () { if (!$('#app').hidden && $('#p-leads').classList.contains('on')) loadLeads(); }, 10000);
+  setInterval(function () {
+    if (!$('#app').hidden && document.visibilityState === 'visible' &&
+        $('#p-leads').classList.contains('on') && !draggedLeadId) loadLeads({silent:true});
+  }, 2500);
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && !$('#app').hidden &&
+        $('#p-leads').classList.contains('on')) loadLeads({silent:true});
+  });
 
   /* ---------- калькулятор ---------- */
   function drawCalc() {
@@ -198,7 +220,7 @@
     }).join('') || '<p class="empty">Шагов нет — добавьте первый.</p>';
   }
   function readCalc() {
-    return { steps: $$('#calcEd .step').map(function (st) {
+    return { steps: $$( '#calcEd .step').map(function (st) {
       return { id: st.dataset.id, name: $('[name=name]', st).value.trim() || 'Шаг', sub: $('[name=sub]', st).value.trim(), type: $('[name=type]', st).value,
         items: $$('.it', st).map(function (it) {
           var p = $('[name=iprice]', it).value.trim();
@@ -425,11 +447,12 @@
     $('#pricebookInfo').innerHTML = 'Позиций: <b>' + items.length + '</b>. ' +
       (PRICEBOOK.siteSync ? '<span class="pricebook-on">Автоперенос цен на сайт включён</span>' : 'Автоперенос на сайт выключен') +
       (PRICEBOOK.updatedAt ? ' · Обновлено: ' + esc(new Date(PRICEBOOK.updatedAt).toLocaleString('ru-RU')) : '');
-    $('#pricebookRows').innerHTML = items.length ? '<table class="price-table"><thead><tr><th>Категория</th><th>Наименование</th><th>Ед.</th><th>Цена, BYN</th><th>Привязка к сайту</th><th></th></tr></thead><tbody>' +
+    $('#pricebookRows').innerHTML = items.length ? '<table class="price-table"><thead><tr><th>Категория</th><th>Наименование</th><th>Артикул</th><th>Ед.</th><th>Цена, BYN</th><th>Привязка к сайту</th><th></th></tr></thead><tbody>' +
       items.map(function (p, i) {
         var target = p.siteTarget || guessPriceTarget(p);
         return '<tr class="pb-row" data-pbi="' + i + '"><td><input class="price-cat" name="pcat" value="' + esc(p.category || '') + '" placeholder="Категория"></td>' +
           '<td><input class="price-name" name="pname" value="' + esc(p.name || '') + '" placeholder="Название позиции"></td>' +
+          '<td><input class="price-article" name="particle" value="' + esc(p.article || '') + '" placeholder="Артикул / SKU"></td>' +
           '<td><input name="punit" value="' + esc(p.unit || 'шт.') + '" placeholder="шт."></td>' +
           '<td><input class="price-val" name="pprice" type="number" min="0" step="0.01" value="' + (p.price == null ? '' : esc(p.price)) + '" placeholder="Цена"></td>' +
           '<td><select class="price-target" name="ptarget">' + targets.map(function (x) { return '<option value="' + esc(x.value) + '"' + (x.value === target ? ' selected' : '') + '>' + esc(x.label) + '</option>'; }).join('') + '</select></td>' +
@@ -437,14 +460,14 @@
       }).join('') + '</tbody></table>' : '<p class="empty">Каталог пока пуст. Загрузите CSV или добавьте позиции вручную.</p>';
   }
   function readPricebook() {
-    var items = $('#pricebookRows .pb-row').map(function (tr, i) {
+    return $$('#pricebookRows .pb-row').map(function (tr, i) {
       var p = $('[name=pprice]', tr).value.trim();
       return { id:(PRICEBOOK.items[i] && PRICEBOOK.items[i].id) || slug('price'),
         category:$('[name=pcat]',tr).value.trim(), name:$('[name=pname]',tr).value.trim(),
+        article:$('[name=particle]',tr).value.trim(),
         unit:$('[name=punit]',tr).value.trim() || 'шт.', price:p === '' ? null : Math.max(0, +p),
         siteTarget:$('[name=ptarget]',tr).value };
     }).filter(function (x) { return x.name; });
-    return items;
   }
   function savePricebook() {
     var body = {action:'save_pricebook',items:readPricebook(),siteSync:$('#sitePriceSync').checked};
@@ -467,7 +490,7 @@
   $('#sitePriceSync').addEventListener('change',savePricebook);
   $('#priceAdd').addEventListener('click',function() {
     if (!PRICEBOOK.items) PRICEBOOK.items=[];
-    PRICEBOOK.items.push({id:slug('price'),category:'Работы',name:'Новая позиция',unit:'шт.',price:0,siteTarget:''});
+    PRICEBOOK.items.push({id:slug('price'),category:'Работы',name:'Новая позиция',article:'',unit:'шт.',price:0,siteTarget:''});
     drawPricebook();
   });
   $('#pricebookRows').addEventListener('click',function(e) {
@@ -497,16 +520,17 @@
       if(!rows.length) return toast('CSV-файл пустой',true);
       var first=rows[0].map(function(x){return x.toLocaleLowerCase('ru-RU');});
       var hasHeader=first.some(function(x){return /назван|name|наимен/.test(x);});
-      var ix={category:0,name:1,unit:2,price:3,target:4}, data=rows;
+      var ix={category:0,name:1,unit:2,price:3,target:4,article:-1}, data=rows;
       if(hasHeader){
         function find(re, fallback){var i=first.findIndex(function(x){return re.test(x);});return i<0?fallback:i;}
         ix.category=find(/катег|category|групп/,0);ix.name=find(/назван|name|наимен/,1);
-        ix.unit=find(/ед\.?изм|единиц|unit/,2);ix.price=find(/цен|price|стоим/,3);ix.target=find(/привяз|target|сайт/,4);
+        ix.article=find(/артик|sku|article|код\\b/,-1);
+        ix.unit=find(/ед\\.?изм|единиц|unit/,2);ix.price=find(/цен|price|стоим/,3);ix.target=find(/привяз|target|сайт/,4);
         data=rows.slice(1);
       }
       var parsed=data.map(function(r,i){
         var raw=String(r[ix.price]||'').replace(/\s/g,'').replace(',','.');
-        return {id:slug('price'),category:String(r[ix.category]||'').trim(),name:String(r[ix.name]||'').trim(),
+        return {id:slug('price'),category:String(r[ix.category]||'').trim(),name:String(r[ix.name]||'').trim(),article:ix.article>=0?String(r[ix.article]||'').trim():'',
           unit:String(r[ix.unit]||'шт.').trim(),price:raw===''?null:Math.max(0,Number(raw)||0),siteTarget:String(r[ix.target]||'').trim()};
       }).filter(function(x){return x.name;});
       if(!parsed.length) return toast('Не нашёл строк с названиями. Нужны колонки: Категория; Название; Ед.; Цена.',true);
