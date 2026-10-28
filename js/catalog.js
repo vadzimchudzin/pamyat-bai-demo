@@ -33,7 +33,7 @@
   function kitHtml(c) {
     var h = '';
     if (c.price != null && c.price !== '') h += '<div class="prl"><span>Стоимость</span><b>' + price(c) + '</b></div>';
-    var sharedSize = CAT.sameSizeAll ? String(c.sizeOverride || CAT.commonSize || '').trim() : '';
+    var sharedSize = CAT.sameSizeAll && c.sizeEnabled !== false ? String(c.sizeOverride || CAT.commonSize || '').trim() : '';
     var sizeApplied = false;
     if (c.kit && c.kit.length) {
       h += '<ul class="kit">' + c.kit.map(function (k) {
