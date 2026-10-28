@@ -3,8 +3,9 @@ const L = require('./_lib');
 module.exports = async (req, res) => {
   try {
     if (req.method === 'GET') {
-      const c = await L.getContent();
-      if (L.session(req) && req.query && req.query.full) return L.send(res, 200, { ok: true, content: c });
+      const full = !!(L.session(req) && req.query && req.query.full);
+      const c = full ? await L.getContent() : await L.getSiteContent();
+      if (full) return L.send(res, 200, { ok: true, content: c });
       res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=30, stale-while-revalidate=300');
       res.statusCode = 200; res.setHeader('Content-Type', 'application/json; charset=utf-8');
       return res.end(JSON.stringify({ ok: true, content: L.publicContent(c) }));
