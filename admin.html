@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/admin.css?v=a3">
+<link rel="stylesheet" href="/css/admin.css?v=a4">
 </head>
 <body>
 <div class="bg" aria-hidden="true"></div>
@@ -31,13 +31,19 @@
   <aside class="side">
     <a class="logo" href="/" target="_blank">Память<span>.бай</span></a>
     <nav id="nav">
-      <button data-p="leads" class="on">Заявки <b id="newCount"></b></button>
-      <button data-p="catalog">Каталог</button>
+      <div class="nav-label">Работа с клиентами</div>
+      <button data-p="leads" class="on">Заявки · канбан <b id="newCount"></b></button>
+      <div class="nav-label">Настройки сайта</div>
+      <button data-p="catalog">Каталог сайта</button>
       <button data-p="calc">Калькулятор</button>
       <button data-p="works">Примеры работ</button>
       <button data-p="texts">Тексты</button>
       <button data-p="contacts">Контакты и номера</button>
       <button data-p="tg">Telegram-бот</button>
+      <div class="nav-label">Финансовый отдел</div>
+      <button data-p="pricebook">Актуальный каталог цен</button>
+      <button data-p="estimates">Сметы</button>
+      <div class="nav-label">Система</div>
       <button data-p="log">Журнал</button>
       <button data-p="security">Безопасность</button>
     </nav>
@@ -48,7 +54,7 @@
     <!-- заявки -->
     <section class="pane on" id="p-leads">
       <header><h2>Заявки</h2><button class="btn line sm" id="leadsReload">Обновить</button></header>
-      <div class="card"><div class="tbl" id="leadsTbl"></div></div>
+      <div class="card"><p class="hint">Перетаскивайте карточку в другую колонку или меняйте статус в карточке. Изменения синхронизируются с Telegram.</p><div class="kanban-wrap" id="leadsBoard"></div><div class="tbl" id="leadsTbl" hidden></div></div>
     </section>
 
     <!-- каталог -->
@@ -61,7 +67,7 @@
 
     <!-- калькулятор -->
     <section class="pane" id="p-calc">
-      <header><h2>Калькулятор</h2><div class="acts"><button class="btn line sm" id="addStep">+ Шаг</button><button class="btn gold sm" data-save="calc">Сохранить</button></div></header>
+      <header><h2>Калькулятор</h2><div class="acts"><label class="chk price-sync"><input type="checkbox" id="sitePriceSync"> Использовать актуальный каталог цен</label><button class="btn line sm" id="addStep">+ Шаг</button><button class="btn gold sm" data-save="calc">Сохранить</button></div></header>
       <p class="hint"><b>Шаг 1 «Памятник» берётся из раздела «Каталог» автоматически.</b> Ниже — остальные шаги. «Один вариант» — круглые переключатели, «несколько» — овальные тумблеры. Пустая цена = «индивидуальный расчёт». Подпись вместо цены — например «включено».</p>
       <div id="calcEd"></div>
     </section>
@@ -107,6 +113,43 @@
       </div>
     </section>
 
+    <!-- актуальный каталог цен -->
+    <section class="pane" id="p-pricebook">
+      <header><h2>Актуальный каталог цен</h2><div class="acts">
+        <label class="btn line sm">Загрузить CSV<input type="file" id="priceCsv" accept=".csv,.tsv,.txt,text/csv" hidden></label>
+        <button class="btn line sm" id="priceAdd">+ Позиция</button>
+        <button class="btn gold sm" id="priceSave">Сохранить каталог</button>
+      </div></header>
+      <p class="hint">Загрузите CSV, экспортированный из Excel. Колонки: Категория; Название; Ед.; Цена; Привязка к сайту (необязательно). Связанные позиции могут автоматически обновлять цены на сайте, когда включён переключатель в разделе «Калькулятор».</p>
+      <p class="hint" id="pricebookInfo"></p>
+      <div class="card"><div class="tbl" id="pricebookRows"></div></div>
+    </section>
+
+    <!-- сметы -->
+    <section class="pane" id="p-estimates">
+      <header><h2>Сметы</h2><button class="btn line sm" id="estimatesReload">Обновить</button></header>
+      <div class="card"><div class="tbl" id="estimatesList"></div></div>
+      <section class="card estimate-editor" id="estimateEditor" hidden>
+        <header><h2 id="estimateTitle">Новая смета</h2><div class="acts">
+          <button class="btn line sm" id="estimateAddRow">+ Позиция</button>
+          <button class="btn gold sm" id="estimateSave">Сохранить смету</button>
+        </div></header>
+        <div class="form">
+          <label>Клиент<input id="estimateClient" maxlength="120"></label>
+          <label>Телефон<input id="estimatePhone" maxlength="60"></label>
+          <label>Статус<select id="estimateStatus"><option value="draft">Черновик</option><option value="sent">Отправлена</option><option value="approved">Согласована</option><option value="rejected">Отклонена</option></select></label>
+          <label>Скидка, BYN<input id="estimateDiscount" type="number" min="0" step="1" value="0"></label>
+          <label class="wide">Примечание<textarea id="estimateNotes" rows="2"></textarea></label>
+        </div>
+        <div class="tbl" id="estimateItems"></div>
+        <div class="estimate-total" id="estimateTotal"></div>
+        <div class="acts wrap">
+          <button class="btn line sm" id="estimatePrint">Смета с логотипом · печать / PDF</button>
+          <a class="btn line sm" id="estimatePublicLink" target="_blank" rel="noopener" hidden>Открыть ссылку сметы</a>
+        </div>
+      </section>
+    </section>
+
     <!-- журнал -->
     <section class="pane" id="p-log">
       <header><h2>Журнал</h2><button class="btn line sm" id="logReload">Обновить</button></header>
@@ -127,6 +170,6 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="/js/admin.js?v=a3"></script>
+<script src="/js/admin.js?v=a4"></script>
 </body>
 </html>
