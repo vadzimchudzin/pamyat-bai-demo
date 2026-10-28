@@ -15,7 +15,7 @@ module.exports = async (req, res) => {
   try {
     await L.init();
     if (req.method === 'GET' && req.query && req.query.token) {
-      const r = await L.q('select * from estimates where public_token=$1 limit 1', [clean(req.query.token, 100)]);
+      const r = await L.q('select id,lead_id,client_name,client_phone,items,total,discount,notes,status,public_token,created_at,updated_at,created_by from estimates where public_token=$1 limit 1', [clean(req.query.token, 100)]);
       if (!r.rows[0]) return L.send(res, 404, { ok:false, error:'Ссылка на смету недействительна' });
       const c = await L.getContent();
       const e = shapeEstimate(r.rows[0]);
