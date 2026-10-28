@@ -152,8 +152,14 @@ function tgSecret() { return crypto.createHmac('sha256', secret()).update('tg-we
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
 function leadText(L) {
   const time = new Date(L.created_at || Date.now()).toLocaleDateString('ru-RU', { timeZone: 'Europe/Minsk' });
+  const status = String(L.status || 'новая');
+  const statusIcon = ({
+    'новая':'🟡', 'взята в работу':'🔵', 'связались':'🟣',
+    'назначен замер':'🩵', 'отправлена смета':'🟠',
+    'заключён договор':'🟢', 'отказ':'🔴', 'завершена':'✅'
+  })[status] || '📌';
   function col(value, width) {
-    const text = String(value == null ? '—' : value).replace(/[\r\n]+/g, ' ').trim();
+    const text = String(value == null ? '—' : value).replace(/[\\r\\n]+/g, ' ').trim();
     const chars = Array.from(text);
     const short = chars.length > width ? chars.slice(0, width - 1).join('') + '…' : text;
     return short + ' '.repeat(Math.max(0, width - Array.from(short).length));
@@ -162,13 +168,14 @@ function leadText(L) {
   const amount = L.price == null ? 'инд.' : Number(L.price).toLocaleString('ru-RU') + ' BYN';
   const widths = [4, 10, 14, 16, 14, 15];
   const headers = ['№','Дата','Клиент','Телефон','Сумма','Статус'];
-  const values = [String(L.id),time,L.name || '—',L.phone || '—',amount,L.status || 'новая'];
+  const values = [String(L.id),time,L.name || '—',L.phone || '—',amount,status];
   const line = row => '│ ' + row.map((x,i)=>col(x,widths[i])).join(' │ ') + ' │';
   const bar = '├' + widths.map(w=>'─'.repeat(w+2)).join('┼') + '┤';
   const top = '┌' + widths.map(w=>'─'.repeat(w+2)).join('┬') + '┐';
   const bottom = '└' + widths.map(w=>'─'.repeat(w+2)).join('┴') + '┘';
   const lines = [
-    '<b>ПАМЯТЬ.БАЙ · НОВАЯ ЗАЯВКА №' + L.id + '</b>',
+    '<b>ПАМЯТЬ.БАЙ · ЗАЯВКА №' + L.id + '</b>',
+    '<b>' + statusIcon + ' ТЕКУЩИЙ СТАТУС: ' + esc(status.toLocaleUpperCase('ru-RU')) + '</b>',
     '<pre>' + esc([top,line(headers),bar,line(values),bottom].join(String.fromCharCode(10))) + '</pre>',
     '<b>Тип:</b> ' + esc(type)
   ];
