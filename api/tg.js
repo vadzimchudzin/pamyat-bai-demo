@@ -2,6 +2,7 @@
 const L = require('./_lib');
 const { makeEstimateDocx } = require('./_estimate-docx');
 const { quoteText, quoteKeyboard, statusLabel } = require('./_estimate-telegram');
+const { makeEstimateTablePng } = require('./_estimate-table');
 const STATUS_BY_CODE = {
   n:'новая',
   w:'взята в работу',
@@ -16,6 +17,61 @@ function whoFrom(cb) {
   return cb.from && cb.from.username ? '@' + cb.from.username :
     [cb.from && cb.from.first_name, cb.from && cb.from.last_name].filter(Boolean).join(' ') || 'Telegram';
 }
+
+async function sendNewQuotePhoto(token, chatId, estimate, leadStatus, png, caption) {
+  const form = new FormData();
+  form.append('chat_id', String(chatId));
+  form.append('photo', new Blob([png], { type:'image/png' }), 'smeta-' + estimate.id + '.png');
+  form.append('caption', caption);
+  form.append('parse_mode', 'HTML');
+  form.append('reply_markup', JSON.stringify(quoteKeyboard(estimate)));
+  const response = await fetch('https://api.telegram.org/bot' + token + '/sendPhoto', { method:'POST', body:form });
+  return response.json();
+}
+async function sendOrUpdateQuotePhoto(token, chatId, estimate, leadStatus) {
+  const png = makeEstimateTablePng(estimate, leadStatus);
+  const caption = quoteText(estimate, leadStatus);
+  const oldMessageId = estimate.telegram_message_id;
+  const oldChatId = estimate.telegram_chat_id || chatId;
+  if (oldMessageId && oldChatId) {
+    const form = new FormData();
+    form.append('chat_id', String(oldChatId));
+    form.append('message_id', String(oldMessageId));
+    form.append('media', JSON.stringify({ type:'photo', media:'attach://photo', caption:caption, parse_mode:'HTML' }));
+    form.append('reply_markup', JSON.stringify(quoteKeyboard(estimate)));
+    form.append('photo', new Blob([png], { type:'image/png' }), 'smeta-' + estimate.id + '.png');
+    try {
+      const response = await fetch('https://api.telegram.org/bot' + token + '/editMessageMedia', { method:'POST', body:form });
+      const result = await response.json();
+      if (result.ok || /message is not modified/i.test(String(result.description || ''))) {
+        return { ok:true, result:{ message_id:oldMessageId } };
+      }
+    } catch (e) { /* send a fresh message below */ }
+  }
+  const sent = await sendNewQuotePhoto(token, chatId, estimate, leadStatus, png, caption);
+  // A previous version may be a text-only message. Remove it only after the replacement photo was sent.
+  if (sent.ok && oldMessageId && oldChatId) {
+    try { await L.tg(token, 'deleteMessage', { chat_id:String(oldChatId), message_id:oldMessageId }); } catch (e) {}
+  }
+  return sent;
+}
+async function editQuoteMessage(token, chatId, messageId, estimate, leadStatus) {
+  const caption = quoteText(estimate, leadStatus);
+  const keyboard = quoteKeyboard(estimate);
+  const edited = await L.tg(token, 'editMessageCaption', {
+    chat_id:chatId, message_id:messageId, caption:caption,
+    parse_mode:'HTML', reply_markup:keyboard
+  });
+  if (edited.ok || /message is not modified/i.test(String(edited.description || ''))) {
+    return { ok:true, result:edited.result || { message_id:messageId } };
+  }
+  // Compatibility with old text-only quote messages that predate the table photo.
+  return L.tg(token, 'editMessageText', {
+    chat_id:chatId, message_id:messageId, text:caption,
+    parse_mode:'HTML', disable_web_page_preview:true, reply_markup:keyboard
+  });
+}
+
 module.exports = async (req, res) => {
   try {
     const action = req.query && req.query.action;
@@ -30,24 +86,10 @@ module.exports = async (req, res) => {
         const e = await L.createEstimateFromLead(Number(estimateMatch[1]), who);
         const leadResult = e.lead_id ? await L.q('select status from leads where id=$1 limit 1', [e.lead_id]) : {rows:[]};
         const leadStatus = leadResult.rows[0] ? leadResult.rows[0].status : '';
-        const text = quoteText(e, leadStatus);
-        const messageArgs = { chat_id: cb.message.chat.id, text, parse_mode:'HTML', disable_web_page_preview:true, reply_markup:quoteKeyboard(e) };
-        let sent;
-        if (e.telegram_message_id && e.telegram_chat_id) {
-          sent = await L.tg(t.token, 'editMessageText', Object.assign({}, messageArgs, {
-            chat_id:e.telegram_chat_id, message_id:e.telegram_message_id
-          }));
-          if (!sent.ok && /message is not modified/i.test(String(sent.description || ''))) {
-            sent = {ok:true,result:{message_id:e.telegram_message_id}};
-          } else if (!sent.ok) {
-            sent = await L.tg(t.token, 'sendMessage', messageArgs);
-          }
-        } else {
-          sent = await L.tg(t.token, 'sendMessage', messageArgs);
-        }
+        const chatId = e.telegram_chat_id || String(cb.message.chat.id);
+        const sent = await sendOrUpdateQuotePhoto(t.token, chatId, e, leadStatus);
         if (sent.ok) {
           const messageId = sent.result && sent.result.message_id ? sent.result.message_id : e.telegram_message_id;
-          const chatId = e.telegram_chat_id || String(cb.message.chat.id);
           if (messageId) await L.q('update estimates set telegram_message_id=$1, telegram_chat_id=$2 where id=$3', [messageId, String(chatId), e.id]);
         }
         let docSent = false, docError = '';
@@ -55,7 +97,7 @@ module.exports = async (req, res) => {
           try {
             const doc = await makeEstimateDocx(e, c.contacts || {});
             const form = new FormData();
-            form.append('chat_id', String(cb.message.chat.id));
+            form.append('chat_id', String(chatId));
             form.append('document', new Blob([doc], { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), 'smeta-' + e.id + '.docx');
             const upload = await fetch('https://api.telegram.org/bot' + t.token + '/sendDocument', { method: 'POST', body: form });
             const result = await upload.json();
@@ -85,11 +127,7 @@ module.exports = async (req, res) => {
           updatedLead = leadChange.rows[0] || null;
         }
         const currentLeadStatus = updatedLead ? updatedLead.status : '';
-        const editQuote = await L.tg(t.token,'editMessageText',{
-          chat_id:cb.message.chat.id,message_id:cb.message.message_id,
-          text:quoteText(estimate,currentLeadStatus),parse_mode:'HTML',disable_web_page_preview:true,
-          reply_markup:quoteKeyboard(estimate)
-        });
+        const editQuote = await editQuoteMessage(t.token, cb.message.chat.id, cb.message.message_id, estimate, currentLeadStatus);
         let leadMessageUpdated = null;
         if (updatedLead && updatedLead.tg_msg_id) {
           const editLead = await L.tg(t.token,'editMessageText',{
@@ -135,13 +173,7 @@ module.exports = async (req, res) => {
       const relatedEstimateResult = await L.q('select * from estimates where lead_id=$1 order by id desc limit 1', [leadId]);
       const relatedEstimate = relatedEstimateResult.rows[0] || null;
       if (relatedEstimate && relatedEstimate.telegram_message_id && relatedEstimate.telegram_chat_id) {
-        const estimateEdit = await L.tg(t.token, 'editMessageText', {
-          chat_id:relatedEstimate.telegram_chat_id,
-          message_id:relatedEstimate.telegram_message_id,
-          text:quoteText(relatedEstimate, lead.status),
-          parse_mode:'HTML', disable_web_page_preview:true,
-          reply_markup:quoteKeyboard(relatedEstimate)
-        });
+        const estimateEdit = await editQuoteMessage(t.token, relatedEstimate.telegram_chat_id, relatedEstimate.telegram_message_id, relatedEstimate, lead.status);
         if (!estimateEdit.ok) await L.log(req, 'Telegram sync', 'смета №' + relatedEstimate.id + ': ' + String(estimateEdit.description || 'не удалось обновить'), false);
       }
       let messageUpdated = false, messageError = '';

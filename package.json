@@ -10,6 +10,7 @@
     "docx": "^9.15.0",
     "xlsx": "^0.18.5",
     "mammoth": "^1.9.1",
-    "pdf-parse": "^1.1.1"
+    "pdf-parse": "^1.1.1",
+    "@resvg/resvg-js": "^2.6.2"
   }
 }
