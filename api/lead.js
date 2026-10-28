@@ -53,16 +53,28 @@ module.exports = async (req, res) => {
         [st, JSON.stringify([{ at: new Date().toISOString(), t: st, by: s.u }]), b.id]);
       if (!changed.rows[0]) return L.send(res, 404, { ok:false, error:'Заявка не найдена' });
       const updatedLead = changed.rows[0];
+      let telegramSync = null, telegramError = '';
       try {
         const c = await L.getContent(), t = c.telegram || {};
         if (t.enabled && t.token && t.chat && updatedLead.tg_msg_id) {
-          await L.tg(t.token, 'editMessageText', { chat_id:t.chat, message_id:updatedLead.tg_msg_id,
+          const tgResult = await L.tg(t.token, 'editMessageText', {
+            chat_id:t.chat, message_id:updatedLead.tg_msg_id,
             text:L.leadText(updatedLead), parse_mode:'HTML', disable_web_page_preview:true,
-            reply_markup:L.leadKeyboard(updatedLead.id) });
+            reply_markup:L.leadKeyboard(updatedLead.id)
+          });
+          telegramSync = !!tgResult.ok;
+          if (!tgResult.ok) {
+            telegramError = String(tgResult.description || 'Telegram отклонил обновление сообщения');
+            await L.log(req, 'Telegram sync', 'заявка №' + b.id + ': ' + telegramError, false);
+          }
         }
-      } catch (e) { /* status is saved even if Telegram is unavailable */ }
-      await L.log(req, 'Статус заявки', '№' + b.id + ' → ' + st);
-      return L.send(res, 200, { ok: true, lead:updatedLead });
+      } catch (e) {
+        telegramSync = false;
+        telegramError = String(e && e.message || e || 'Ошибка Telegram');
+        await L.log(req, 'Telegram sync', 'заявка №' + b.id + ': ' + telegramError, false);
+      }
+      await L.log(req, 'Статус заявки', '№' + b.id + ' → ' + st + (telegramSync === false ? ' · Telegram sync failed' : ''));
+      return L.send(res, 200, { ok: true, lead:updatedLead, telegramSync:telegramSync, telegramError:telegramError });
     }
     if (req.method === 'DELETE') {
       const id = parseInt((req.query && req.query.id) || '0', 10);
