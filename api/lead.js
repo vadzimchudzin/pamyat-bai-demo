@@ -20,7 +20,7 @@ module.exports = async (req, res) => {
         const c = await L.getContent(), t = c.telegram || {};
         if (t.enabled && t.token && t.chat) {
           const m = await L.tg(t.token, 'sendMessage', { chat_id: t.chat, text: L.leadText(lead), parse_mode: 'HTML', disable_web_page_preview: true,
-            reply_markup: { inline_keyboard: [[{ text: '✅ Взять в работу', callback_data: 'take:' + lead.id }, { text: '✖️ Пропустить', callback_data: 'skip:' + lead.id }]] } });
+            reply_markup: L.leadKeyboard(lead.id) });
           if (m.ok) { sent = true; await L.q(`update leads set tg_msg_id=$1 where id=$2`, [m.result.message_id, lead.id]); }
         }
       } catch (e) { /* заявка уже в базе — Telegram не критичен */ }
@@ -34,9 +34,20 @@ module.exports = async (req, res) => {
     if (req.method === 'PATCH') {
       const b = L.body(req), st = String(b.status || '');
       if (STATUSES.indexOf(st) < 0) return L.send(res, 400, { ok: false, error: 'Неизвестный статус' });
-      await L.q(`update leads set status=$1, history = history || $2::jsonb where id=$3`, [st, JSON.stringify([{ at: new Date().toISOString(), t: st, by: s.u }]), b.id]);
+      const changed = await L.q(`update leads set status=$1, history = history || $2::jsonb where id=$3 returning *`,
+        [st, JSON.stringify([{ at: new Date().toISOString(), t: st, by: s.u }]), b.id]);
+      if (!changed.rows[0]) return L.send(res, 404, { ok:false, error:'Заявка не найдена' });
+      const updatedLead = changed.rows[0];
+      try {
+        const c = await L.getContent(), t = c.telegram || {};
+        if (t.enabled && t.token && t.chat && updatedLead.tg_msg_id) {
+          await L.tg(t.token, 'editMessageText', { chat_id:t.chat, message_id:updatedLead.tg_msg_id,
+            text:L.leadText(updatedLead), parse_mode:'HTML', disable_web_page_preview:true,
+            reply_markup:L.leadKeyboard(updatedLead.id) });
+        }
+      } catch (e) { /* status is saved even if Telegram is unavailable */ }
       await L.log(req, 'Статус заявки', '№' + b.id + ' → ' + st);
-      return L.send(res, 200, { ok: true });
+      return L.send(res, 200, { ok: true, lead:updatedLead });
     }
     if (req.method === 'DELETE') {
       const id = parseInt((req.query && req.query.id) || '0', 10);
