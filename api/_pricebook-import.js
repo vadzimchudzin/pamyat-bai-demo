@@ -97,10 +97,11 @@ function normalizeRows(rows, sourceName) {
         unit = r[2] || 'шт.';
       } else {
         const prefix = (priceIdx >= 0 ? r.slice(0,priceIdx) : r).filter(Boolean);
-        const first = prefix[0] || '';
-        if (/^[A-Za-zА-Яа-я0-9][A-Za-zА-Яа-я0-9._/-]{1,30}$/.test(first) && prefix.length >= 2) {
+        const words = prefix.join(' ').split(/\s+/).filter(Boolean);
+        const first = words[0] || '';
+        if (/^[A-Za-zА-Яа-я0-9][A-Za-zА-Яа-я0-9._/-]{1,30}$/.test(first) && words.length >= 2) {
           article = first;
-          name = prefix.slice(1).join(' ');
+          name = words.slice(1).join(' ');
         } else {
           name = prefix.join(' ');
         }
