@@ -297,18 +297,19 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
   .hero-copy>*,.rv{opacity:1;transform:none}
 }
 
-/* ================= v5: тон текста плавно следует за фоном ================= */
-.tone{
-  --ink:color-mix(in oklab,#f3eee7 calc(var(--tp,0) * 100%),#2a241c);
-  --mut:color-mix(in oklab,#cfc5b8 calc(var(--tp,0) * 100%),#5b5046);
-  --dim:color-mix(in oklab,#a69c90 calc(var(--tp,0) * 100%),#857868);
-  --gold:color-mix(in oklab,#d6b07a calc(var(--tp,0) * 100%),#9a7436);
-  --gold2:color-mix(in oklab,#b8924f calc(var(--tp,0) * 100%),#b08a4e);
-  --glass:color-mix(in oklab,rgba(24,22,20,.44) calc(var(--tp,0) * 100%),rgba(255,251,245,.58));
-  --line:color-mix(in oklab,rgba(243,238,231,.14) calc(var(--tp,0) * 100%),rgba(70,52,32,.14));
-  --sh:0 26px 70px color-mix(in oklab,rgba(0,0,0,.32) calc(var(--tp,0) * 100%),rgba(74,58,29,.12));
-  color:var(--ink)}
-.tone .muted{color:var(--dim)}
+/* ================= v6: тон текста — всегда читаемо =================
+   Каждый блок сам выбирает светлый или тёмный режим по цвету фона под ним (JS: tone-l / tone-d).
+   Стекло в обоих режимах плотное, поэтому текст на нём не сливается с переходом фона. */
+.tone-l{--ink:#241e17;--mut:#4f453b;--dim:#6f6253;--gold:#8a6528;--gold2:#a57d3f;
+  --glass:rgba(253,249,243,.84);--line:rgba(70,52,32,.16);--sh:0 22px 56px rgba(60,44,22,.16);color:var(--ink)}
+.tone-d{--ink:#f6f1ea;--mut:#ddd3c6;--dim:#b9ad9f;--gold:#e0bd86;--gold2:#c49a55;
+  --glass:rgba(27,23,20,.7);--line:rgba(243,238,231,.15);--sh:0 26px 70px rgba(0,0,0,.34);color:var(--ink)}
+.tone-l,.tone-d{transition:color .5s var(--ez),background-color .5s var(--ez),border-color .5s}
+.tone-l .muted{color:var(--dim)} .tone-d .muted{color:var(--dim)}
+/* текст прямо на фоне в зоне перехода — мягкая подложка-свечение, чтобы буквы держали контраст */
+.tone-l.tsh{text-shadow:0 0 22px rgba(255,249,240,.85),0 0 2px rgba(255,249,240,.6)}
+.tone-d.tsh{text-shadow:0 1px 18px rgba(0,0,0,.55),0 0 2px rgba(0,0,0,.35)}
+.glass.tone-l,.glass.tone-d{text-shadow:none}
 
 /* ================= кнопки: минимум анимации ================= */
 .btn{position:relative;overflow:hidden;isolation:isolate;transition:transform .35s var(--ez),box-shadow .35s var(--ez),background .3s,border-color .3s,color .3s}
@@ -415,3 +416,21 @@ footer .wrap{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;
 /* страница каталога: светлая до самого подвала, сумерки — только у подвала */
 .catpage .ambience{background:linear-gradient(180deg,#ede2d2 0%,#e9ddcb 40%,#e4d5c0 calc(100% - 640px),#c0a68a calc(100% - 470px),#7a6453 calc(100% - 360px),#3b312b calc(100% - 240px),#4d2f1c 100%)}
 .catpage .ambience:after,.catpage .flame-light,.catpage .light-breath{opacity:.6}
+
+/* сводка калькулятора: каждая позиция отдельной строкой с ценой */
+.summary{position:sticky;top:96px}
+.summary ul{gap:0;margin-bottom:16px}
+.summary li{display:block;border-bottom:1px solid var(--line);padding:11px 0}
+.summary li:last-child{border-bottom:0}
+.summary li .lb{display:block;font:500 11px var(--sans);letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:5px}
+.summary li .rw{display:flex;justify-content:space-between;gap:14px;font-size:15px;color:var(--ink);line-height:1.45}
+.summary li .rw+.rw{margin-top:4px}
+.summary li .rw i{font-style:normal;color:var(--gold);white-space:nowrap;font-size:14px}
+.summary li .rw.no{color:var(--dim)}
+/* индивидуальный проект в калькуляторе */
+.indcall{margin-top:16px;padding:18px 20px;border-radius:16px;border:1px solid color-mix(in oklab,var(--gold) 45%,transparent);background:color-mix(in oklab,var(--gold) 10%,transparent)}
+.indcall p{color:var(--mut);font-size:15px;margin-bottom:14px}
+.qcontact .row2{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.cat-back{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:26px}
+.cc .go{margin-top:auto;padding-top:16px}
+.cc .inc{margin-bottom:0}

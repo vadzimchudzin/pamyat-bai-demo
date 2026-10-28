@@ -8,16 +8,40 @@
 
   /* ---------- шапка + тепло лампады по скроллу ---------- */
   var top = $('#top'), hero = $('#hero');
-  /* фон — одно полотно: верх светлый, ~38–60% страницы — переход в сумерки.
-     Цвет текста и стекла каждого блока плавно смешивается по его месту на полотне (без резкой смены). */
-  var EDGE = 0.47, T0 = 0.38, T1 = 0.6, CATPAGE = document.body.classList.contains('catpage');
+  /* фон — одно полотно: верх светлый, середина — переход в сумерки.
+     Каждый блок берёт цвет фона под собой и выбирает режим, где текст контрастнее: tone-l (тёмный текст,
+     светлое стекло) или tone-d (светлый текст, тёмное стекло). Никаких «серых на сером» в переходе. */
+  var EDGE = 0.47, CATPAGE = document.body.classList.contains('catpage');
+  var STOPS = [[0, '#ede2d2'], [.2, '#ebdfce'], [.36, '#e4d5c0'], [.41, '#d6c2a8'], [.45, '#c0a68a'], [.49, '#9f8670'], [.53, '#7a6453'],
+    [.57, '#55463b'], [.61, '#3b312b'], [.72, '#302823'], [.85, '#352820'], [.94, '#432b1d'], [1, '#4d2f1c']];
+  function hex(h) { return [1, 3, 5].map(function (i) { return parseInt(h.substr(i, 2), 16); }); }
+  function stops(H) {
+    if (!CATPAGE) return STOPS;
+    var f = function (px) { return Math.min(1, Math.max(0, px / H)); };
+    return [[0, '#ede2d2'], [.4, '#e9ddcb'], [f(H - 640), '#e4d5c0'], [f(H - 470), '#c0a68a'], [f(H - 360), '#7a6453'], [f(H - 240), '#3b312b'], [1, '#4d2f1c']];
+  }
+  function bgAt(p, S) {
+    for (var i = 1; i < S.length; i++) if (p <= S[i][0]) {
+      var a = hex(S[i - 1][1]), b = hex(S[i][1]), t = (p - S[i - 1][0]) / ((S[i][0] - S[i - 1][0]) || 1);
+      return a.map(function (v, k) { return v + (b[k] - v) * t; });
+    }
+    return hex(S[S.length - 1][1]);
+  }
+  function lum(c) { var l = c.map(function (v) { v /= 255; return v <= .03928 ? v / 12.92 : Math.pow((v + .055) / 1.055, 2.4); }); return .2126 * l[0] + .7152 * l[1] + .0722 * l[2]; }
+  function contrast(a, b) { var x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); }
+  var DARK = hex('#241e17'), LIGHT = hex('#f6f1ea');
   function themes() {
-    var H = document.documentElement.scrollHeight;
+    var H = document.documentElement.scrollHeight, S = stops(H);
     $$('main > section:not(.hero), main .head, main .glass, main .note, footer').forEach(function (el) {
-      var r = el.getBoundingClientRect(), y = r.top + scrollY + Math.min(r.height, innerHeight) * 0.5;
-      var t = CATPAGE ? (y - (H - 560)) / 260 : (y / H - T0) / (T1 - T0);
-      t = Math.min(1, Math.max(0, t));
-      el.classList.add('tone'); el.style.setProperty('--tp', t.toFixed(3));
+      var fixed = el.closest('[data-tone]'), mode, low = false;
+      if (fixed) mode = fixed.dataset.tone;
+      else {
+        var r = el.getBoundingClientRect(), y = r.top + scrollY + Math.min(r.height, innerHeight) * 0.5;
+        var bg = bgAt(y / H, S), cd = contrast(bg, DARK), cl = contrast(bg, LIGHT);
+        mode = cd >= cl ? 'l' : 'd'; low = Math.max(cd, cl) < 6;
+      }
+      el.classList.toggle('tone-l', mode === 'l'); el.classList.toggle('tone-d', mode !== 'l');
+      el.classList.toggle('tsh', low && !el.classList.contains('glass'));
     });
   }
   function onScroll() {
@@ -219,7 +243,9 @@
       { id: 'medal', name: 'Медальон', price: 250 }] },
     { id: 'land', name: 'Благоустройство', type: 'multi', sub: 'Можно выбрать несколько.', items: [
       { id: 'granite', name: 'Гранитная плитка', price: 1600 }, { id: 'curb', name: 'Бетонный бордюр', price: 300 },
-      { id: 'paving', name: 'Тротуарная плитка', price: 400 }, { id: 'fence', name: 'Ограда из гранита', price: 1200 }] },
+      { id: 'paving', name: 'Тротуарная плитка', price: 400 }] },
+    { id: 'fence', name: 'Ограда', type: 'radio', sub: 'Ограда считается отдельно от благоустройства.', items: [
+      { id: 'none', name: 'Без ограды', price: 0 }, { id: 'granite', name: 'Гранитная ограда', price: 1200 }] },
     { id: 'decor', name: 'Декор', type: 'multi', sub: 'Дополните композицию вазой, искусственной травой или белым щебнем.', items: [
       { id: 'vase', name: 'Гранитная ваза / лампада', price: 200 }, { id: 'grass', name: 'Искусственная трава / белый щебень', price: 80 }] }
   ];
@@ -230,7 +256,7 @@
   function build() {
     // шаг 1 «Памятник» = разделы каталога; дальше — шаги из админки; последний — контакты
     var first = { id: 'monument', name: 'Памятник', type: 'radio', sub: 'Выберите тип — как в каталоге. Гранит и размеры согласуем лично.', catalog: true,
-      items: visibleCats().map(function (c) { return { id: c.id, name: c.short || c.name, price: c.price == null ? null : +c.price }; }) };
+      items: visibleCats().filter(function (c) { return c.calc !== false; }).map(function (c) { return { id: c.id, name: c.short || c.name, price: c.price == null ? null : +c.price }; }) };
     STEPS = [first].concat(CALC.filter(function (s) { return s.id !== 'monument' && s.items && s.items.length; }))
       .concat([{ id: '__contact', name: 'Контакты', type: 'contact' }]);
     var old = S; S = {};
@@ -275,11 +301,15 @@
     }).join('');
     $$('#snav button').forEach(function (b) { b.addEventListener('click', function () { step = +b.dataset.step; render(); }); });
     if (s.type === 'contact') {
-      $('#q').innerHTML = '<div class="qtitle">Куда прислать расчёт?</div><div class="qsub">Оставьте имя и телефон — перезвоним, уточним детали и зафиксируем смету.</div>' +
+      var ind = individual();
+      $('#q').innerHTML = (ind ? '<div class="qtitle">Обсудим ваш проект</div><div class="qsub">Индивидуальный проект считаем лично. Оставьте имя и телефон — перезвоним, обсудим эскиз, гранит и размеры.</div>'
+        : '<div class="qtitle">Куда прислать расчёт?</div><div class="qsub">Оставьте имя и телефон — перезвоним, уточним детали и зафиксируем смету.</div>') +
         '<form class="form qcontact" id="cform"><input required name="name" placeholder="Имя" autocomplete="name"><input required name="phone" type="tel" placeholder="+375 (XX) XXX-XX-XX" autocomplete="tel">' +
-        '<textarea name="c" rows="2" placeholder="Комментарий (необязательно)"></textarea><button class="btn btn-gold" type="submit">Отправить заявку <span class="arr">→</span></button>' +
+        '<textarea name="c" rows="2" placeholder="Комментарий (необязательно)"></textarea>' +
+        '<div class="row2"><button class="btn btn-gold" type="submit">' + (ind ? 'Заказать звонок' : 'Отправить заявку') + ' <span class="arr">→</span></button><button class="btn btn-line" type="button" id="qback">← Назад</button></div>' +
         '<p class="muted">Нажимая кнопку, вы соглашаетесь с политикой обработки персональных данных.</p></form><div class="ok" id="cok">Спасибо! Перезвоним в рабочее время и уточним детали.</div>';
       bindForm('#cform', '#cok', 'calc');
+      $('#qback').onclick = function () { step = individual() ? 0 : step - 1; render(); };
     } else {
       var pick = s.catalog && S.monument && S.monument !== 'individual'
         ? '<a class="pick" href="/catalog#' + S.monument + '">' + (MODEL ? 'Модель ' + MODEL + ' · выбрать другую' : 'Выбрать модель в каталоге') + ' →</a>' : '';
@@ -288,7 +318,9 @@
         return s.type === 'multi'
           ? '<div class="tog' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="switch" aria-checked="' + on + '" tabindex="0"><span class="sw"></span><span class="t">' + o.name + '</span><span class="p">' + priceLabel(o) + '</span></div>'
           : '<div class="radio' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="radio" aria-checked="' + on + '" tabindex="0"><i></i><span class="t">' + o.name + '</span><span class="p">' + priceLabel(o) + '</span></div>';
-      }).join('') + pick;
+      }).join('') + pick + (s.catalog && individual()
+        ? '<div class="indcall"><p>Индивидуальный проект считаем лично: по эскизу или фото подберём гранит и размеры. Калькулятор здесь не нужен — просто закажите звонок.</p><button class="btn btn-gold" type="button" id="indgo">Заказать звонок <span class="arr">→</span></button></div>' : '');
+      if ($('#indgo')) $('#indgo').onclick = function () { step = STEPS.length - 1; render(); };
       $$('[data-id]', $('#q')).forEach(function (el) {
         var act = function () {
           var id = el.dataset.id;
@@ -299,22 +331,27 @@
         el.addEventListener('click', act); el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
       });
     }
+    var navbar = $('#prev').parentNode;
+    navbar.style.display = s.type === 'contact' ? 'none' : '';
     $('#prev').style.visibility = step ? 'visible' : 'hidden';
-    $('#next').style.display = s.type === 'contact' ? 'none' : '';
-    $('#next').innerHTML = 'Далее <span class="arr">→</span>';
-    var rows = [];
+    $('#next').innerHTML = (s.catalog && individual() ? 'Заказать звонок' : 'Далее') + ' <span class="arr">→</span>';
+    var html = '';
     STEPS.forEach(function (x, i) {
       if (x.type === 'contact') return;
       var ids = x.type === 'multi' ? S[x.id] : [S[x.id]];
-      rows.push([x.name, ids.map(function (id) { var it = item(x, id); return it ? it.name : ''; }).filter(Boolean).join(', ') || '—']);
-      if (i === 0 && MODEL) rows.push(['Модель', MODEL]);
+      var its = ids.map(function (id) { return item(x, id); }).filter(Boolean);
+      var rws = its.length ? its.map(function (it) {
+        var pr = it.note ? it.note : it.price == null ? 'инд.' : it.price ? fmt(it.price) + ' BYN' : '';
+        return '<div class="rw"><span>' + it.name + (i === 0 && MODEL ? ' · ' + MODEL : '') + '</span><i>' + pr + '</i></div>';
+      }).join('') : '<div class="rw no"><span>не выбрано</span></div>';
+      html += '<li><span class="lb">' + x.name + '</span>' + rws + '</li>';
     });
-    $('#sum').innerHTML = rows.map(function (r) { return '<li><span>' + r[0] + '</span><span>' + r[1] + '</span></li>'; }).join('');
+    $('#sum').innerHTML = html;
     drawTotal();
   }
   if ($('#q')) {
     $('#prev').onclick = function () { if (step > 0) { step--; render(); } };
-    $('#next').onclick = function () { if (step < STEPS.length - 1) { step++; render(); } };
+    $('#next').onclick = function () { if (STEPS[step].catalog && individual()) step = STEPS.length - 1; else if (step < STEPS.length - 1) step++; render(); };
   }
   window.pamyatPickModel = function (code, cat) {
     MODEL = code; MODEL_CAT = cat || catOf(code) || MODEL_CAT; build(); step = 0; render();

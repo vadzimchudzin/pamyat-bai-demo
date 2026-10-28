@@ -15,13 +15,13 @@
     return '<div class="cover"><img src="' + cv.img + '" alt="' + c.name + '" style="--z:' + (cv.zoom || 1) + ';--pos:' + (cv.pos || '50% 50%') + '"></div>';
   }
   function themes() { if (window.pamyatThemes) setTimeout(window.pamyatThemes, 30); }
-  function title(eyebrow, h, lead) {
-    $('#catTitle').innerHTML = '<p class="eyebrow">' + eyebrow + '</p><h2>' + h + '</h2>' + (lead ? '<p class="lead">' + lead + '</p>' : '');
+  function title(eyebrow, h, lead, back) {
+    $('#catTitle').innerHTML = '<div class="cat-back">' + back + '</div><p class="eyebrow">' + eyebrow + '</p><h2>' + h + '</h2>' + (lead ? '<p class="lead">' + lead + '</p>' : '');
   }
 
   function home() {
     cur = null;
-    title('Каталог', 'Каталог памятников', 'Выберите раздел и модель. Гранит, размеры и гравировку согласуем с вами лично.');
+    title('Каталог', 'Каталог памятников', 'Выберите раздел и модель. Гранит, размеры и гравировку согласуем с вами лично.', '<a class="back" href="/" data-home>← На главную</a>');
     box.innerHTML = '<div class="cats">' + cats().map(function (c) {
       var n = items(c.id).length;
       return '<a class="cc glass" href="#' + c.id + '">' + cover(c) + '<h3>' + c.name + '</h3><div class="pr">' + price(c) + '</div>' +
@@ -42,8 +42,8 @@
     var c = cats().filter(function (x) { return x.id === id; })[0];
     if (!c) return home();
     cur = c; list = items(c.id);
-    title('Каталог · ' + (c.short || c.name), c.name, '');
-    var top = '<div class="cat-top"><a class="back" href="#">← Все разделы</a></div>';
+    title('Каталог · ' + (c.short || c.name), c.name, '', '<a class="back" href="#">← Все разделы</a><a class="back" href="/" data-home>На главную</a>');
+    var top = '';
     if (!list.length) {
       box.innerHTML = top + '<div class="indiv glass">' + '<h3>' + c.name + '</h3><p>' + (c.desc || '') + '</p>' +
         '<div class="acts"><a class="btn btn-gold" href="/#contact">Обсудить проект <span class="arr">→</span></a><a class="btn btn-line" href="/#calc">Калькулятор</a></div></div>';
@@ -83,6 +83,10 @@
     if (e.key === 'Escape') close(); if (e.key === 'ArrowLeft') show(idx - 1); if (e.key === 'ArrowRight') show(idx + 1);
   });
 
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest('[data-home]'); if (!a || window.parent === window) return;
+    e.preventDefault(); window.parent.postMessage({ pamyatClose: true }, '*');
+  });
   function route() { var id = location.hash.slice(1); id ? open(id) : home(); scrollTo(0, 0); }
   addEventListener('hashchange', route);
   document.addEventListener('pamyat:catalog', function (e) { CAT = e.detail; route(); });

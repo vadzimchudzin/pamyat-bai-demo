@@ -162,7 +162,8 @@
           '<div style="margin-top:10px"><b style="font-size:13px">Комплект и размеры</b>' + (c.kit || []).map(function (k, ki) {
             return '<div class="kitrow" data-ki="' + ki + '"><input name="kn" value="' + esc(k[0]) + '" placeholder="Элемент"><input name="kv" value="' + esc(k[1] || '') + '" placeholder="Размер, напр. 100 × 60 × 5 см"><button class="ic del" data-c="kit-del">✕</button></div>';
           }).join('') + '<button class="link" data-c="kit-add" style="margin-top:6px">+ строка комплекта</button></div>' +
-          '<div class="bar"><label class="chk"><input type="checkbox" name="visible"' + (c.visible !== false ? ' checked' : '') + '> Показывать на сайте</label>' +
+          '<div class="bar"><div style="display:flex;gap:18px;flex-wrap:wrap"><label class="chk"><input type="checkbox" name="visible"' + (c.visible !== false ? ' checked' : '') + '> Показывать на сайте</label>' +
+          '<label class="chk"><input type="checkbox" name="incalc"' + (c.calc !== false ? ' checked' : '') + '> В калькуляторе (шаг «Памятник»)</label></div>' +
           '<div class="acts"><button class="ic" data-c="up" title="Выше">↑</button><button class="ic" data-c="down" title="Ниже">↓</button><button class="ic del" data-c="del" title="Удалить раздел">✕</button></div></div>' +
         '</div></div>' +
         '<details' + (openCats[c.id] ? ' open' : '') + ' data-id="' + esc(c.id) + '"><summary>Модели: ' + its.length + '</summary>' +
@@ -184,6 +185,7 @@
       c.name = v('name') || 'Раздел'; c.short = v('short'); c.inc = v('inc'); c.desc = v('desc');
       var p = v('price'); c.price = p === '' ? null : Math.max(0, Math.round(+p));
       c.visible = $('[name=visible]', el).checked;
+      c.calc = $('[name=incalc]', el).checked;
       c.cover = c.cover || {}; c.cover.zoom = +$('[name=zoom]', el).value;
       c.kit = $$('.kitrow', el).map(function (r) { return [$('[name=kn]', r).value.trim(), $('[name=kv]', r).value.trim()]; }).filter(function (k) { return k[0]; });
       $$('.mod', el).forEach(function (m) {
