@@ -518,3 +518,47 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
 .tone-l .form input,.tone-l .form textarea{background:rgba(255,255,255,.78);border-color:rgba(70,52,32,.2);color:#241e17}
 .tone-l .form input::placeholder,.tone-l .form textarea::placeholder{color:#8a7b6a}
 .tone-l .form input:focus,.tone-l .form textarea:focus{border-color:#a57d3f;background:#fff}
+
+/* ================= телефон: спокойный, без прыжков ================= */
+.mbar{display:none}
+@media (hover:none){
+  .btn:hover,.cc:hover,.mc:hover,.msg:hover,.soc:hover,.cta2:hover,.back:hover{transform:none}
+  .cc:hover .cover img,.mc:hover .im img{transform:scale(var(--z,1))}
+  .btn-gold:hover:after,.cta2:hover:after{transform:translateX(-130%)}
+}
+@media (max-width:720px){
+  .rv{transform:none;transition:opacity .6s ease}
+  /* калькулятор: цена и «Далее» всегда под пальцем */
+  .mbar{display:flex;position:fixed;left:0;right:0;bottom:0;z-index:60;align-items:center;justify-content:space-between;gap:12px;
+    padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:rgba(24,20,17,.95);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);
+    border-top:1px solid rgba(214,176,122,.28);color:#f6f1ea;transform:translateY(110%);transition:transform .35s var(--ez)}
+  .mbar.on{transform:none}
+  .mbar .mt{display:flex;flex-direction:column;line-height:1.15}
+  .mbar .mt span{font:500 10px var(--sans);letter-spacing:.18em;text-transform:uppercase;color:#b9ad9f}
+  .mbar .mt b{font:600 20px var(--sans);color:#e0bd86;font-variant-numeric:lining-nums}
+  .mbar .btn{padding:13px 22px;flex:0 0 auto}
+  #next{display:none}
+  .cnav{margin-top:14px}
+  .cnav #prev{flex:0 0 auto}
+  #calc{padding-bottom:110px}
+  .calc .summary .live{display:none}
+  .qtitle{font-size:20px}
+  .qsub{font-size:14px;margin-bottom:12px}
+  /* визуализация: компактная карточка фиксированной высоты — текст не прыгает */
+  .story-sticky{top:68px;height:calc(100svh - 76px)}
+  .story-box{padding:12px;gap:10px}
+  .story-head{padding:2px 4px 0}
+  .story-head .eyebrow{display:none}
+  .story-head h2{font-size:22px!important}
+  .story-screen{aspect-ratio:16/10;max-height:30svh}
+  .story-side{padding:2px 4px}
+  .sc-top{margin-bottom:8px}
+  .sc-stack{height:132px;min-height:0}
+  .sc-item h3{font-size:18px;margin-bottom:6px}
+  .sc-item p{font-size:14px;line-height:1.5}
+  .sc-item small{display:none}
+  .story .rail{display:none}
+  .story .cta2{margin-top:10px!important;align-self:stretch!important;justify-content:space-between}
+  /* шапка-обложка: текст на плотной подложке, не налезает на камень */
+  .veil{background:linear-gradient(0deg,rgba(247,238,226,.96) 0,rgba(247,238,226,.82) 38%,rgba(247,238,226,.35) 60%,rgba(247,238,226,0) 78%)}
+}

@@ -308,7 +308,12 @@
     var tv = $('#tv'); if (!tv) return;
     var any = STEPS.some(function (s) { return s.type !== 'contact' && (s.type === 'multi' ? S[s.id].length : S[s.id]); });
     var txt = individual() ? 'Индивидуально' : any ? 'от ' + fmt(total()) + ' BYN' : '0 BYN';
+    if ($('#mtv')) $('#mtv').textContent = txt;
     if (txt !== lastTotal) { tv.textContent = txt; tv.classList.remove('bump'); void tv.offsetWidth; tv.classList.add('bump'); lastTotal = txt; }
+  }
+  function go(n) {
+    step = Math.max(0, Math.min(STEPS.length - 1, n)); render();
+    if (innerWidth <= 720) { var p = $('#calc .panel'); if (p) scrollTo({ top: p.getBoundingClientRect().top + scrollY - 76, behavior: 'smooth' }); }
   }
   function render() {
     if (!$('#q') || !STEPS.length) return;
@@ -316,7 +321,8 @@
     $('#snav').innerHTML = STEPS.map(function (x, i) {
       return '<button type="button" data-step="' + i + '" class="' + (i === step ? 'on' : i < step ? 'done' : '') + '">' + (i + 1) + '. ' + x.name + '</button>';
     }).join('');
-    $$('#snav button').forEach(function (b) { b.addEventListener('click', function () { step = +b.dataset.step; render(); }); });
+    $$('#snav button').forEach(function (b) { b.addEventListener('click', function () { go(+b.dataset.step); }); });
+    var on = $('#snav .on'); if (on) $('#snav').scrollLeft = Math.max(0, on.offsetLeft - 16);
     if (s.type === 'contact') {
       var ind = individual();
       $('#q').innerHTML = (ind ? '<div class="qtitle">Обсудим ваш проект</div><div class="qsub">Индивидуальный проект считаем лично. Оставьте имя и телефон — перезвоним, обсудим эскиз, гранит и размеры.</div>'
@@ -326,7 +332,7 @@
         '<div class="row2"><button class="btn btn-gold" type="submit">' + (ind ? 'Заказать звонок' : 'Отправить заявку') + ' <span class="arr">→</span></button><button class="btn btn-line" type="button" id="qback">← Назад</button></div>' +
         '<p class="muted">Нажимая кнопку, вы соглашаетесь с политикой обработки персональных данных.</p></form><div class="ok" id="cok">Спасибо! Перезвоним в рабочее время и уточним детали.</div>';
       bindForm('#cform', '#cok', 'calc');
-      $('#qback').onclick = function () { step = individual() ? 0 : step - 1; render(); };
+      $('#qback').onclick = function () { go(individual() ? 0 : step - 1); };
     } else {
       var pick = s.catalog && S.monument && S.monument !== 'individual'
         ? '<a class="pick" href="/catalog#' + S.monument + '">' + (MODEL ? 'Модель ' + MODEL + ' · выбрать другую' : 'Выбрать модель в каталоге') + ' →</a>' : '';
@@ -351,6 +357,7 @@
     navbar.style.display = s.type === 'contact' ? 'none' : '';
     $('#prev').style.display = step ? '' : 'none';
     $('#next').innerHTML = (s.catalog && individual() ? 'Заказать звонок' : 'Далее') + ' <span class="arr">→</span>';
+    if ($('#mnext')) { $('#mnext').innerHTML = $('#next').innerHTML; $('#mnext').style.display = s.type === 'contact' ? 'none' : ''; }
     var html = '';
     var indiv = individual();
     STEPS.forEach(function (x, i) {
@@ -367,8 +374,15 @@
     drawTotal();
   }
   if ($('#q')) {
-    $('#prev').onclick = function () { if (step > 0) { step--; render(); } };
-    $('#next').onclick = function () { if (STEPS[step].catalog && individual()) step = STEPS.length - 1; else if (step < STEPS.length - 1) step++; render(); };
+    $('#prev').onclick = function () { if (step > 0) go(step - 1); };
+    var nextStep = function () { go(STEPS[step].catalog && individual() ? STEPS.length - 1 : step + 1); };
+    $('#next').onclick = nextStep;
+    if ($('#mnext')) $('#mnext').onclick = nextStep;
+    // нижняя панель с ценой на телефоне — видна, пока на экране калькулятор
+    if ($('#mbar')) document.body.appendChild($('#mbar'));   // вне стекла: иначе position:fixed привязывается к панели
+    if ('IntersectionObserver' in window && $('#mbar')) new IntersectionObserver(function (es) {
+      es.forEach(function (e) { $('#mbar').classList.toggle('on', e.isIntersecting); });
+    }, { rootMargin: '-30% 0px -30% 0px' }).observe($('#calc .calc'));
   }
   window.pamyatPickModel = function (code, cat) {
     MODEL = code; MODEL_CAT = cat || catOf(code) || MODEL_CAT; build(); step = 0; render();
