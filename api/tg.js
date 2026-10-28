@@ -68,15 +68,25 @@ module.exports = async (req, res) => {
         const leadResult = e.lead_id ? await L.q('select status from leads where id=$1 limit 1', [e.lead_id]) : {rows:[]};
         const leadStatus = leadResult.rows[0] ? leadResult.rows[0].status : '';
         const chatId = e.telegram_chat_id || String(cb.message.chat.id);
-        const pdf = await makeEstimatePdf(e, c.contacts || {});
-        const sent = await sendOrUpdateQuotePdf(t.token, chatId, e, leadStatus, pdf);
-        if (sent.ok) {
-          const messageId = sent.result && sent.result.message_id ? sent.result.message_id : e.telegram_message_id;
-          if (messageId) await L.q('update estimates set telegram_message_id=$1, telegram_chat_id=$2 where id=$3', [messageId, String(chatId), e.id]);
+        await L.tg(t.token, 'answerCallbackQuery', { callback_query_id:cb.id, text:'Готовлю PDF-смету…' });
+        let sent;
+        try {
+          const pdf = await makeEstimatePdf(e, c.contacts || {});
+          sent = await sendOrUpdateQuotePdf(t.token, chatId, e, leadStatus, pdf);
+          if (sent.ok) {
+            const messageId = sent.result && sent.result.message_id ? sent.result.message_id : e.telegram_message_id;
+            if (messageId) await L.q('update estimates set telegram_message_id=$1, telegram_chat_id=$2 where id=$3', [messageId, String(chatId), e.id]);
+          }
+          await L.log(req, 'Telegram', 'PDF-смета №' + e.id + ' по заявке №' + estimateMatch[1] + ': ' + (sent.ok?'отправлена':'ошибка Telegram: '+String(sent.description||'неизвестная ошибка')) + ' · ' + who, sent.ok);
+          if (!sent.ok) await L.tg(t.token, 'sendMessage', {chat_id:String(chatId),text:'Не удалось отправить PDF-смету №'+e.id+': '+String(sent.description||'ошибка Telegram').slice(0,250)});
+          return L.send(res,200,{ok:!!sent.ok,pdf:!!sent.ok,error:sent.ok?undefined:sent.description});
+        } catch (err) {
+          const message=String(err && err.message || err || 'Ошибка генерации PDF');
+          await L.log(req,'Telegram','PDF-смета №'+e.id+' не создана: '+message, false);
+          await L.tg(t.token,'answerCallbackQuery',{callback_query_id:cb.id,text:'Ошибка PDF: '+message.slice(0,150),show_alert:true});
+          await L.tg(t.token,'sendMessage',{chat_id:String(chatId),text:'Не удалось сформировать PDF-смету №'+e.id+': '+message.slice(0,300)});
+          return L.send(res,500,{ok:false,error:message});
         }
-        await L.tg(t.token, 'answerCallbackQuery', { callback_query_id:cb.id, text:sent.ok ? ('PDF-смета №' + e.id + ' отправлена') : 'Не удалось отправить PDF-смету' });
-        await L.log(req, 'Telegram', 'PDF-смета №' + e.id + ' по заявке №' + estimateMatch[1] + ': ' + (sent.ok?'отправлена':'ошибка') + ' · ' + who, sent.ok);
-        return L.send(res,200,{ok:true,pdf:sent.ok});
       }
 
 const quoteStatusMatch = /^quote-status:(sent|approved|rejected):(\d+)$/.exec(data);
@@ -152,8 +162,9 @@ const quoteStatusMatch = /^quote-status:(sent|approved|rejected):(\d+)$/.exec(da
           text:L.leadText(lead), parse_mode:'HTML', disable_web_page_preview:true,
           reply_markup:L.leadKeyboard(leadId, lead.status)
         });
-        messageUpdated = !!edit.ok;
-        if (!edit.ok) messageError = String(edit.description || 'Не удалось обновить сообщение');
+        const unchanged = !edit.ok && /message is not modified/i.test(String(edit.description || ''));
+        messageUpdated = !!edit.ok || unchanged;
+        if (!edit.ok && !unchanged) messageError = String(edit.description || 'Не удалось обновить сообщение');
       } catch (e) {
         messageError = String(e && e.message || e || 'Ошибка Telegram');
       }
