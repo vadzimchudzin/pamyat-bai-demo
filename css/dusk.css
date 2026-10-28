@@ -502,3 +502,19 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
 .clb .pic img{position:absolute;inset:0;margin:auto;max-width:86%;max-height:90%;width:auto;height:auto;object-fit:contain}
 @media (min-width:721px){.clb .pic{min-height:440px}}
 .clb .x{z-index:3}
+
+.indform{margin:6px auto 0;text-align:left;max-width:460px}
+.indiv .ok{margin-top:10px}
+
+/* свет лампады доходит до кнопок: тёплый отсвет и кромка, дышат вместе с пламенем (--flicker) */
+.lit{--glow:calc(var(--lit,0) * var(--flicker,1));transition:box-shadow .25s linear,border-color .25s linear,background-color .25s linear,transform .35s var(--ez)}
+.msg.lit,.btn-line.lit{
+  border-color:color-mix(in oklab,#ffbe7a calc(var(--glow) * 60%),var(--line));
+  background-image:radial-gradient(130% 160% at 0% 100%,rgba(255,172,96,calc(var(--glow) * .3)),rgba(255,172,96,0) 72%);
+  box-shadow:0 0 calc(var(--lit,0) * 28px) rgba(255,146,66,calc(var(--glow) * .22)),inset 0 1px 0 rgba(255,214,160,calc(var(--glow) * .18))}
+.msg.lit svg{fill:color-mix(in oklab,#ffd39a calc(var(--glow) * 70%),var(--gold))}
+.btn-gold.lit,.cta2.lit{box-shadow:0 14px 34px rgba(168,130,63,.32),0 0 calc(var(--lit,0) * 34px) rgba(255,150,64,calc(var(--glow) * .38))}
+.btn-gold.lit{filter:saturate(calc(1 + var(--glow) * .18)) brightness(calc(1 + var(--glow) * .06))}
+.tone-l .form input,.tone-l .form textarea{background:rgba(255,255,255,.78);border-color:rgba(70,52,32,.2);color:#241e17}
+.tone-l .form input::placeholder,.tone-l .form textarea::placeholder{color:#8a7b6a}
+.tone-l .form input:focus,.tone-l .form textarea:focus{border-color:#a57d3f;background:#fff}

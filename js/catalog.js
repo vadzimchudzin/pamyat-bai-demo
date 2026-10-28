@@ -45,8 +45,14 @@
     title('Каталог · ' + (c.short || c.name), c.name, '', '<a class="back" href="#">← Все разделы</a><a class="back" href="/" data-home>На главную</a>');
     var top = '';
     if (!list.length) {
-      box.innerHTML = top + '<div class="indiv glass">' + '<h3>' + c.name + '</h3><p>' + (c.desc || '') + '</p>' +
-        '<div class="acts"><a class="btn btn-gold" href="/#contact">Обсудить проект <span class="arr">→</span></a><a class="btn btn-line" href="/#calc">Калькулятор</a></div></div>';
+      box.innerHTML = top + '<div class="indiv glass"><h3>' + c.name + '</h3><p>' + (c.desc || '') + '</p>' +
+        '<form class="form qcontact indform" id="indForm"><input required name="name" placeholder="Имя" autocomplete="name">' +
+        '<input required name="phone" type="tel" placeholder="+375 (XX) XXX-XX-XX" autocomplete="tel">' +
+        '<textarea name="c" rows="3" placeholder="Коротко опишите идею (необязательно)"></textarea>' +
+        '<button class="btn btn-gold" type="submit">Обсудить проект <span class="arr">→</span></button>' +
+        '<p class="muted">Перезвоним в рабочее время. Нажимая кнопку, вы соглашаетесь с политикой обработки персональных данных.</p></form>' +
+        '<div class="ok" id="indOk">Спасибо! Перезвоним и обсудим ваш проект.</div></div>';
+      bindInd(c);
       return themes();
     }
     box.innerHTML = top + '<div class="cat-info"><div class="panel glass"><h3>О разделе</h3><p style="color:var(--mut)">' + (c.desc || '') + '</p>' +
@@ -63,6 +69,20 @@
     themes();
   }
 
+  function bindInd(c) {
+    var f = $('#indForm'); if (!f) return;
+    f.addEventListener('submit', function (e) {
+      e.preventDefault();
+      var fd = new FormData(f), btn = f.querySelector('button[type=submit]');
+      var lead = { type: 'contact', name: fd.get('name'), phone: fd.get('phone'), comment: c.name + (fd.get('c') ? ': ' + fd.get('c') : ''), source: location.href };
+      function done() { f.style.display = 'none'; $('#indOk').classList.add('on'); }
+      if (window.PAMYAT_DEMO) return done();
+      btn.disabled = true; btn.textContent = 'Отправляем…';
+      fetch('/api/lead', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(lead) })
+        .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return r.ok && d.ok ? done() : Promise.reject(d.error); }); })
+        .catch(function (err) { btn.disabled = false; btn.innerHTML = 'Обсудить проект <span class="arr">→</span>'; alert(err || 'Не удалось отправить. Позвоните нам, пожалуйста.'); });
+    });
+  }
   function calcHref(m) { return '/?model=' + encodeURIComponent(m.code) + '&cat=' + encodeURIComponent(cur.id) + '#calc'; }
   function show(i) {
     idx = (i + list.length) % list.length;
@@ -84,8 +104,10 @@
   });
 
   document.addEventListener('click', function (e) {
-    var a = e.target.closest('[data-home]'); if (!a || window.parent === window) return;
-    e.preventDefault(); window.parent.postMessage({ pamyatClose: true }, '*');
+    if (window.parent === window) return;
+    var a = e.target.closest('[data-home], a[href^="/#"]'); if (!a || a.id === 'clbCalc') return;
+    e.preventDefault(); var h = a.getAttribute('href') || '';
+    window.parent.postMessage({ pamyatClose: true, go: h.indexOf('#') > -1 ? h.slice(h.indexOf('#')) : '' }, '*');
   });
   function route() { var id = location.hash.slice(1); id ? open(id) : home(); scrollTo(0, 0); }
   addEventListener('hashchange', route);

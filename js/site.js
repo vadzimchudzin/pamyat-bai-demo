@@ -51,11 +51,19 @@
       el.classList.toggle('tone-l', mode === 'l'); el.classList.toggle('tone-d', mode !== 'l');
       el.classList.toggle('tsh', low && !el.classList.contains('glass'));
     });
+    // кнопки «ловят» свет лампады: чем ближе к источнику (низ-лево страницы), тем теплее отсвет
+    var W = innerWidth;
+    $$('main .msg, main .btn, main .cta2, footer .btn').forEach(function (el) {
+      var r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + scrollY + r.height / 2;
+      var d = Math.sqrt(Math.pow(x / (W * 1.1), 2) + Math.pow((H - y) / Math.min(H * 0.42, 1500), 2));
+      var lit = Math.max(0, Math.min(1, 1.15 - d));
+      el.classList.toggle('lit', lit > 0.02); el.style.setProperty('--lit', lit.toFixed(3));
+    });
   }
   function onScroll() {
     var h = hero ? hero.offsetHeight : 600;
     if (top) {
-      top.classList.toggle('scrolled', scrollY > h * 0.55);
+      top.classList.toggle('scrolled', hero ? scrollY > h * 0.55 : scrollY > 24);
       var SH = document.documentElement.scrollHeight;
       top.classList.toggle('dk', CATPAGE ? scrollY + 40 > SH - 420 : (scrollY + 40) / SH > EDGE + 0.03);
     }
