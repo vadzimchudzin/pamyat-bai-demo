@@ -153,7 +153,7 @@ function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (
 function leadText(L) {
   const time = new Date(L.created_at || Date.now()).toLocaleDateString('ru-RU', { timeZone: 'Europe/Minsk' });
   function col(value, width) {
-    const text = String(value == null ? '—' : value).replace(/[\\r\\n]+/g, ' ').trim();
+    const text = String(value == null ? '—' : value).replace(/[\r\n]+/g, ' ').trim();
     const chars = Array.from(text);
     const short = chars.length > width ? chars.slice(0, width - 1).join('') + '…' : text;
     return short + ' '.repeat(Math.max(0, width - Array.from(short).length));
