@@ -222,15 +222,26 @@ async function getSiteContent() {
 }
 function leadKeyboard(id, currentStatus) {
   const current = String(currentStatus || 'новая');
-  const button = (status, label, callback) => ({
-    text: current === status ? '▶ ' + label + ' · ТЕКУЩИЙ' : label,
+  const names = {
+    'новая':'Новая',
+    'взята в работу':'Взята в работу',
+    'связались':'Связались',
+    'назначен замер':'Назначен замер',
+    'отправлена смета':'Смета отправлена',
+    'заключён договор':'Договор',
+    'завершена':'Завершена',
+    'отказ':'Отказ'
+  };
+  const button = (status, callback) => ({
+    // Plain text marker: avoid the ▶ glyph that Telegram renders as a blue media icon.
+    text: current === status ? '✓ СЕЙЧАС: ' + names[status] : names[status],
     callback_data: callback + id
   });
   return { inline_keyboard: [
-    [button('новая', '🟡 Новая', 'status:n:'), button('взята в работу', '✅ Взять в работу', 'status:w:')],
-    [button('связались', '📞 Связались', 'status:c:'), button('назначен замер', '📐 Назначить замер', 'status:m:')],
-    [button('отправлена смета', '📄 Смета отправлена', 'status:q:'), button('заключён договор', '🤝 Договор', 'status:d:')],
-    [button('завершена', '✔️ Завершена', 'status:f:'), button('отказ', '✖️ Отказ', 'status:x:')],
+    [button('новая','status:n:'), button('взята в работу','status:w:')],
+    [button('связались','status:c:'), button('назначен замер','status:m:')],
+    [button('отправлена смета','status:q:'), button('заключён договор','status:d:')],
+    [button('завершена','status:f:'), button('отказ','status:x:')],
     [{ text:'🧾 Получить смету', callback_data:'quote:' + id }]
   ] };
 }
