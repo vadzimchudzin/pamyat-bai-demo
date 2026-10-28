@@ -258,7 +258,7 @@
       { id: 'base', name: 'Базовая (ФИО, даты)', price: 0, note: 'включено' }, { id: 'art', name: 'Художественная (портрет, пейзаж)', price: 200 },
       { id: 'medal', name: 'Медальон', price: 250 }] },
     { id: 'land', name: 'Благоустройство', type: 'multi', sub: 'Можно выбрать несколько.', items: [
-      { id: 'granite', name: 'Гранитная плитка', price: 1600 }, { id: 'curb', name: 'Бетонный бордюр', price: 300 },
+      { id: 'granite', name: 'Керамогранитная плитка', price: 1600 }, { id: 'curb', name: 'Бетонный бордюр', price: 300 },
       { id: 'paving', name: 'Тротуарная плитка', price: 400 }] },
     { id: 'fence', name: 'Ограда', type: 'radio', sub: 'Ограда считается отдельно от благоустройства.', items: [
       { id: 'none', name: 'Без ограды', price: 0 }, { id: 'granite', name: 'Гранитная ограда', price: 1200 }] },

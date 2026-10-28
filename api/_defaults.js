@@ -38,7 +38,7 @@ module.exports = {
         { id: 'medal', name: 'Медальон', price: 250 }
       ] },
       { id: 'land', name: 'Благоустройство', type: 'multi', sub: 'Можно выбрать несколько.', items: [
-        { id: 'granite', name: 'Гранитная плитка', price: 1600 },
+        { id: 'granite', name: 'Керамогранитная плитка', price: 1600 },
         { id: 'curb', name: 'Бетонный бордюр', price: 300 },
         { id: 'paving', name: 'Тротуарная плитка', price: 400 }
       ] },
