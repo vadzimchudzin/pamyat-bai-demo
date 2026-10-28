@@ -96,9 +96,9 @@ function quoteKeyboard(estimate) {
   const sent = estimate.status === 'sent' || estimate.status === 'approved';
   const wordUrl = 'https://pamyat-bai-demo.vercel.app/api/estimate-file?token=' + encodeURIComponent(estimate.public_token);
   return { inline_keyboard: [
-    [{ text:'Открыть смету / PDF', url:url }],
-    [{ text:'Скачать смету Word (.docx)', url:wordUrl }],
-    [{ text:sent ? 'Смета уже отправлена' : 'Отметить: смета отправлена', callback_data:'quote-status:sent:' + estimate.id }]
+    [{ text:'🌐 Открыть смету', url:url }, { text:'📝 Word', url:wordUrl }],
+    [{ text:sent ? '✅ Смета отправлена' : '📤 Отметить отправку', callback_data:'quote-status:sent:' + estimate.id }],
+    [{ text:'👍 Согласована', callback_data:'quote-status:approved:' + estimate.id }, { text:'✖️ Отклонена', callback_data:'quote-status:rejected:' + estimate.id }]
   ] };
 }
 module.exports = { quoteText, quoteRichMessage, quoteKeyboard, statusLabel };

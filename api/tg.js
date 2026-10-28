@@ -1,7 +1,8 @@
 /* Telegram: таблица заявки, управление статусом и создание смет кнопками в группе. */
 const L = require('./_lib');
 const { makeEstimateDocx } = require('./_estimate-docx');
-const { quoteRichMessage, quoteKeyboard, statusLabel } = require('./_estimate-telegram');
+const { makeEstimatePdf } = require('./_estimate-pdf');
+const { quoteText, quoteKeyboard, statusLabel } = require('./_estimate-telegram');
 const STATUS_BY_CODE = {
   n:'новая',
   w:'взята в работу',
@@ -17,47 +18,39 @@ function whoFrom(cb) {
     [cb.from && cb.from.first_name, cb.from && cb.from.last_name].filter(Boolean).join(' ') || 'Telegram';
 }
 
-async function sendOrUpdateQuoteMessage(token, chatId, estimate, leadStatus) {
-  const richMessage = quoteRichMessage(estimate, leadStatus);
-  const keyboard = quoteKeyboard(estimate);
+async function sendOrUpdateQuotePdf(token, chatId, estimate, leadStatus, pdf) {
+  const caption = quoteText(estimate, leadStatus);
   const oldMessageId = estimate.telegram_message_id;
   const oldChatId = estimate.telegram_chat_id || chatId;
   if (oldMessageId && oldChatId) {
-    const edited = await L.tg(token, 'editMessageText', {
+    const edited = await L.tg(token, 'editMessageCaption', {
       chat_id:String(oldChatId), message_id:oldMessageId,
-      rich_message:richMessage, reply_markup:keyboard
+      caption:caption, parse_mode:'HTML', reply_markup:quoteKeyboard(estimate)
     });
     if (edited.ok || /message is not modified/i.test(String(edited.description || ''))) {
       return {ok:true,result:{message_id:oldMessageId}};
     }
   }
-  const sent = await L.tg(token, 'sendRichMessage', {
-    chat_id:String(chatId), rich_message:richMessage, reply_markup:keyboard
-  });
-  if (sent.ok && oldMessageId && oldChatId) {
-    try { await L.tg(token, 'deleteMessage', {chat_id:String(oldChatId), message_id:oldMessageId}); } catch (e) {}
+  const form = new FormData();
+  form.append('chat_id',String(chatId));
+  form.append('document',new Blob([pdf],{type:'application/pdf'}),'smeta-'+estimate.id+'.pdf');
+  form.append('caption',caption);
+  form.append('parse_mode','HTML');
+  form.append('reply_markup',JSON.stringify(quoteKeyboard(estimate)));
+  const response=await fetch('https://api.telegram.org/bot'+token+'/sendDocument',{method:'POST',body:form});
+  const sent=await response.json();
+  if(sent.ok&&oldMessageId&&oldChatId){
+    try{await L.tg(token,'deleteMessage',{chat_id:String(oldChatId),message_id:oldMessageId});}catch(e){}
   }
   return sent;
 }
 async function editQuoteMessage(token, chatId, messageId, estimate, leadStatus) {
-  const richMessage = quoteRichMessage(estimate, leadStatus);
-  const edited = await L.tg(token, 'editMessageText', {
-    chat_id:chatId, message_id:messageId,
-    rich_message:richMessage, reply_markup:quoteKeyboard(estimate)
+  const edited=await L.tg(token,'editMessageCaption',{
+    chat_id:chatId,message_id:messageId,caption:quoteText(estimate,leadStatus),
+    parse_mode:'HTML',reply_markup:quoteKeyboard(estimate)
   });
-  if (edited.ok || /message is not modified/i.test(String(edited.description || ''))) {
-    return {ok:true,result:edited.result || {message_id:messageId}};
-  }
-  // Upgrade older text/photo estimate messages to the native table format if in-place editing is not possible.
-  const sent = await L.tg(token, 'sendRichMessage', {
-    chat_id:String(chatId), rich_message:richMessage, reply_markup:quoteKeyboard(estimate)
-  });
-  if (sent.ok) {
-    try { await L.tg(token, 'deleteMessage', {chat_id:String(chatId), message_id:messageId}); } catch (e) {}
-    const newId = sent.result && sent.result.message_id;
-    if (newId) await L.q('update estimates set telegram_message_id=$1, telegram_chat_id=$2 where id=$3', [newId, String(chatId), estimate.id]);
-  }
-  return sent;
+  if(edited.ok||/message is not modified/i.test(String(edited.description||'')))return {ok:true,result:edited.result||{message_id:messageId}};
+  return edited;
 }
 
 module.exports = async (req, res) => {
@@ -75,24 +68,17 @@ module.exports = async (req, res) => {
         const leadResult = e.lead_id ? await L.q('select status from leads where id=$1 limit 1', [e.lead_id]) : {rows:[]};
         const leadStatus = leadResult.rows[0] ? leadResult.rows[0].status : '';
         const chatId = e.telegram_chat_id || String(cb.message.chat.id);
-        const sent = await sendOrUpdateQuoteMessage(t.token, chatId, e, leadStatus);
+        const pdf = await makeEstimatePdf(e, c.contacts || {});
+        const sent = await sendOrUpdateQuotePdf(t.token, chatId, e, leadStatus, pdf);
         if (sent.ok) {
           const messageId = sent.result && sent.result.message_id ? sent.result.message_id : e.telegram_message_id;
           if (messageId) await L.q('update estimates set telegram_message_id=$1, telegram_chat_id=$2 where id=$3', [messageId, String(chatId), e.id]);
         }
-        let docSent = false, docError = '';
-        if (sent.ok) {
-          try {
-            const doc = await makeEstimateDocx(e, c.contacts || {});
-            const form = new FormData();
-            form.append('chat_id', String(chatId));
-            form.append('document', new Blob([doc], { type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), 'smeta-' + e.id + '.docx');
-            const upload = await fetch('https://api.telegram.org/bot' + t.token + '/sendDocument', { method: 'POST', body: form });
-            const result = await upload.json();
-            docSent = !!result.ok;
-            if (!docSent) docError = result.description || 'Telegram не принял Word-файл';
-          } catch (error) { docError = String(error && error.message || error); }
-        }
+        await L.tg(t.token, 'answerCallbackQuery', { callback_query_id:cb.id, text:sent.ok ? ('PDF-смета №' + e.id + ' отправлена') : 'Не удалось отправить PDF-смету' });
+        await L.log(req, 'Telegram', 'PDF-смета №' + e.id + ' по заявке №' + estimateMatch[1] + ': ' + (sent.ok?'отправлена':'ошибка') + ' · ' + who, sent.ok);
+        return L.send(res,200,{ok:true,pdf:sent.ok});
+      }
+
         await L.tg(t.token, 'answerCallbackQuery', { callback_query_id:cb.id, text:sent.ok ? (docSent ? ('Смета №' + e.id + ' и Word-файл отправлены') : ('Смета отправлена, DOCX: ' + docError.slice(0,100))) : 'Не удалось отправить смету' });
         await L.log(req, 'Telegram', 'смета №' + e.id + ' по заявке №' + estimateMatch[1] + ': сообщение ' + (sent.ok?'ок':'ошибка') + ', Word ' + (docSent?'ок':docError || 'не отправлен') + ' · ' + who, sent.ok && docSent);
         return L.send(res,200,{ok:true,document:docSent});

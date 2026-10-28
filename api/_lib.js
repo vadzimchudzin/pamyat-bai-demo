@@ -153,37 +153,33 @@ async function tg(token, method, payload) {
 function tgSecret() { return crypto.createHmac('sha256', secret()).update('tg-webhook').digest('hex').slice(0, 48); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
 function leadText(L) {
-  const time = new Date(L.created_at || Date.now()).toLocaleDateString('ru-RU', { timeZone: 'Europe/Minsk' });
+  const time = new Date(L.created_at || Date.now()).toLocaleString('ru-RU', { timeZone: 'Europe/Minsk' });
   const status = String(L.status || 'новая');
   const statusIcon = ({
     'новая':'🟡', 'взята в работу':'🔵', 'связались':'🟣',
     'назначен замер':'🩵', 'отправлена смета':'🟠',
     'заключён договор':'🟢', 'отказ':'🔴', 'завершена':'✅'
   })[status] || '📌';
-  function col(value, width) {
-    const text = String(value == null ? '—' : value).replace(/[\\r\\n]+/g, ' ').trim();
-    const chars = Array.from(text);
-    const short = chars.length > width ? chars.slice(0, width - 1).join('') + '…' : text;
-    return short + ' '.repeat(Math.max(0, width - Array.from(short).length));
-  }
-  const type = L.type === 'calc' ? 'Расчёт' : 'Звонок';
-  const amount = L.price == null ? 'инд.' : Number(L.price).toLocaleString('ru-RU') + ' BYN';
-  const widths = [4, 10, 14, 16, 14, 15];
-  const headers = ['№','Дата','Клиент','Телефон','Сумма','Статус'];
-  const values = [String(L.id),time,L.name || '—',L.phone || '—',amount,status];
-  const line = row => '│ ' + row.map((x,i)=>col(x,widths[i])).join(' │ ') + ' │';
-  const bar = '├' + widths.map(w=>'─'.repeat(w+2)).join('┼') + '┤';
-  const top = '┌' + widths.map(w=>'─'.repeat(w+2)).join('┬') + '┐';
-  const bottom = '└' + widths.map(w=>'─'.repeat(w+2)).join('┴') + '┘';
+  const type = L.type === 'calc' ? 'Расчёт с сайта' : 'Звонок / консультация';
+  const amount = L.price == null ? 'Индивидуальный расчёт' : Number(L.price).toLocaleString('ru-RU') + ' BYN';
   const lines = [
-    '<b>ПАМЯТЬ.БАЙ · ЗАЯВКА №' + L.id + '</b>',
-    '<b>' + statusIcon + ' ТЕКУЩИЙ СТАТУС: ' + esc(status.toLocaleUpperCase('ru-RU')) + '</b>',
-    '<pre>' + esc([top,line(headers),bar,line(values),bottom].join(String.fromCharCode(10))) + '</pre>',
-    '<b>Тип:</b> ' + esc(type)
+    '<b>🟤 ПАМЯТЬ.БАЙ · ЗАЯВКА №' + L.id + '</b>',
+    statusIcon + ' <b>' + esc(status.toLocaleUpperCase('ru-RU')) + '</b>',
+    '',
+    '👤 <b>Клиент:</b> ' + esc(L.name || 'Не указано'),
+    '📞 <b>Телефон:</b> ' + esc(L.phone || 'Не указан'),
+    '🗓 <b>Дата:</b> ' + esc(time),
+    '🧩 <b>Тип заявки:</b> ' + esc(type),
+    '💰 <b>Предварительная сумма:</b> ' + esc(amount)
   ];
-  if (L.config && L.config.summary) lines.push('<b>Состав расчёта</b>', '<pre>' + esc(String(L.config.summary).slice(0, 1500)) + '</pre>');
-  if (L.comment) lines.push('<b>Комментарий:</b> ' + esc(String(L.comment).slice(0, 700)));
-  if (L.taken_by) lines.push('<b>Ответственный:</b> ' + esc(L.taken_by));
+  if (L.config && L.config.summary) {
+    const summary = String(L.config.summary).split(/\r?\n/).map(s=>s.trim()).filter(Boolean).slice(0,18);
+    lines.push('', '📋 <b>Клиент выбрал:</b>');
+    summary.forEach(s => lines.push('  • ' + esc(s.slice(0,220))));
+  }
+  if (L.comment) lines.push('', '💬 <b>Комментарий:</b> ' + esc(String(L.comment).slice(0,700)));
+  if (L.taken_by) lines.push('👷 <b>Ответственный:</b> ' + esc(L.taken_by));
+  lines.push('', '<i>Изменяйте статус кнопками ниже. Для расчёта нажмите «Смета PDF».</i>');
   return lines.join(String.fromCharCode(10));
 }
 
@@ -242,7 +238,7 @@ function leadKeyboard(id, currentStatus) {
     [button('связались','status:c:'), button('назначен замер','status:m:')],
     [button('отправлена смета','status:q:'), button('заключён договор','status:d:')],
     [button('завершена','status:f:'), button('отказ','status:x:')],
-    [{ text:'🧾 Получить смету', callback_data:'quote:' + id }]
+    [{ text:'📄 Смета PDF', callback_data:'quote:' + id }]
   ] };
 }
 async function createEstimateFromLead(leadId, by) {
