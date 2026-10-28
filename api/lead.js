@@ -1,6 +1,5 @@
 /* Заявки: POST — с сайта (сохраняем в базу + шлём в Telegram) · GET — список (админ) · PATCH {id,status} (админ) */
 const L = require('./_lib');
-const { makeLeadDocx } = require('./_lead-docx');
 const { quoteText, quoteKeyboard } = require('./_estimate-telegram');
 const STATUSES = ['новая', 'взята в работу', 'связались', 'назначен замер', 'отправлена смета', 'заключён договор', 'отказ', 'завершена'];
 function clean(s, n) { return String(s == null ? '' : s).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n); }
@@ -26,17 +25,6 @@ module.exports = async (req, res) => {
           if (m.ok) {
             sent = true;
             await L.q(`update leads set tg_msg_id=$1 where id=$2`, [m.result.message_id, lead.id]);
-            try {
-              const doc = await makeLeadDocx(lead);
-              const form = new FormData();
-              form.append('chat_id', String(t.chat));
-              form.append('document', new Blob([doc], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' }), 'lead-' + lead.id + '.docx');
-              const upload = await fetch('https://api.telegram.org/bot' + t.token + '/sendDocument', { method: 'POST', body: form });
-              const result = await upload.json();
-              if (!result.ok) await L.log(req, 'Telegram DOCX', 'заявка №' + lead.id + ': ' + (result.description || 'ошибка отправки документа'), false);
-            } catch (docError) {
-              await L.log(req, 'Telegram DOCX', 'заявка №' + lead.id + ': ' + String(docError && docError.message || docError), false);
-            }
           }
         }
       } catch (e) { /* заявка уже в базе — Telegram не критичен */ }
