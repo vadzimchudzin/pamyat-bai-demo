@@ -83,7 +83,7 @@
   function statusKey(s) { return STATUS_KEYS[s] || 'new'; }
   function leadStatus(id, status) {
     return api('/api/lead', {method:'PATCH', body:{id:Number(id),status:status}}).then(function (d) {
-      if (d.ok) { toast('Статус заявки №' + id + ': ' + status); return loadLeads(); }
+      if (d.ok) { toast(d.telegramSync === false ? ('Статус сохранён, но Telegram не обновился: ' + (d.telegramError || 'проверьте бота')) : ('Статус заявки №' + id + ': ' + status)); return loadLeads(); }
       toast(d.error || 'Статус не обновлён', true);
     });
   }
@@ -177,7 +177,7 @@
     var lead=LEADS.find(function(x){return String(x.id)===String(id);});
     if(lead && lead.status!==zone.dataset.dropStatus) leadStatus(id,zone.dataset.dropStatus);
   });
-  setInterval(function () { if (!$('#app').hidden) loadLeads(); }, 60000);
+  setInterval(function () { if (!$('#app').hidden && $('#p-leads').classList.contains('on')) loadLeads(); }, 10000);
 
   /* ---------- калькулятор ---------- */
   function drawCalc() {
@@ -532,9 +532,26 @@
         '</tbody></table>' : '<p class="empty">Смет пока нет. Создайте смету из карточки заявки.</p>';
     });
   }
+  function estimatePriceItems() {
+    var out=[];
+    (PRICEBOOK.items||[]).forEach(function(p){
+      out.push({id:'pricebook:'+p.id,name:p.name,unit:p.unit||'шт.',price:p.price,note:p.price==null?'Индивидуальный расчёт':'',source:'Актуальный прайс'});
+    });
+    ((C&&C.catalog&&C.catalog.categories)||[]).forEach(function(c){
+      out.push({id:'site:catalog:'+c.id,name:c.name,unit:'комплект',price:c.price,note:c.price==null?'Индивидуальный расчёт':'',source:'Каталог сайта'});
+    });
+    ((C&&C.calc&&C.calc.steps)||[]).forEach(function(st){
+      (st.items||[]).forEach(function(it){
+        out.push({id:'site:calc:'+st.id+':'+it.id,name:st.name+' · '+it.name,unit:'шт.',price:it.price,note:it.price==null?'Индивидуальный расчёт':(it.note||''),source:'Калькулятор сайта'});
+      });
+    });
+    return out;
+  }
   function estimatePriceOptions(selectedName) {
-    return '<option value="">— выбрать из каталога —</option>' + (PRICEBOOK.items||[]).map(function(p) {
-      return '<option value="'+esc(p.id)+'"'+(p.name===selectedName?' selected':'')+'>'+esc(p.name+' · '+(p.price==null?'без цены':Number(p.price).toLocaleString('ru-RU')+' BYN/'+(p.unit||'шт.')) )+'</option>';
+    var items=estimatePriceItems(), matched=items.find(function(p){return p.name===selectedName;});
+    return '<option value="">— выбрать из каталога —</option>' + items.map(function(p) {
+      var priceLabel=p.price==null?'индивидуальный расчёт':Number(p.price).toLocaleString('ru-RU')+' BYN/'+(p.unit||'шт.');
+      return '<option value="'+esc(p.id)+'"'+(matched&&matched.id===p.id?' selected':'')+'>'+esc(p.source+' · '+p.name+' · '+priceLabel)+'</option>';
     }).join('');
   }
   function drawEstimateEditor(e) {
@@ -595,8 +612,11 @@
   $('#estimateDiscount').addEventListener('input',updateEstimateTotal);
   $('#estimateItems').addEventListener('change',function(e){
     var sel=e.target.closest('[name=priceRef]');if(!sel)return;
-    var tr=sel.closest('.estimate-row'),p=(PRICEBOOK.items||[]).find(function(x){return x.id===sel.value;});if(!p)return;
-    $('[name=ename]',tr).value=p.name;$('[name=eunit]',tr).value=p.unit||'шт.';$('[name=eprice]',tr).value=p.price==null?0:p.price;
+    var tr=sel.closest('.estimate-row'),p=estimatePriceItems().find(function(x){return x.id===sel.value;});if(!p)return;
+    $('[name=ename]',tr).value=p.name;
+    $('[name=eunit]',tr).value=p.unit||'шт.';
+    $('[name=eprice]',tr).value=p.price==null?0:p.price;
+    $('[name=enote]',tr).value=p.note||'';
     updateEstimateTotal();
   });
   $('#estimateItems').addEventListener('click',function(e){
@@ -607,6 +627,16 @@
     var data=currentEstimate?readEstimateForm():{items:[]};data.items.push({name:'',unit:'шт.',qty:1,price:0,note:''});drawEstimateItems(data.items);updateEstimateTotal();
   });
   $('#estimateSave').addEventListener('click',function(){saveEstimate(false);});
+  $('#estimateNew').addEventListener('click',function(){
+    api('/api/finance',{method:'POST',body:{action:'create_blank_estimate'}}).then(function(d){
+      if(!d.ok){toast(d.error||'Не удалось создать смету',true);return;}
+      currentEstimate=d.estimate;
+      activatePane('estimates');
+      drawEstimateEditor(currentEstimate);
+      loadEstimates();
+      toast('Создана новая смета №'+currentEstimate.id);
+    }).catch(function(){toast('Ошибка создания сметы',true);});
+  });
   $('#estimatesReload').addEventListener('click',loadEstimates);
   $('#estimatesList').addEventListener('click',function(e){
     var b=e.target.closest('[data-open-estimate],[data-print-estimate]');if(!b)return;
@@ -619,7 +649,10 @@
   });
   $('#estimatePrint').addEventListener('click',function(){
     var win=window.open('about:blank','_blank');
-    saveEstimate(true).then(function(d){if(d.ok&&win)win.location='/estimate.html?token='+encodeURIComponent(d.estimate.public_token);else if(win)win.close();});
+    saveEstimate(true).then(function(d){
+      if(d.ok&&win){win.location='/estimate.html?token='+encodeURIComponent(d.estimate.public_token);}
+      else {if(win)win.close();toast('Не удалось подготовить смету для печати',true);}
+    }).catch(function(){if(win)win.close();toast('Ошибка сохранения сметы',true);});
   });
 
   /* ---------- пароль ---------- */

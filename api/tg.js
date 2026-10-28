@@ -113,13 +113,24 @@ module.exports = async (req, res) => {
         return L.send(res,200,{ok:true});
       }
       const lead = patch.rows[0];
+      let messageUpdated = false, messageError = '';
       try {
-        await L.tg(t.token, 'editMessageText', { chat_id:cb.message.chat.id, message_id:cb.message.message_id,
-          text:L.leadText(lead), parse_mode:'HTML', disable_web_page_preview:true, reply_markup:L.leadKeyboard(leadId) });
-      } catch (e) {}
-      await L.tg(t.token, 'answerCallbackQuery', { callback_query_id:cb.id, text:'Статус: ' + st });
-      await L.log(req, 'Telegram', 'заявка №' + leadId + ': ' + st + ' · ' + who);
-      return L.send(res,200,{ok:true});
+        const edit = await L.tg(t.token, 'editMessageText', {
+          chat_id:cb.message.chat.id, message_id:cb.message.message_id,
+          text:L.leadText(lead), parse_mode:'HTML', disable_web_page_preview:true,
+          reply_markup:L.leadKeyboard(leadId)
+        });
+        messageUpdated = !!edit.ok;
+        if (!edit.ok) messageError = String(edit.description || 'Не удалось обновить сообщение');
+      } catch (e) {
+        messageError = String(e && e.message || e || 'Ошибка Telegram');
+      }
+      await L.tg(t.token, 'answerCallbackQuery', {
+        callback_query_id:cb.id,
+        text:messageUpdated ? ('Статус: ' + st) : ('Статус сохранён; сообщение не обновлено: ' + messageError.slice(0,90))
+      });
+      await L.log(req, 'Telegram', 'заявка №' + leadId + ': ' + st + ' · ' + who + (messageUpdated ? '' : ' · ошибка обновления: ' + messageError), messageUpdated);
+      return L.send(res,200,{ok:true,messageUpdated:messageUpdated,error:messageError});
     }
 
     const session = await L.requireAdmin(req, res); if (!session) return;

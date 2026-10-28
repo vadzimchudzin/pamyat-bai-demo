@@ -1,5 +1,6 @@
 /* Финансовый отдел: актуальный прайс, сметы и публичная печатная ссылка по случайному токену. */
 const L = require('./_lib');
+const crypto = require('crypto');
 function clean(s, n) { return String(s == null ? '' : s).replace(/[\u0000-\u001f]/g, ' ').trim().slice(0, n); }
 function number(v, fallback) { const n = Number(v); return Number.isFinite(n) ? n : fallback; }
 function shapeEstimate(row) {
@@ -52,6 +53,14 @@ module.exports = async (req, res) => {
       const estimate = await L.createEstimateFromLead(Number(b.leadId), session.u);
       await L.log(req, 'Смета', 'создан черновик №' + estimate.id + ' по заявке №' + b.leadId + ' · ' + session.u);
       return L.send(res, 200, {ok:true, estimate:shapeEstimate(estimate)});
+    }
+    if (action === 'create_blank_estimate') {
+      const token = crypto.randomBytes(24).toString('hex');
+      const created = await L.q(`insert into estimates(lead_id,client_name,client_phone,items,total,discount,notes,status,public_token,created_by)
+        values(null,'','' ,'[]'::jsonb,0,0,'','draft',$1,$2) returning *`,
+        [token, String(session.u || '').slice(0,80)]);
+      await L.log(req, 'Смета', 'создана новая пустая смета №' + created.rows[0].id + ' · ' + session.u);
+      return L.send(res, 200, {ok:true, estimate:shapeEstimate(created.rows[0])});
     }
     if (action === 'update_estimate') {
       const id = Number(b.id);

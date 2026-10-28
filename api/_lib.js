@@ -238,18 +238,35 @@ async function createEstimateFromLead(leadId, by) {
     rows.push({ name: category.name + (model ? ' · модель ' + model.code : ''), unit: 'комплект', qty: 1,
       price: category.price == null ? 0 : Number(category.price), note: category.price == null ? 'Индивидуальный расчёт' : '' });
   }
+  const missing = [];
   (content.calc && content.calc.steps || []).forEach(function (st) {
     const chosen = sel[st.id];
     const ids = st.type === 'multi' ? (Array.isArray(chosen) ? chosen : []) : (chosen ? [chosen] : []);
     ids.forEach(function (id) {
       const item = (st.items || []).find(x => x.id === id);
-      if (!item) return;
+      if (!item) {
+        missing.push({ name: st.name + ' · ' + id, unit: 'шт.', qty: 1, price: 0,
+          note: 'Эта позиция была выбрана в заявке, но отсутствует в актуальном каталоге. Проверьте цену.' });
+        return;
+      }
       rows.push({ name: st.name + ' · ' + item.name, unit: 'шт.', qty: 1,
         price: item.price == null ? 0 : Number(item.price), note: item.note || (item.price == null ? 'Индивидуальный расчёт' : '') });
     });
   });
-  if (!rows.length) rows.push({ name: 'Предварительный расчёт по заявке №' + lead.id, unit: 'комплект', qty: 1,
+  if (!rows.length && !missing.length) rows.push({ name: 'Предварительный расчёт по заявке №' + lead.id, unit: 'комплект', qty: 1,
     price: lead.price == null ? 0 : Number(lead.price), note: lead.config && lead.config.summary || lead.comment || '' });
+  if (missing.length) {
+    const knownTotal = rows.reduce((n, x) => n + Number(x.qty || 0) * Number(x.price || 0), 0);
+    const residual = lead.price == null ? 0 : Math.max(0, Number(lead.price) - knownTotal);
+    if (missing.length === 1 && residual > 0) {
+      missing[0].price = residual;
+      missing[0].note = 'Позиция была выбрана в заявке. Цена восстановлена по сохранённой сумме заявки; проверьте её по актуальному прайсу.';
+    } else if (missing.length > 1 && residual > 0) {
+      rows.push({ name: 'Корректировка до суммы заявки', unit: 'комплект', qty: 1, price: residual,
+        note: 'В текущем каталоге не найдены: ' + missing.map(x => x.name).join(', ') + '. Разнесите сумму по позициям вручную.' });
+    }
+    rows.push.apply(rows, missing);
+  }
   const total = rows.reduce((n, x) => n + Number(x.qty || 0) * Number(x.price || 0), 0);
   const token = crypto.randomBytes(24).toString('hex');
   const res = await q(`insert into estimates(lead_id,client_name,client_phone,items,total,discount,notes,status,public_token,created_by)
