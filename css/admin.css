@@ -311,4 +311,6 @@ tr.new td:first-child{box-shadow:inset 3px 0 0 #9a3a24}
 .size-global-field .hint,.cat-size-override .hint{margin:5px 0 0}
 .cat-size-override{margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:10px;background:rgba(154,116,54,.045)}
 .cat-size-override label{max-width:560px}
+.cat-size-toggle{margin-bottom:10px;font-size:13px!important}
+.cat-size-override .hint{font-size:12px;line-height:1.5}
 @media(max-width:680px){.size-global-head{display:block}.size-global-head .chk{margin-top:12px;white-space:normal}}
