@@ -38,7 +38,7 @@ function normalizeRows(rows, sourceName) {
     category:[/катег/,/category/,/групп/,/раздел/],
     name:[/наимен/,/назван/,/товар/,/позици/,/product/,/item/,/материал/,/работа/,/услуг/,/description/],
     article:[/артик/,/sku/,/article/,/код\b/,/номенклат/],
-    unit:[/ед\.?\s*изм/,/единиц/,/unit/,/measure/],
+    unit:[/^ед\.?$/, /ед\.?\s*изм/,/единиц/,/unit/,/measure/],
     price:[/цен/,/стоим/,/price/,/сумма\s*за\s*ед/],
     target:[/привяз/,/target/,/позици.*сайт/,/сайт/]
   };
@@ -56,6 +56,8 @@ function normalizeRows(rows, sourceName) {
     indexes = {category:0,name:1,article:-1,unit:2,price:3,target:4};
     data = nonEmpty;
   }
+  const sourceExt = (String(sourceName || '').match(/\.([^.]+)$/) || [,''])[1].toLowerCase();
+  const legacyDelimited = ['csv','tsv','txt'].includes(sourceExt);
   const items = [];
   data.forEach((r, i) => {
     let category = '', name = '', article = '', unit = 'шт.', price = null, siteTarget = '';
@@ -66,42 +68,43 @@ function normalizeRows(rows, sourceName) {
       unit = indexes.unit >= 0 ? r[indexes.unit] || 'шт.' : 'шт.';
       price = indexes.price >= 0 ? moneyNumber(r[indexes.price]) : null;
       siteTarget = indexes.target >= 0 ? r[indexes.target] || '' : '';
+    } else if (legacyDelimited) {
+      // CSV/TSV without a header keeps the legacy column order:
+      // category, name, unit, price, target, article.
+      category = r[0] || '';
+      name = r[1] || '';
+      unit = r[2] || 'шт.';
+      price = moneyNumber(r[3]);
+      siteTarget = r[4] || '';
+      article = r[5] || '';
     } else {
-      // Default export order: category, name, unit, price, target. If the
-      // source is a text document without headers, use its last numeric cell.
-      const numericIndexes = [];
-      r.forEach((v, j) => { if (moneyNumber(v) !== null && String(v).trim() !== '') numericIndexes.push(j); });
-      if (numericIndexes.length && r.length >= 3) {
-        const priceIdx = numericIndexes[numericIndexes.length - 1];
-        price = moneyNumber(r[priceIdx]);
-        const prefix = r.slice(0, priceIdx).filter(Boolean);
-        if (r.length >= 5) {
-          category = r[0] || '';
-          name = r[1] || '';
-          article = r.length > 5 ? r[2] || '' : '';
-          unit = r[3] || 'шт.';
-          siteTarget = r[priceIdx + 1] || '';
-        } else if (r.length === 4) {
-          category = r[0] || '';
-          name = r[1] || '';
-          unit = r[2] || 'шт.';
-        } else {
-          const first = prefix[0] || '';
-          if (/^[A-Za-zА-Яа-я0-9][A-Za-zА-Яа-я0-9._/-]{1,30}$/.test(first) && prefix.length >= 2) {
-            article = first;
-            name = prefix.slice(1).join(' ');
-          } else {
-            name = prefix.join(' ');
-          }
-          unit = 'шт.';
-        }
-      } else {
+      // For tables without headers, accept category/name/article/unit/price/target
+      // and the compact article/name/unit/price layout commonly used in documents.
+      let priceIdx = -1;
+      for (let j=r.length-1; j>=0; j--) {
+        if (moneyNumber(r[j]) !== null && String(r[j]).trim() !== '') { priceIdx=j; break; }
+      }
+      if (priceIdx >= 0) price = moneyNumber(r[priceIdx]);
+      if (r.length >= 5) {
         category = r[0] || '';
         name = r[1] || '';
+        article = r[2] || '';
+        unit = r[3] || 'шт.';
+        siteTarget = r[priceIdx + 1] || '';
+      } else if (r.length === 4) {
+        article = r[0] || '';
+        name = r[1] || '';
         unit = r[2] || 'шт.';
-        price = moneyNumber(r[3]);
-        siteTarget = r[4] || '';
-        article = r[5] || '';
+      } else {
+        const prefix = (priceIdx >= 0 ? r.slice(0,priceIdx) : r).filter(Boolean);
+        const first = prefix[0] || '';
+        if (/^[A-Za-zА-Яа-я0-9][A-Za-zА-Яа-я0-9._/-]{1,30}$/.test(first) && prefix.length >= 2) {
+          article = first;
+          name = prefix.slice(1).join(' ');
+        } else {
+          name = prefix.join(' ');
+        }
+        unit = 'шт.';
       }
     }
     name = String(name || '').trim();
