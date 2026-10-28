@@ -21,7 +21,7 @@ module.exports = async (req, res) => {
         const c = await L.getContent(), t = c.telegram || {};
         if (t.enabled && t.token && t.chat) {
           const m = await L.tg(t.token, 'sendMessage', { chat_id: t.chat, text: L.leadText(lead), parse_mode: 'HTML', disable_web_page_preview: true,
-            reply_markup: L.leadKeyboard(lead.id) });
+            reply_markup: L.leadKeyboard(lead.id, lead.status) });
           if (m.ok) {
             sent = true;
             await L.q(`update leads set tg_msg_id=$1 where id=$2`, [m.result.message_id, lead.id]);
@@ -56,7 +56,7 @@ module.exports = async (req, res) => {
           const tgResult = await L.tg(t.token, 'editMessageText', {
             chat_id:t.chat, message_id:updatedLead.tg_msg_id,
             text:L.leadText(updatedLead), parse_mode:'HTML', disable_web_page_preview:true,
-            reply_markup:L.leadKeyboard(updatedLead.id)
+            reply_markup:L.leadKeyboard(updatedLead.id, updatedLead.status)
           });
           telegramSync = !!tgResult.ok;
           if (!tgResult.ok) {
