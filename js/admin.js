@@ -255,10 +255,10 @@
     var sameSizeAll = K.sameSizeAll === true;
     var commonSize = K.commonSize || '';
     $('#catEd').innerHTML = '<div class="card size-global">' +
-      '<div class="size-global-head"><div><b>Одинаковые размеры для всех разделов</b><p class="hint">Включите, чтобы задать один размер сразу для всего каталога. В конкретном разделе его можно изменить вручную.</p></div>' +
+      '<div class="size-global-head"><div><b>Одинаковые размеры для всех разделов</b><p class="hint">Включите, чтобы задать единый размер и выбрать, в каких разделах он будет применяться. Снятая галочка у раздела отключает размер только в нём.</p></div>' +
       '<label class="chk"><input type="checkbox" name="sameSizeAll"' + (sameSizeAll ? ' checked' : '') + '> Использовать общий размер</label></div>' +
-      (sameSizeAll ? '<div class="size-global-field">' + field('commonSize', 'Общий размер / габариты', commonSize, { wide:true, ph:'Например: 100 × 50 × 5 см' }) +
-        '<p class="hint">Изменение общего размера обновит разделы без индивидуальной правки.</p></div>' : '') +
+      (sameSizeAll ? '<div class="size-global-field">' + field('commonSize', 'Общий размер для выбранных разделов', commonSize, { wide:true, ph:'Например: 100 × 50 × 5 см' }) +
+        '<p class="hint">Этот размер применяется ко всем отмеченным разделам. Ниже можно снять галочку или указать индивидуальный размер.</p></div>' : '') +
       '</div>' + K.categories.map(function (c, ci) {
       var its = K.items.filter(function (x) { return x.cat === c.id; }), cv = c.cover || {};
       return '<div class="card catc" data-ci="' + ci + '">' +
@@ -268,8 +268,11 @@
         '<div><div class="f">' + field('name', 'Название раздела', c.name) + field('short', 'Короткое (для калькулятора)', c.short) +
           field('price', 'Цена «от», BYN', c.price == null ? '' : c.price, { type: 'number', ph: 'инд.' }) + '</div>' +
           '<div class="f2">' + field('inc', 'Что входит (через запятую)', c.inc) + field('desc', 'Описание', c.desc, { area: true, rows: 2 }) + '</div>' +
-          (sameSizeAll ? '<div class="cat-size-override">' + field('categorySize', 'Размер / габариты этого раздела', c.sizeOverride || commonSize, { wide:true, ph:'Общий размер или свой для этого раздела' }) +
-            '<p class="hint">Оставьте общий размер или укажите свой. Остальные размеры комплекта ниже не меняются.</p></div>' : '') +
+          (sameSizeAll ? '<div class="cat-size-override">' +
+            '<label class="chk cat-size-toggle"><input type="checkbox" name="categorySizeEnabled"' + (c.sizeEnabled !== false ? ' checked' : '') + '> Применять размер к этому разделу</label>' +
+            (c.sizeEnabled !== false ? field('categorySize', 'Размер / габариты раздела', c.sizeOverride || commonSize, { wide:true, ph:'Общий размер или свой для этого раздела' }) +
+              '<p class="hint">Общий размер стоит по умолчанию. Введите другое значение только для этого раздела.</p>' :
+              '<p class="hint">Размер в этом разделе отключён.</p>') + '</div>' : '') +
           '<div style="margin-top:10px"><b style="font-size:13px">Комплект и размеры</b>' + (c.kit || []).map(function (k, ki) {
             return '<div class="kitrow" data-ki="' + ki + '"><input name="kn" value="' + esc(k[0]) + '" placeholder="Элемент"><input name="kv" value="' + esc(k[1] || '') + '" placeholder="Размер, напр. 100 × 60 × 5 см"><button class="ic del" data-c="kit-del">✕</button></div>';
           }).join('') + '<button class="link" data-c="kit-add" style="margin-top:6px">+ строка комплекта</button></div>' +
@@ -303,12 +306,15 @@
       c.visible = $('[name=visible]', el).checked;
       c.calc = $('[name=incalc]', el).checked;
       c.cover = c.cover || {}; c.cover.zoom = +$('[name=zoom]', el).value;
+      var categorySizeToggle = $('[name=categorySizeEnabled]', el);
+      if (categorySizeToggle) c.sizeEnabled = categorySizeToggle.checked;
       var categorySizeInput = $('[name=categorySize]', el);
       if (categorySizeInput) {
         var categorySizeValue = categorySizeInput.value.trim();
         c.sizeOverride = categorySizeValue && categorySizeValue !== String(K.commonSize || '').trim() ? categorySizeValue : '';
       }
-      c.kit = $('.kitrow', el).map(function (r) { return [$('[name=kn]', r).value.trim(), $('[name=kv]', r).value.trim()]; }).filter(function (k) { return k[0]; });
+      // querySelector returns a single row; querySelectorAll is needed to read all kit rows.
+      c.kit = $$('.kitrow', el).map(function (r) { return [$('[name=kn]', r).value.trim(), $('[name=kv]', r).value.trim()]; }).filter(function (k) { return k[0]; });
       $$('.mod', el).forEach(function (m) {
         var it = K.items[+m.dataset.gi]; if (!it) return;
         it.code = $('[name=code]', m).value.trim() || it.code; it.cat = $('[name=mcat]', m).value;
@@ -336,7 +342,8 @@
     }
   });
   $('#catEd').addEventListener('change', function (e) {
-    if (!e.target || e.target.name !== 'sameSizeAll') return;
+    var name = e.target && e.target.name;
+    if (name !== 'sameSizeAll' && name !== 'categorySizeEnabled') return;
     readCatalog();
     drawCatalog();
   });
