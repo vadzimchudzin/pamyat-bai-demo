@@ -23,6 +23,29 @@ async function init() {
     await q(`create table if not exists leads (id serial primary key, created_at timestamptz default now(), type text, name text, phone text,
       comment text, price integer, config jsonb, source text, status text default 'новая', taken_by text, tg_msg_id bigint, history jsonb default '[]'::jsonb)`);
     await q(`create table if not exists admin_log (id serial primary key, at timestamptz default now(), action text, detail text, ip text, ok boolean default true)`);
+    await q(`create table if not exists price_catalog (
+      id smallint primary key default 1 check (id=1),
+      items jsonb not null default '[]'::jsonb,
+      site_sync boolean not null default false,
+      updated_at timestamptz default now(),
+      updated_by text
+    )`);
+    await q(`insert into price_catalog(id,items,site_sync) values(1,'[]'::jsonb,false) on conflict(id) do nothing`);
+    await q(`create table if not exists estimates (
+      id serial primary key,
+      lead_id integer references leads(id) on delete set null,
+      client_name text not null default '',
+      client_phone text not null default '',
+      items jsonb not null default '[]'::jsonb,
+      total numeric(12,2) not null default 0,
+      discount numeric(12,2) not null default 0,
+      notes text not null default '',
+      status text not null default 'draft',
+      public_token text not null unique,
+      created_at timestamptz default now(),
+      updated_at timestamptz default now(),
+      created_by text not null default ''
+    )`);
   })();
   try { await ready; } catch (e) { ready = null; throw e; }
   return ready;
@@ -128,15 +151,107 @@ async function tg(token, method, payload) {
 function tgSecret() { return crypto.createHmac('sha256', secret()).update('tg-webhook').digest('hex').slice(0, 48); }
 function esc(s) { return String(s == null ? '' : s).replace(/[&<>]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;' }[c]; }); }
 function leadText(L) {
-  const lines = ['<b>Заявка №' + L.id + '</b> · ' + esc(L.type === 'calc' ? 'расчёт' : 'звонок'),
-    '👤 ' + esc(L.name || '—') + ' · ' + esc(L.phone || '—')];
-  if (L.price) lines.push('💰 от ' + Number(L.price).toLocaleString('ru-RU') + ' BYN');
-  if (L.config && L.config.summary) lines.push('🧱 ' + esc(L.config.summary));
-  if (L.comment) lines.push('💬 ' + esc(L.comment));
-  lines.push('🕒 ' + new Date(L.created_at || Date.now()).toLocaleString('ru-RU', { timeZone: 'Europe/Minsk' }));
-  if (L.source) lines.push('🔗 ' + esc(L.source));
-  return lines.join('\n');
+  const time = new Date(L.created_at || Date.now()).toLocaleString('ru-RU', { timeZone: 'Europe/Minsk' });
+  const amount = L.price == null ? 'индивидуально' : Number(L.price).toLocaleString('ru-RU') + ' BYN';
+  const rows = [
+    ['Клиент', L.name || '—'],
+    ['Телефон', L.phone || '—'],
+    ['Тип', L.type === 'calc' ? 'Расчёт' : 'Звонок'],
+    ['Сумма', amount],
+    ['Дата', time],
+    ['Статус', L.status || 'новая']
+  ];
+  const table = rows.map(([k, v]) => (String(k).padEnd(9, ' ') + ' │ ' + String(v).replace(/[\\r\\n]+/g, ' ').slice(0, 48))).join('\\n');
+  const summary = L.config && L.config.summary ? String(L.config.summary).split(/;\\s*/).slice(0, 12).map(x => '• ' + x).join('\\n').slice(0, 1200) : '';
+  const lines = ['<b>ПАМЯТЬ.БАЙ · ЗАЯВКА №' + L.id + '</b>', '<pre>' + esc(table) + '</pre>'];
+  if (summary) lines.push('<b>Состав расчёта</b>', '<pre>' + esc(summary) + '</pre>');
+  if (L.comment) lines.push('<b>Комментарий:</b> ' + esc(String(L.comment).slice(0, 700)));
+  if (L.taken_by) lines.push('<b>Ответственный:</b> ' + esc(L.taken_by));
+  return lines.join('\\n');
 }
 
-module.exports = { q, init, getContent, saveContent, publicContent, merge, checkLogin, setPassword, session, setSession, clearSession,
-  log, body, send, fail, requireAdmin, tg, tgSecret, leadText, esc, ip, DEFAULTS };
+/* ---------- каталог цен и сметы ---------- */
+async function getPriceBook() {
+  await init();
+  const r = await q(`select items, site_sync, updated_at, updated_by from price_catalog where id=1`);
+  const row = r.rows[0] || {};
+  return { items: row.items || [], siteSync: !!row.site_sync, updatedAt: row.updated_at || null, updatedBy: row.updated_by || '' };
+}
+function applySitePriceBook(content, book) {
+  const c = JSON.parse(JSON.stringify(content || {}));
+  if (!book || !book.siteSync || !Array.isArray(book.items)) return c;
+  book.items.forEach(function (p) {
+    if (p.price === null || p.price === '' || !Number.isFinite(Number(p.price))) return;
+    const target = String(p.siteTarget || '');
+    const price = Math.max(0, Math.round(Number(p.price)));
+    let m = /^catalog:(.+)$/.exec(target);
+    if (m && c.catalog && Array.isArray(c.catalog.categories)) {
+      const cat = c.catalog.categories.find(x => x.id === m[1]);
+      if (cat) cat.price = price;
+      return;
+    }
+    m = /^calc:([^:]+):(.+)$/.exec(target);
+    if (m && c.calc && Array.isArray(c.calc.steps)) {
+      const st = c.calc.steps.find(x => x.id === m[1]);
+      const it = st && Array.isArray(st.items) ? st.items.find(x => x.id === m[2]) : null;
+      if (it) it.price = price;
+    }
+  });
+  return c;
+}
+async function getSiteContent() {
+  const c = await getContent();
+  return applySitePriceBook(c, await getPriceBook());
+}
+function leadKeyboard(id) {
+  return { inline_keyboard: [
+    [{ text: '✅ Взять в работу', callback_data: 'take:' + id }, { text: '🧾 Получить смету', callback_data: 'quote:' + id }],
+    [{ text: '📞 Связались', callback_data: 'status:c:' + id }, { text: '📐 Назначить замер', callback_data: 'status:m:' + id }],
+    [{ text: '📄 Смета отправлена', callback_data: 'status:q:' + id }, { text: '🤝 Договор', callback_data: 'status:d:' + id }],
+    [{ text: '✔️ Завершена', callback_data: 'status:f:' + id }, { text: '✖️ Отказ', callback_data: 'skip:' + id }]
+  ] };
+}
+async function createEstimateFromLead(leadId, by) {
+  await init();
+  const prev = await q(`select * from estimates where lead_id=$1 and status='draft' order by id desc limit 1`, [leadId]);
+  if (prev.rows[0]) return prev.rows[0];
+  const leadResult = await q(`select * from leads where id=$1 limit 1`, [leadId]);
+  const lead = leadResult.rows[0];
+  if (!lead) throw Object.assign(new Error('Заявка не найдена'), { code: 'NO_LEAD' });
+  const content = await getSiteContent();
+  const sel = lead.config && lead.config.sel && typeof lead.config.sel === 'object' ? lead.config.sel : {};
+  const rows = [];
+  const catalog = content.catalog || { categories: [], items: [] };
+  const categoryId = sel.monument || '';
+  const category = (catalog.categories || []).find(x => x.id === categoryId);
+  if (category) {
+    const modelCode = lead.config && lead.config.model;
+    const model = modelCode && (catalog.items || []).find(x => x.code === modelCode);
+    rows.push({ name: category.name + (model ? ' · модель ' + model.code : ''), unit: 'комплект', qty: 1,
+      price: category.price == null ? 0 : Number(category.price), note: category.price == null ? 'Индивидуальный расчёт' : '' });
+  }
+  (content.calc && content.calc.steps || []).forEach(function (st) {
+    const chosen = sel[st.id];
+    const ids = st.type === 'multi' ? (Array.isArray(chosen) ? chosen : []) : (chosen ? [chosen] : []);
+    ids.forEach(function (id) {
+      const item = (st.items || []).find(x => x.id === id);
+      if (!item) return;
+      rows.push({ name: st.name + ' · ' + item.name, unit: 'шт.', qty: 1,
+        price: item.price == null ? 0 : Number(item.price), note: item.note || (item.price == null ? 'Индивидуальный расчёт' : '') });
+    });
+  });
+  if (!rows.length) rows.push({ name: 'Предварительный расчёт по заявке №' + lead.id, unit: 'комплект', qty: 1,
+    price: lead.price == null ? 0 : Number(lead.price), note: lead.config && lead.config.summary || lead.comment || '' });
+  const total = rows.reduce((n, x) => n + Number(x.qty || 0) * Number(x.price || 0), 0);
+  const token = crypto.randomBytes(24).toString('hex');
+  const res = await q(`insert into estimates(lead_id,client_name,client_phone,items,total,discount,notes,status,public_token,created_by)
+    values($1,$2,$3,$4,$5,0,$6,'draft',$7,$8) returning *`,
+    [lead.id, lead.name || '', lead.phone || '', JSON.stringify(rows), total, String((lead.config && lead.config.summary) || lead.comment || ''), token, String(by || 'Telegram').slice(0,80)]);
+  await q(`update leads set history=history || $1::jsonb where id=$2`,
+    [JSON.stringify([{at:new Date().toISOString(),t:'создан черновик сметы №'+res.rows[0].id,by:String(by || 'система')}]), lead.id]);
+  return res.rows[0];
+}
+
+
+module.exports = { q, init, getContent, getSiteContent, getPriceBook, applySitePriceBook, saveContent, publicContent, merge, checkLogin, setPassword, session, setSession, clearSession,
+  log, body, send, fail, requireAdmin, tg, tgSecret, leadText, leadKeyboard, createEstimateFromLead, esc, ip, DEFAULTS };
