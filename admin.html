@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/admin.css?v=a7">
+<link rel="stylesheet" href="/css/admin.css?v=a8">
 </head>
 <body>
 <div class="bg" aria-hidden="true"></div>
@@ -116,11 +116,11 @@
     <!-- актуальный каталог цен -->
     <section class="pane" id="p-pricebook">
       <header><h2>Актуальный каталог цен</h2><div class="acts">
-        <label class="btn line sm">Загрузить CSV<input type="file" id="priceCsv" accept=".csv,.tsv,.txt,text/csv" hidden></label>
+        <label class="btn line sm">Импортировать прайс<input type="file" id="priceFile" accept=".csv,.tsv,.txt,.xlsx,.xls,.docx,.pdf,text/csv,application/pdf,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.wordprocessingml.document" hidden></label>
         <button class="btn line sm" id="priceAdd">+ Позиция</button>
         <button class="btn gold sm" id="priceSave">Сохранить каталог</button>
       </div></header>
-      <p class="hint">Загрузите CSV, экспортированный из Excel. Колонки: Категория; Название; Артикул/SKU; Ед.; Цена; Привязка к сайту (необязательно). Связанные позиции могут автоматически обновлять цены на сайте, когда включён переключатель в разделе «Калькулятор».</p>
+      <p class="hint">Импорт: CSV/TSV, Excel (.xlsx/.xls), Word (.docx), PDF с текстовым слоем. Желательные колонки: Категория, Название, Артикул/SKU, Ед., Цена, Привязка к сайту. После разбора проверьте строки и нажмите «Сохранить каталог». Сканированные PDF без распознанного текста нужно предварительно обработать OCR.</p>
       <p class="hint" id="pricebookInfo"></p>
       <div class="card"><div class="tbl" id="pricebookRows"></div></div>
     </section>
@@ -144,7 +144,7 @@
         <div class="tbl" id="estimateItems"></div>
         <div class="estimate-total" id="estimateTotal"></div>
         <div class="acts wrap">
-          <button class="btn line sm" id="estimatePrint">Смета с логотипом · печать / PDF</button>
+          <button class="btn line sm" id="estimatePrint">Печать / сохранить PDF</button><button class="btn gold sm" id="estimateDownloadWord">Скачать Word (.docx)</button>
           <a class="btn line sm" id="estimatePublicLink" target="_blank" rel="noopener" hidden>Открыть ссылку сметы</a>
         </div>
       </section>
@@ -170,6 +170,6 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="/js/admin.js?v=a8"></script>
+<script src="/js/admin.js?v=a9"></script>
 </body>
 </html>
