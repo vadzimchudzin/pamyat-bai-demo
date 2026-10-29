@@ -532,3 +532,15 @@ tr.new td:first-child{box-shadow:inset 3px 0 0 #9a3a24}
   color:#fffaf0!important;-webkit-text-fill-color:#fffaf0!important;font-weight:500!important;
   text-shadow:0 1px 4px rgba(0,0,0,.9),0 1px 1px rgba(0,0,0,.7)!important;
 }
+
+@media(max-width:900px){
+ #worksEd .w .ph:after{
+  background:linear-gradient(180deg,
+   rgba(16,11,7,0) 38%,
+   rgba(16,11,7,.025) 47%,
+   rgba(16,11,7,.16) 57%,
+   rgba(16,11,7,.42) 68%,
+   rgba(16,11,7,.72) 82%,
+   rgba(16,11,7,.90) 100%)!important;
+ }
+}
