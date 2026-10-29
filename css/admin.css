@@ -424,3 +424,5 @@ tr.new td:first-child{box-shadow:inset 3px 0 0 #9a3a24}
   border-radius:50%;color:#fff;background:rgba(151,109,48,.72);box-shadow:0 5px 14px rgba(22,16,10,.2)
 }
 #worksEd .w-zoom-preview svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+
+#worksEd .w-badge-preview[hidden],#worksEd .w-work-copy strong[hidden],#worksEd .w-work-copy span[hidden]{display:none!important}
