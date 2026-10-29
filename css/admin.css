@@ -443,3 +443,16 @@ tr.new td:first-child{box-shadow:inset 3px 0 0 #9a3a24}
 #worksEd .w .w-crop-label{display:grid;grid-template-columns:1fr auto;align-items:center;gap:5px}
 #worksEd .w .w-crop-label output{color:var(--gold);font-size:12px;font-variant-numeric:tabular-nums}
 #worksEd .w .w-crop-label input[type=range]{grid-column:1/-1}
+
+/* Admin preview text is as bright as the public card. */
+#worksEd .w .w-work-info,#worksEd .w .w-work-copy{opacity:1!important;filter:none}
+#worksEd .w .w-work-copy strong{
+ color:#fff!important;-webkit-text-fill-color:#fff;opacity:1!important;
+ font-family:"Playfair Display",Georgia,serif;font-weight:700;
+ text-shadow:0 2px 7px rgba(0,0,0,.95),0 1px 2px rgba(0,0,0,.98);
+ -webkit-text-stroke:.12px rgba(255,255,255,.55)
+}
+#worksEd .w .w-work-copy span{
+ color:#fff!important;-webkit-text-fill-color:#fff;opacity:1!important;font-weight:600;
+ text-shadow:0 1px 5px rgba(0,0,0,.98),0 0 2px rgba(0,0,0,.95)
+}
