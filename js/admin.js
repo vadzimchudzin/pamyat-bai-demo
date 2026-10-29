@@ -420,17 +420,32 @@
     var c = String(v || '').trim();
     return /^#[0-9a-f]{6}$/i.test(c) ? c : '#9a7436';
   }
+  function workPresentationDefaults(work) {
+    var byImage = {
+      '/api/img?id=1': { caption:'Памятник черный гранитный', description:'Двойной памятник с полированной поверхностью' },
+      '/api/img?id=2': { caption:'Памятник с портретом', description:'Элегантный памятник с художественной гравировкой' },
+      '/api/img?id=3': { caption:'Ограда с покрытием', description:'Благоустроенный участок с гранитным настилом' },
+      '/api/img?id=6': { caption:'Индивидуальный проект', description:'Подберём форму, камень и оформление под ваш участок' }
+    };
+    return byImage[String(work && work.img || '')] || { caption:'', description:'' };
+  }
   function drawWorks() {
     var w = C.works || [];
     $('#worksEd').innerHTML = w.map(function (x, i) {
       x = x || {};
+      var defaults = workPresentationDefaults(x);
+      var caption = String(x.caption || '').trim() || defaults.caption;
+      var description = String(x.description || '').trim() || defaults.description;
       var cropX = cropValue(x.cropX), cropY = cropValue(x.cropY), color = badgeColor(x.badgeColor);
       var badge = String(x.badgeText || '').trim();
       return '<div class="w" data-i="' + i + '">' +
         '<div class="ph" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%"><img src="' + esc(x.img || '') + '" alt="">' +
-          '<span class="w-badge-preview" style="background-color:' + color + '"' + (badge ? '' : ' hidden') + '>' + esc(badge) + '</span></div>' +
-        '<label>Заголовок карточки<input name="cap" value="' + esc(x.caption || '') + '" placeholder="Например: Памятник с портретом"></label>' +
-        '<label>Описание карточки<textarea name="description" rows="2" placeholder="Кратко опишите работу">' + esc(x.description || '') + '</textarea></label>' +
+          '<span class="w-badge-preview" style="--badge-color:' + color + ';background-color:' + color + '"' + (badge ? '' : ' hidden') + '><i aria-hidden="true"></i>' + esc(badge) + '</span>' +
+          '<div class="w-work-info"><div class="w-work-copy"><strong data-work-title' + (caption ? '' : ' hidden') + '>' + esc(caption) + '</strong><span data-work-description' + (description ? '' : ' hidden') + '>' + esc(description) + '</span></div>' +
+            '<span class="w-zoom-preview" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.3"></circle><path d="m15.5 15.5 4.2 4.2"></path></svg></span>' +
+          '</div></div>' +
+        '<label>Заголовок карточки<input name="cap" value="' + esc(caption) + '" placeholder="Например: Памятник с портретом"></label>' +
+        '<label>Описание карточки<textarea name="description" rows="2" placeholder="Кратко опишите работу">' + esc(description) + '</textarea></label>' +
         '<label>Текст плашки<input name="badgeText" value="' + esc(badge) + '" placeholder="Например: Новое"></label>' +
         '<label class="w-color-label">Цвет плашки<input type="color" name="badgeColor" value="' + color + '"></label>' +
         '<label class="w-crop-label">Кадр по горизонтали <output data-crop-label="cropX">' + cropX + '%</output><input type="range" name="cropX" min="0" max="100" step="1" value="' + cropX + '"></label>' +
@@ -443,8 +458,16 @@
     var card = e.target.closest('.w'); if (!card) return;
     var item = C.works[+card.dataset.i]; if (!item) return;
     var name = e.target.name;
-    if (name === 'cap') item.caption = e.target.value;
-    if (name === 'description') item.description = e.target.value;
+    if (name === 'cap') {
+      item.caption = e.target.value;
+      var title = card.querySelector('[data-work-title]');
+      if (title) { title.textContent = e.target.value; title.hidden = !String(e.target.value || '').trim(); }
+    }
+    if (name === 'description') {
+      item.description = e.target.value;
+      var description = card.querySelector('[data-work-description]');
+      if (description) { description.textContent = e.target.value; description.hidden = !String(e.target.value || '').trim(); }
+    }
     if (name === 'badgeText') {
       item.badgeText = e.target.value;
       var preview = card.querySelector('.w-badge-preview');
