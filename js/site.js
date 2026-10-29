@@ -170,7 +170,11 @@
   var lbx = $('#lbx');
   function bindWorks() {
     $$('.work').forEach(function (w) {
-      w.addEventListener('click', function () { $('#lbimg').src = w.querySelector('img').src; lbx.classList.add('on'); });
+      w.addEventListener('click', function (e) {
+        if (e.target.closest('a')) return;
+        var img = w.querySelector('.mat img');
+        if (img && lbx && $('#lbimg')) { $('#lbimg').src = img.src; lbx.classList.add('on'); }
+      });
     });
   }
   bindWorks();
@@ -179,28 +183,58 @@
   var worksCarousel = $('#worksCarousel'), worksTrack = $('#worksGrid');
   var worksPrev = worksCarousel && $('.works-prev', worksCarousel);
   var worksNext = worksCarousel && $('.works-next', worksCarousel);
-  function refreshWorksCarousel() {
-    if (!worksCarousel || !worksTrack) return;
-    var max = Math.max(0, worksTrack.scrollWidth - worksTrack.clientWidth);
-    var left = worksTrack.scrollLeft > 3;
-    var right = worksTrack.scrollLeft < max - 3;
-    worksCarousel.classList.toggle('can-left', max > 3 && left);
-    worksCarousel.classList.toggle('can-right', max > 3 && right);
-    if (worksPrev) worksPrev.hidden = !(max > 3 && left);
-    if (worksNext) worksNext.hidden = !(max > 3 && right);
-  }
-  function moveWorks(direction) {
-    if (!worksTrack) return;
-    var card = $('.work', worksTrack);
-    var gap = 18;
-    if (card) {
+  var worksPagination = worksCarousel && $('#worksPagination');
+  function worksMetrics() {
+    var card = worksTrack && $('.work', worksTrack), gap = 18;
+    if (worksTrack) {
       var style = getComputedStyle(worksTrack);
       gap = parseFloat(style.columnGap || style.gap || '18') || 18;
     }
-    worksTrack.scrollBy({ left: direction * ((card ? card.getBoundingClientRect().width : worksTrack.clientWidth * 0.8) + gap), behavior: calm ? 'auto' : 'smooth' });
+    return { max: worksTrack ? Math.max(0, worksTrack.scrollWidth - worksTrack.clientWidth) : 0,
+      step: (card ? card.getBoundingClientRect().width : (worksTrack ? worksTrack.clientWidth * .8 : 0)) + gap };
+  }
+  function refreshWorksCarousel() {
+    if (!worksCarousel || !worksTrack) return;
+    var metrics = worksMetrics(), max = metrics.max, step = metrics.step;
+    var left = worksTrack.scrollLeft > 3;
+    var right = worksTrack.scrollLeft < max - 3;
+    worksCarousel.classList.toggle('is-scrollable', max > 3);
+    worksCarousel.classList.toggle('can-left', max > 3 && left);
+    worksCarousel.classList.toggle('can-right', max > 3 && right);
+    if (worksPrev) { worksPrev.hidden = max <= 3; worksPrev.disabled = !left; worksPrev.setAttribute('aria-disabled', String(!left)); }
+    if (worksNext) { worksNext.hidden = max <= 3; worksNext.disabled = !right; worksNext.setAttribute('aria-disabled', String(!right)); }
+    if (worksPagination) {
+      var pages = max > 3 && step > 0 ? Math.max(1, worksTrack.children.length) : 1;
+      if (Number(worksPagination.dataset.pageCount) !== pages) {
+        worksPagination.dataset.pageCount = String(pages);
+        worksPagination.innerHTML = Array.from({ length: pages }, function (_, i) {
+          return '<button type="button" class="works-dot' + (i === 0 ? ' active' : '') + '" data-page="' + i +
+            '" aria-label="Показать страницу ' + (i + 1) + '"' + (i === 0 ? ' aria-current="true"' : '') + '></button>';
+        }).join('');
+        worksPagination.hidden = pages < 2;
+      }
+      var active = max > 3 && pages > 1 ? Math.max(0, Math.min(pages - 1, Math.round(worksTrack.scrollLeft / max * (pages - 1)))) : 0;
+      $$('.works-dot', worksPagination).forEach(function (dot, i) {
+        var on = i === active;
+        dot.classList.toggle('active', on);
+        if (on) dot.setAttribute('aria-current', 'true'); else dot.removeAttribute('aria-current');
+      });
+    }
+  }
+  function moveWorks(direction) {
+    if (!worksTrack) return;
+    var metrics = worksMetrics();
+    worksTrack.scrollBy({ left: direction * metrics.step, behavior: calm ? 'auto' : 'smooth' });
   }
   if (worksPrev) worksPrev.addEventListener('click', function () { moveWorks(-1); });
   if (worksNext) worksNext.addEventListener('click', function () { moveWorks(1); });
+  if (worksPagination) worksPagination.addEventListener('click', function (e) {
+    var dot = e.target.closest('[data-page]');
+    if (!dot || !worksTrack) return;
+    var metrics = worksMetrics(), pages = Number(worksPagination.dataset.pageCount) || 1;
+    var page = Math.max(0, Math.min(pages - 1, Number(dot.dataset.page) || 0));
+    worksTrack.scrollTo({ left: pages > 1 ? metrics.max * page / (pages - 1) : 0, behavior: calm ? 'auto' : 'smooth' });
+  });
   if (worksTrack) {
     worksTrack.addEventListener('scroll', refreshWorksCarousel, { passive:true });
     worksTrack.addEventListener('keydown', function (e) {
@@ -309,7 +343,7 @@
   function catOf(code) { var it = (CAT.items || []).filter(function (x) { return x.code === code; })[0]; return it ? it.cat : ''; }
   function build() {
     // шаг 1 «Памятник» = разделы каталога; дальше — шаги из админки; последний — контакты
-    var first = { id: 'monument', name: 'Памятник', type: 'radio', sub: 'Выберите тип — как в каталоге. Гранит и размеры согласуем лично.', catalog: true,
+    var first = { id: 'monument', name: 'Памятник', type: 'radio', sub: 'Выберите форму — как в каталоге. Гранит и размеры согласуем лично.', catalog: true,
       items: visibleCats().filter(function (c) { return c.calc !== false; }).map(function (c) { return { id: c.id, name: c.short || c.name, price: c.price == null ? null : +c.price }; }) };
     STEPS = [first].concat(CALC.filter(function (s) { return s.id !== 'monument' && s.items && s.items.length; }))
       .concat([{ id: '__contact', name: 'Контакты', type: 'contact' }]);
@@ -465,6 +499,21 @@
     var color = String(value || '').trim();
     return /^#[0-9a-f]{6}$/i.test(color) ? color : '#9a7436';
   }
+  function workZoom(value) {
+    var n = Number(value);
+    return Number.isFinite(n) ? Math.max(1, Math.min(2.2, n)) : 1;
+  }
+  /* Display-only captions for the four photos already in the database.
+     Admin values always take precedence; these defaults don't write to Neon. */
+  function workPresentationDefaults(work) {
+    var byImage = {
+      '/api/img?id=1': { caption:'Памятник черный гранитный', description:'Двойной памятник с полированной поверхностью' },
+      '/api/img?id=2': { caption:'Памятник с портретом', description:'Элегантный памятник с художественной гравировкой' },
+      '/api/img?id=3': { caption:'Ограда с покрытием', description:'Благоустроенный участок с гранитным настилом' },
+      '/api/img?id=6': { caption:'Индивидуальный проект', description:'Подберём форму, камень и оформление под ваш участок' }
+    };
+    return byImage[String(work && work.img || '')] || { caption:'', description:'' };
+  }
 
   function applyContent(c) {
     if (!c) return;
@@ -485,15 +534,23 @@
     if (Array.isArray(c.works) && $('#worksGrid')) {
       $('#worksGrid').innerHTML = c.works.map(function (w) {
         w = w || {};
-        var caption = String(w.caption || '');
+        var defaults = workPresentationDefaults(w);
+        var caption = String(w.caption || '').trim() || defaults.caption;
+        var description = String(w.description || '').trim() || defaults.description;
         var badge = String(w.badgeText || '').trim();
         var color = workBadgeColor(w.badgeColor);
-        var cropX = workCrop(w.cropX), cropY = workCrop(w.cropY);
-        return '<figure class="work glass rv in" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%">' +
+        var cropX = workCrop(w.cropX), cropY = workCrop(w.cropY), zoom = workZoom(w.zoom);
+        return '<figure class="work glass rv in" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%;--photo-zoom:' + zoom + '">' +
           '<div class="mat">' +
-            (badge ? '<span class="work-badge" style="--badge-color:' + color + '">' + workHtmlEscape(badge) + '</span>' : '') +
             '<img src="' + workHtmlEscape(w.img || '') + '" loading="lazy" alt="' + workHtmlEscape(caption || 'Пример работы') + '">' +
-          '</div><p>' + workHtmlEscape(caption) + '</p></figure>';
+            (badge ? '<span class="work-badge" style="--badge-color:' + color + '"><i aria-hidden="true"></i>' + workHtmlEscape(badge) + '</span>' : '') +
+            '<div class="work-info">' +
+              '<div class="work-copy">' +
+                (caption ? '<h3>' + workHtmlEscape(caption) + '</h3>' : '') +
+                (description ? '<p>' + workHtmlEscape(description) + '</p>' : '') +
+              '</div>' +
+            '</div>' +
+          '</div></figure>';
       }).join('');
       bindWorks();
       refreshWorksCarousel();

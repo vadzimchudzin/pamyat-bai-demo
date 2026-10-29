@@ -248,7 +248,10 @@
 
   /* ---------- каталог: разделы, обложки, модели — всё редактируется ---------- */
   var openCats = {};
-  function catImg(src) { return src ? '<img src="' + esc(src) + '" alt="">' : '<span>✦</span>'; }
+  function catImg(src, zoom) {
+    var scale = Math.max(0.8, Math.min(2.2, Number(zoom) || 1));
+    return src ? '<img src="' + esc(src) + '" alt="" style="transform:scale(' + scale + ')">' : '<span>✦</span>';
+  }
   function drawCatalog() {
     var K = C.catalog || { categories: [], items: [] };
     $('#catGranite').value = K.granite || '';
@@ -262,9 +265,9 @@
       '</div>' + K.categories.map(function (c, ci) {
       var its = K.items.filter(function (x) { return x.cat === c.id; }), cv = c.cover || {};
       return '<div class="card catc" data-ci="' + ci + '">' +
-        '<div class="top"><div class="cov"><div class="ph">' + catImg(cv.img) + '</div>' +
+        '<div class="top"><div class="cov"><div class="ph">' + catImg(cv.img, cv.zoom) + '</div>' +
           '<label class="btn line sm">Обложка<input type="file" accept="image/*" data-up="cover" hidden></label>' +
-          '<label>Масштаб обложки <input type="range" min="0.8" max="2.2" step="0.05" name="zoom" value="' + (cv.zoom || 1) + '"></label></div>' +
+          '<label class="cover-zoom-label">Масштаб обложки <output data-zoom-label>' + Math.round((cv.zoom || 1) * 100) + '%</output><input type="range" min="0.8" max="2.2" step="0.05" name="zoom" value="' + (cv.zoom || 1) + '"></label></div>' +
         '<div><div class="f">' + field('name', 'Название раздела', c.name) + field('short', 'Короткое (для калькулятора)', c.short) +
           field('price', 'Цена «от», BYN', c.price == null ? '' : c.price, { type: 'number', ph: 'инд.' }) + '</div>' +
           '<div class="f2">' + field('inc', 'Что входит (через запятую)', c.inc) + field('desc', 'Описание', c.desc, { area: true, rows: 2 }) + '</div>' +
@@ -328,6 +331,15 @@
   }
   $('#catEd').addEventListener('input', function (e) {
     var inp = e.target;
+    if (inp.name === 'zoom') {
+      var card = inp.closest('.catc'), preview = card && card.querySelector('.cov .ph img'), out = card && card.querySelector('[data-zoom-label]');
+      var zoom = Math.max(0.8, Math.min(2.2, Number(inp.value) || 1));
+      if (preview) preview.style.transform = 'scale(' + zoom + ')';
+      if (out) out.textContent = Math.round(zoom * 100) + '%';
+      var category = C.catalog && C.catalog.categories[+(card && card.dataset.ci)];
+      if (category) { category.cover = category.cover || {}; category.cover.zoom = zoom; }
+      return;
+    }
     if (inp.name === 'kv' && !inp.disabled) inp.dataset.individualValue = inp.value;
     if (inp.name === 'commonSize') {
       var K = C.catalog || {};
@@ -408,20 +420,39 @@
     var c = String(v || '').trim();
     return /^#[0-9a-f]{6}$/i.test(c) ? c : '#9a7436';
   }
+  function workZoom(value) {
+    var n = Number(value);
+    return Number.isFinite(n) ? Math.max(1, Math.min(2.2, n)) : 1;
+  }
+  function workPresentationDefaults(work) {
+    var byImage = {
+      '/api/img?id=1': { caption:'Памятник черный гранитный', description:'Двойной памятник с полированной поверхностью' },
+      '/api/img?id=2': { caption:'Памятник с портретом', description:'Элегантный памятник с художественной гравировкой' },
+      '/api/img?id=3': { caption:'Ограда с покрытием', description:'Благоустроенный участок с гранитным настилом' },
+      '/api/img?id=6': { caption:'Индивидуальный проект', description:'Подберём форму, камень и оформление под ваш участок' }
+    };
+    return byImage[String(work && work.img || '')] || { caption:'', description:'' };
+  }
   function drawWorks() {
     var w = C.works || [];
     $('#worksEd').innerHTML = w.map(function (x, i) {
       x = x || {};
-      var cropX = cropValue(x.cropX), cropY = cropValue(x.cropY), color = badgeColor(x.badgeColor);
+      var defaults = workPresentationDefaults(x);
+      var caption = String(x.caption || '').trim() || defaults.caption;
+      var description = String(x.description || '').trim() || defaults.description;
+      var cropX = cropValue(x.cropX), cropY = cropValue(x.cropY), zoom = workZoom(x.zoom), color = badgeColor(x.badgeColor);
       var badge = String(x.badgeText || '').trim();
       return '<div class="w" data-i="' + i + '">' +
-        '<div class="ph" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%"><img src="' + esc(x.img || '') + '" alt="">' +
-          '<span class="w-badge-preview" style="background-color:' + color + '"' + (badge ? '' : ' hidden') + '>' + esc(badge) + '</span></div>' +
-        '<label>Подпись под фото<input name="cap" value="' + esc(x.caption || '') + '" placeholder="Например: Памятник из чёрного гранита"></label>' +
-        '<label>Текст плашки<input name="badgeText" value="' + esc(badge) + '" placeholder="Например: Скидка, Новое, Хит"></label>' +
+        '<div class="ph" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%;--photo-zoom:' + zoom + '"><img src="' + esc(x.img || '') + '" alt="" style="transform:scale(' + zoom + ')">' +
+          '<span class="w-badge-preview" style="--badge-color:' + color + ';background-color:' + color + '"' + (badge ? '' : ' hidden') + '><i aria-hidden="true"></i>' + esc(badge) + '</span>' +
+          '<div class="w-work-info"><div class="w-work-copy"><strong data-work-title' + (caption ? '' : ' hidden') + '>' + esc(caption) + '</strong><span data-work-description' + (description ? '' : ' hidden') + '>' + esc(description) + '</span></div></div></div>' +
+        '<label>Заголовок карточки<input name="cap" value="' + esc(caption) + '" placeholder="Например: Памятник с портретом"></label>' +
+        '<label>Описание карточки<textarea name="description" rows="2" placeholder="Кратко опишите работу">' + esc(description) + '</textarea></label>' +
+        '<label>Текст плашки<input name="badgeText" value="' + esc(badge) + '" placeholder="Например: Новое"></label>' +
         '<label class="w-color-label">Цвет плашки<input type="color" name="badgeColor" value="' + color + '"></label>' +
         '<label class="w-crop-label">Кадр по горизонтали <output data-crop-label="cropX">' + cropX + '%</output><input type="range" name="cropX" min="0" max="100" step="1" value="' + cropX + '"></label>' +
         '<label class="w-crop-label">Кадр по вертикали <output data-crop-label="cropY">' + cropY + '%</output><input type="range" name="cropY" min="0" max="100" step="1" value="' + cropY + '"></label>' +
+        '<label class="w-crop-label">Масштаб фото <output data-photo-zoom-label>' + Math.round(zoom * 100) + '%</output><input type="range" name="zoom" min="1" max="2.2" step="0.05" value="' + zoom + '"></label>' +
         '<div class="tools"><span><button class="ic" data-w="up" type="button" aria-label="Переместить выше">↑</button> <button class="ic" data-w="down" type="button" aria-label="Переместить ниже">↓</button></span><button class="ic del" data-w="del" type="button" title="Убрать">✕</button></div>' +
       '</div>';
     }).join('') || '<p class="empty">Фото нет — загрузите первые.</p>';
@@ -430,16 +461,33 @@
     var card = e.target.closest('.w'); if (!card) return;
     var item = C.works[+card.dataset.i]; if (!item) return;
     var name = e.target.name;
-    if (name === 'cap') item.caption = e.target.value;
+    if (name === 'zoom') {
+      item.zoom = workZoom(e.target.value);
+      var photo = card.querySelector('.ph img');
+      if (photo) photo.style.transform = 'scale(' + item.zoom + ')';
+      var zoomOut = card.querySelector('[data-photo-zoom-label]');
+      if (zoomOut) zoomOut.textContent = Math.round(item.zoom * 100) + '%';
+      return;
+    }
+    if (name === 'cap') {
+      item.caption = e.target.value;
+      var title = card.querySelector('[data-work-title]');
+      if (title) { title.textContent = e.target.value; title.hidden = !String(e.target.value || '').trim(); }
+    }
+    if (name === 'description') {
+      item.description = e.target.value;
+      var description = card.querySelector('[data-work-description]');
+      if (description) { description.textContent = e.target.value; description.hidden = !String(e.target.value || '').trim(); }
+    }
     if (name === 'badgeText') {
       item.badgeText = e.target.value;
       var preview = card.querySelector('.w-badge-preview');
-      if (preview) { preview.textContent = item.badgeText; preview.hidden = !String(item.badgeText || '').trim(); }
+      if (preview) { preview.innerHTML = '<i aria-hidden="true"></i>' + esc(item.badgeText); preview.hidden = !String(item.badgeText || '').trim(); }
     }
     if (name === 'badgeColor') {
       item.badgeColor = badgeColor(e.target.value);
       var previewColor = card.querySelector('.w-badge-preview');
-      if (previewColor) previewColor.style.backgroundColor = item.badgeColor;
+      if (previewColor) { previewColor.style.backgroundColor = item.badgeColor; previewColor.style.setProperty('--badge-color', item.badgeColor); }
     }
     if (name === 'cropX' || name === 'cropY') {
       item[name] = cropValue(e.target.value);
@@ -481,7 +529,7 @@
     toast('Загружаем ' + files.length + ' фото…');
     files.reduce(function (p, f) {
       return p.then(function () { return compress(f); }).then(function (data) { return api('/api/upload', { method: 'POST', body: { data: data } }); })
-        .then(function (d) { if (d.ok) { C.works = C.works || []; C.works.push({ img: d.url, caption: '', badgeText: '', badgeColor: '#9a7436', cropX: 50, cropY: 50 }); drawWorks(); } else toast(d.error || 'Фото не загрузилось', true); });
+        .then(function (d) { if (d.ok) { C.works = C.works || []; C.works.push({ img: d.url, caption: '', description: '', badgeText: '', badgeColor: '#9a7436', cropX: 50, cropY: 50, zoom: 1 }); drawWorks(); } else toast(d.error || 'Фото не загрузилось', true); });
     }, Promise.resolve()).then(function () { return save('works', C.works); });
   });
 

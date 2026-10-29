@@ -336,3 +336,211 @@ tr.new td:first-child{box-shadow:inset 3px 0 0 #9a3a24}
 /* Софтовая карточка превью: золотая линия, мягкая глубина, читаемая подпись */
 #worksEd .w{border-color:rgba(154,116,54,.3);box-shadow:0 8px 24px rgba(61,44,25,.08),inset 0 1px 0 rgba(255,255,255,.55)}
 #worksEd .w .ph{box-shadow:0 3px 10px rgba(44,29,14,.12),inset 0 0 0 1px rgba(255,255,255,.14)}
+
+
+/* Premium visual tuning: soft photo edges, restrained glass badge, visible live zoom */
+#worksEd .w{
+  border:1px solid rgba(176,132,63,.24);
+  border-radius:20px;
+  background:linear-gradient(150deg,rgba(255,252,246,.92),rgba(237,225,207,.74));
+  box-shadow:0 14px 34px rgba(74,58,29,.09),0 3px 9px rgba(74,58,29,.045),inset 0 1px 0 rgba(255,255,255,.82);
+  overflow:hidden;
+  transition:box-shadow .28s ease,border-color .28s ease,transform .28s ease;
+}
+#worksEd .w:hover{border-color:rgba(154,116,54,.42);box-shadow:0 18px 40px rgba(74,58,29,.13),inset 0 1px 0 rgba(255,255,255,.9);transform:translateY(-1px)}
+#worksEd .w .ph{
+  border:1px solid rgba(255,255,255,.7);
+  border-radius:13px;
+  box-shadow:0 5px 16px rgba(46,34,19,.12),0 0 0 1px rgba(123,91,46,.08);
+  isolation:isolate;
+}
+#worksEd .w .ph:after{
+  content:"";position:absolute;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(180deg,rgba(25,20,14,.02) 45%,rgba(25,20,14,.12) 100%);
+  box-shadow:inset 0 0 18px rgba(255,245,224,.12);
+}
+#worksEd .w .w-badge-preview{
+  z-index:1;
+  border-color:rgba(255,255,255,.55);
+  border-radius:9px;
+  padding:6px 11px;
+  background-image:linear-gradient(135deg,rgba(255,255,255,.2),rgba(24,18,12,.16));
+  box-shadow:0 5px 12px rgba(28,20,12,.16),0 12px 24px rgba(28,20,12,.12),inset 0 1px 0 rgba(255,255,255,.32);
+  -webkit-backdrop-filter:blur(13px) saturate(1.35);
+  backdrop-filter:blur(13px) saturate(1.35);
+  text-shadow:0 1px 3px rgba(0,0,0,.68);
+}
+.catc .cov .ph{
+  box-shadow:0 8px 24px rgba(74,58,29,.11),inset 0 0 0 1px rgba(255,255,255,.72);
+  border:1px solid rgba(176,132,63,.16);
+}
+.catc .cov .ph img{transition:transform .16s ease-out;transform-origin:center center}
+.catc .cov .cover-zoom-label{display:grid;grid-template-columns:1fr auto;align-items:center;gap:5px}
+.catc .cov .cover-zoom-label output{color:var(--gold);font-size:12px;font-variant-numeric:tabular-nums}
+.catc .cov .cover-zoom-label input[type=range]{grid-column:1/-1}
+
+
+/* Admin work-card preview mirrors the public premium card rather than a separate thumbnail */
+#worksEd .w .ph{
+  position:relative;aspect-ratio:.87;border:1px solid rgba(207,169,107,.52);
+  border-radius:17px;overflow:hidden;background:#8a7861;
+  box-shadow:0 8px 22px rgba(57,40,21,.13),inset 0 0 0 1px rgba(255,255,255,.18)
+}
+#worksEd .w .ph:after{
+  content:"";position:absolute;z-index:1;inset:0;pointer-events:none;border-radius:inherit;
+  background:linear-gradient(180deg,rgba(33,26,18,.01) 30%,rgba(33,26,18,.05) 48%,rgba(30,23,16,.50) 70%,rgba(25,19,13,.9) 100%);
+  box-shadow:inset 0 0 0 1px rgba(255,249,236,.18),inset 0 0 22px rgba(255,238,207,.08)
+}
+#worksEd .w .ph img{
+  position:absolute;inset:0;display:block;width:100%;height:100%;max-width:none;max-height:none;
+  object-fit:cover;object-position:var(--crop-x,50%) var(--crop-y,50%);mix-blend-mode:normal;
+  transition:object-position .08s linear,transform .18s ease
+}
+#worksEd .w-badge-preview{
+  z-index:3;display:inline-flex;align-items:center;gap:6px;max-width:calc(100% - 24px);
+  top:12px;left:12px;padding:7px 11px;border:1px solid rgba(255,255,255,.42);border-radius:999px;
+  background-image:linear-gradient(135deg,color-mix(in srgb,var(--badge-color,#9a7436) 82%,rgba(255,255,255,.32)),color-mix(in srgb,var(--badge-color,#9a7436) 76%,rgba(30,21,12,.28)));
+  -webkit-backdrop-filter:blur(12px) saturate(1.3);backdrop-filter:blur(12px) saturate(1.3);
+  box-shadow:0 5px 13px rgba(27,20,12,.18),0 10px 22px rgba(27,20,12,.12),inset 0 1px 0 rgba(255,255,255,.34);
+  font-size:10px;line-height:1.2;letter-spacing:.045em
+}
+#worksEd .w-badge-preview i{width:5px;height:5px;flex:0 0 5px;border-radius:50%;background:currentColor}
+#worksEd .w-work-info{
+  position:absolute;z-index:2;left:0;right:0;bottom:0;display:flex;align-items:flex-end;justify-content:space-between;gap:9px;
+  padding:46px 12px 13px;color:#fff;pointer-events:none
+}
+#worksEd .w-work-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:6px}
+#worksEd .w-work-copy strong{
+  display:block;color:#fff;font:400 16px/1.16 Georgia,"Times New Roman",serif;letter-spacing:-.02em;
+  text-shadow:0 2px 10px rgba(0,0,0,.3);overflow-wrap:anywhere
+}
+#worksEd .w-work-copy strong[hidden],#worksEd .w-work-copy span[hidden]{display:none!important}
+#worksEd .w-work-copy span{
+  display:block;color:rgba(255,250,241,.88);font-size:10px;font-weight:450;line-height:1.42;
+  text-shadow:0 1px 5px rgba(0,0,0,.34);overflow-wrap:anywhere
+}
+#worksEd .w-zoom-preview{
+  flex:0 0 34px;width:34px;height:34px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.2);
+  border-radius:50%;color:#fff;background:rgba(151,109,48,.72);box-shadow:0 5px 14px rgba(22,16,10,.2)
+}
+#worksEd .w-zoom-preview svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round}
+
+#worksEd .w-badge-preview[hidden],#worksEd .w-work-copy strong[hidden],#worksEd .w-work-copy span[hidden]{display:none!important}
+
+
+/* Admin preview: keep the card identical to the public version without the redundant loupe */
+#worksEd .w-zoom-preview{display:none!important}
+#worksEd .w-work-info{right:0;opacity:1}
+#worksEd .w-work-copy strong{
+  color:#fff!important;opacity:1!important;font-weight:500;
+  text-shadow:0 2px 12px rgba(0,0,0,.72),0 1px 2px rgba(0,0,0,.7)
+}
+#worksEd .w-work-copy span{
+  color:rgba(255,253,248,.98)!important;opacity:1!important;font-weight:550;
+  text-shadow:0 1px 8px rgba(0,0,0,.82),0 1px 2px rgba(0,0,0,.72)
+}
+#worksEd .w .ph img{transform-origin:center center;will-change:transform}
+#worksEd .w .w-crop-label{display:grid;grid-template-columns:1fr auto;align-items:center;gap:5px}
+#worksEd .w .w-crop-label output{color:var(--gold);font-size:12px;font-variant-numeric:tabular-nums}
+#worksEd .w .w-crop-label input[type=range]{grid-column:1/-1}
+
+/* Admin preview text is as bright as the public card. */
+#worksEd .w .w-work-info,#worksEd .w .w-work-copy{opacity:1!important;filter:none}
+#worksEd .w .w-work-copy strong{
+ color:#fff!important;-webkit-text-fill-color:#fff;opacity:1!important;
+ font-family:"Playfair Display",Georgia,serif;font-weight:700;
+ text-shadow:0 2px 7px rgba(0,0,0,.95),0 1px 2px rgba(0,0,0,.98);
+ -webkit-text-stroke:.12px rgba(255,255,255,.55)
+}
+#worksEd .w .w-work-copy span{
+ color:#fff!important;-webkit-text-fill-color:#fff;opacity:1!important;font-weight:600;
+ text-shadow:0 1px 5px rgba(0,0,0,.98),0 0 2px rgba(0,0,0,.95)
+}
+
+/* Admin photo preview follows the public reference: inset photo, light glass frame, bottom-only caption gradient. */
+#worksEd .w{border:1px solid rgba(204,163,99,.27);border-radius:20px;background:linear-gradient(145deg,rgba(255,251,242,.94),rgba(235,222,199,.84));box-shadow:0 12px 28px rgba(74,58,29,.08),inset 0 1px 0 rgba(255,255,255,.85);overflow:hidden}
+#worksEd .w .ph{
+  position:relative;aspect-ratio:.90;min-height:0;padding:10px;box-sizing:border-box;
+  border:1px solid rgba(210,169,105,.50);border-radius:24px;overflow:hidden;
+  background:linear-gradient(145deg,rgba(255,249,237,.8),rgba(234,216,184,.55));
+  box-shadow:0 12px 24px rgba(74,52,23,.10),inset 0 1px 0 rgba(255,255,255,.88);
+}
+#worksEd .w .ph:after{
+  content:"";position:absolute;z-index:1;inset:10px;pointer-events:none;border-radius:17px;
+  background:linear-gradient(180deg,rgba(26,20,13,0) 46%,rgba(26,20,13,.025) 56%,rgba(26,20,13,.16) 68%,rgba(26,20,13,.47) 81%,rgba(26,20,13,.76) 100%);
+  box-shadow:inset 0 0 0 1px rgba(255,255,255,.2);
+}
+#worksEd .w .ph img{
+  position:absolute;z-index:0;inset:10px;width:calc(100% - 20px);height:calc(100% - 20px);
+  max-width:none;max-height:none;object-fit:cover;object-position:var(--crop-x,50%) var(--crop-y,50%);
+  border-radius:17px;mix-blend-mode:normal;transform-origin:center center;will-change:transform;
+}
+#worksEd .w .w-badge-preview{
+  z-index:3;top:18px;left:18px;max-width:calc(100% - 36px);
+  display:inline-flex;align-items:center;gap:7px;padding:8px 12px;overflow:hidden;
+  border:1px solid rgba(255,255,255,.58);border-radius:999px;color:#fff;
+  background-image:linear-gradient(135deg,color-mix(in srgb,var(--badge-color,#a27a3c) 78%,rgba(255,255,255,.28)),color-mix(in srgb,var(--badge-color,#a27a3c) 72%,rgba(35,24,12,.23)));
+  box-shadow:0 5px 13px rgba(31,22,12,.20),inset 0 1px 0 rgba(255,255,255,.43);
+  -webkit-backdrop-filter:blur(13px) saturate(1.3);backdrop-filter:blur(13px) saturate(1.3);
+  font-size:11px;font-weight:650;letter-spacing:.045em;text-transform:uppercase;text-shadow:0 1px 3px rgba(0,0,0,.55);
+}
+#worksEd .w .w-work-info{
+  position:absolute;z-index:2;left:10px;right:10px;bottom:10px;display:flex;align-items:flex-end;
+  padding:62px 16px 17px;color:#fff;pointer-events:none;opacity:1!important;filter:none;
+}
+#worksEd .w .w-work-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:7px;opacity:1!important;filter:none}
+#worksEd .w .w-work-copy strong{
+  display:block;color:#fff4e2!important;-webkit-text-fill-color:#fff4e2;opacity:1!important;
+  font:500 17px/1.2 "Playfair Display",Georgia,serif;font-weight:600;letter-spacing:0;
+  text-shadow:0 2px 8px rgba(0,0,0,.72),0 1px 2px rgba(0,0,0,.66);overflow-wrap:anywhere;
+}
+#worksEd .w .w-work-copy span{
+  display:block;color:rgba(255,248,235,.96)!important;-webkit-text-fill-color:rgba(255,248,235,.96);
+  opacity:1!important;font:500 11px/1.48 var(--sans);text-shadow:0 1px 5px rgba(0,0,0,.82),0 1px 2px rgba(0,0,0,.55);overflow-wrap:anywhere;
+}
+#worksEd .w .w-zoom-preview{display:none!important}
+#worksEd .w .w-badge-preview[hidden],#worksEd .w .w-work-copy strong[hidden],#worksEd .w .w-work-copy span[hidden]{display:none!important}
+#worksEd .w .w-crop-label{display:grid;grid-template-columns:1fr auto;align-items:center;gap:5px}
+#worksEd .w .w-crop-label output{color:var(--gold);font-size:12px;font-variant-numeric:tabular-nums}
+#worksEd .w .w-crop-label input[type=range]{grid-column:1/-1}
+@media(max-width:560px){
+ #worksEd .w .ph{aspect-ratio:.86}
+ #worksEd .w .w-work-info{padding:55px 13px 14px}
+ #worksEd .w .w-work-copy strong{font-size:16px}
+ #worksEd .w .w-work-copy span{font-size:10px}
+}
+
+/* Admin preview: same visibly darkened text zone as the public photo cards. */
+#worksEd .w .ph:after{
+  z-index:2!important;
+  background:linear-gradient(180deg,
+    rgba(19,14,9,0) 39%,
+    rgba(19,14,9,.015) 48%,
+    rgba(19,14,9,.12) 58%,
+    rgba(19,14,9,.34) 69%,
+    rgba(19,14,9,.63) 82%,
+    rgba(19,14,9,.82) 100%)!important;
+}
+#worksEd .w .w-work-info{z-index:3!important}
+#worksEd .w .w-badge-preview{z-index:4!important}
+#worksEd .w .w-work-copy strong{
+  color:#fff2dd!important;-webkit-text-fill-color:#fff2dd!important;
+  font-family:"Playfair Display",Georgia,serif!important;font-size:17px!important;font-weight:650!important;
+  text-shadow:0 2px 5px rgba(0,0,0,.85),0 1px 2px rgba(0,0,0,.9)!important;
+}
+#worksEd .w .w-work-copy span{
+  color:#fffaf0!important;-webkit-text-fill-color:#fffaf0!important;font-weight:500!important;
+  text-shadow:0 1px 4px rgba(0,0,0,.9),0 1px 1px rgba(0,0,0,.7)!important;
+}
+
+@media(max-width:900px){
+ #worksEd .w .ph:after{
+  background:linear-gradient(180deg,
+   rgba(16,11,7,0) 38%,
+   rgba(16,11,7,.025) 47%,
+   rgba(16,11,7,.16) 57%,
+   rgba(16,11,7,.42) 68%,
+   rgba(16,11,7,.72) 82%,
+   rgba(16,11,7,.90) 100%)!important;
+ }
+}
