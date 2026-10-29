@@ -74,7 +74,7 @@ tr.new td:first-child{box-shadow:inset 3px 0 0 #9a3a24}
 .w{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:10px;display:grid;gap:8px}
 .w .ph{position:relative;aspect-ratio:4/3;border-radius:12px;background:#241d16;display:block;overflow:hidden;border:1px solid rgba(184,146,79,.7)}
 .w .ph img{width:100%;height:100%;max-width:none;max-height:none;object-fit:cover;object-position:var(--crop-x,50%) var(--crop-y,50%);mix-blend-mode:normal}
-.w .w-badge-preview{position:absolute;top:10px;left:10px;max-width:calc(100% - 20px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:5px 9px;border:1px solid rgba(255,255,255,.42);border-radius:5px;color:#fff;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;box-shadow:0 4px 12px rgba(0,0,0,.25)}
+.w .w-badge-preview{position:absolute;top:10px;left:10px;max-width:calc(100% - 20px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;padding:6px 10px;border:1px solid rgba(255,255,255,.6);border-radius:7px;color:#fff;font-size:10px;font-weight:700;letter-spacing:.055em;text-transform:uppercase;text-shadow:0 1px 2px rgba(0,0,0,.5);background-image:linear-gradient(135deg,color-mix(in srgb,currentColor 2%,rgba(255,255,255,.18)),rgba(20,14,8,.16));-webkit-backdrop-filter:blur(10px) saturate(1.25);backdrop-filter:blur(10px) saturate(1.25);box-shadow:0 2px 4px rgba(0,0,0,.17),0 7px 16px rgba(0,0,0,.22),inset 0 1px 0 rgba(255,255,255,.38)}
 .w .w-color-label{display:grid;grid-template-columns:1fr 76px;align-items:center}
 .w .w-color-label input[type=color]{width:76px;height:38px;padding:4px;cursor:pointer}
 .w .w-crop-label{display:grid;grid-template-columns:1fr auto;align-items:center;gap:5px;font-size:12px}
@@ -332,3 +332,7 @@ tr.new td:first-child{box-shadow:inset 3px 0 0 #9a3a24}
 #worksEd .w{gap:10px;border-color:rgba(154,116,54,.24);background:rgba(255,252,246,.86)}
 #worksEd .w label{display:grid;gap:5px;color:var(--mut);font-size:12px}
 #worksEd .w .tools{padding-top:3px;border-top:1px solid var(--line)}
+
+/* Софтовая карточка превью: золотая линия, мягкая глубина, читаемая подпись */
+#worksEd .w{border-color:rgba(154,116,54,.3);box-shadow:0 8px 24px rgba(61,44,25,.08),inset 0 1px 0 rgba(255,255,255,.55)}
+#worksEd .w .ph{box-shadow:0 3px 10px rgba(44,29,14,.12),inset 0 0 0 1px rgba(255,255,255,.14)}
