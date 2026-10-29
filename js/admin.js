@@ -400,15 +400,56 @@
   });
 
   /* ---------- примеры работ ---------- */
+  function cropValue(v) {
+    var n = Number(v);
+    return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 50;
+  }
+  function badgeColor(v) {
+    var c = String(v || '').trim();
+    return /^#[0-9a-f]{6}$/i.test(c) ? c : '#9a7436';
+  }
   function drawWorks() {
     var w = C.works || [];
     $('#worksEd').innerHTML = w.map(function (x, i) {
-      return '<div class="w" data-i="' + i + '"><div class="ph"><img src="' + esc(x.img) + '" alt=""></div>' +
-        '<input name="cap" value="' + esc(x.caption || '') + '" placeholder="Подпись">' +
-        '<div class="tools"><span><button class="ic" data-w="up">←</button> <button class="ic" data-w="down">→</button></span><button class="ic del" data-w="del" title="Убрать">✕</button></div></div>';
+      x = x || {};
+      var cropX = cropValue(x.cropX), cropY = cropValue(x.cropY), color = badgeColor(x.badgeColor);
+      var badge = String(x.badgeText || '').trim();
+      return '<div class="w" data-i="' + i + '">' +
+        '<div class="ph" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%"><img src="' + esc(x.img || '') + '" alt="">' +
+          '<span class="w-badge-preview" style="background-color:' + color + '"' + (badge ? '' : ' hidden') + '>' + esc(badge) + '</span></div>' +
+        '<label>Подпись под фото<input name="cap" value="' + esc(x.caption || '') + '" placeholder="Например: Памятник из чёрного гранита"></label>' +
+        '<label>Текст плашки<input name="badgeText" value="' + esc(badge) + '" placeholder="Например: Скидка, Новое, Хит"></label>' +
+        '<label class="w-color-label">Цвет плашки<input type="color" name="badgeColor" value="' + color + '"></label>' +
+        '<label class="w-crop-label">Кадр по горизонтали <output data-crop-label="cropX">' + cropX + '%</output><input type="range" name="cropX" min="0" max="100" step="1" value="' + cropX + '"></label>' +
+        '<label class="w-crop-label">Кадр по вертикали <output data-crop-label="cropY">' + cropY + '%</output><input type="range" name="cropY" min="0" max="100" step="1" value="' + cropY + '"></label>' +
+        '<div class="tools"><span><button class="ic" data-w="up" type="button" aria-label="Переместить выше">↑</button> <button class="ic" data-w="down" type="button" aria-label="Переместить ниже">↓</button></span><button class="ic del" data-w="del" type="button" title="Убрать">✕</button></div>' +
+      '</div>';
     }).join('') || '<p class="empty">Фото нет — загрузите первые.</p>';
   }
-  $('#worksEd').addEventListener('input', function (e) { var w = e.target.closest('.w'); if (w && e.target.name === 'cap') C.works[+w.dataset.i].caption = e.target.value; });
+  $('#worksEd').addEventListener('input', function (e) {
+    var card = e.target.closest('.w'); if (!card) return;
+    var item = C.works[+card.dataset.i]; if (!item) return;
+    var name = e.target.name;
+    if (name === 'cap') item.caption = e.target.value;
+    if (name === 'badgeText') {
+      item.badgeText = e.target.value;
+      var preview = card.querySelector('.w-badge-preview');
+      if (preview) { preview.textContent = item.badgeText; preview.hidden = !String(item.badgeText || '').trim(); }
+    }
+    if (name === 'badgeColor') {
+      item.badgeColor = badgeColor(e.target.value);
+      var previewColor = card.querySelector('.w-badge-preview');
+      if (previewColor) previewColor.style.backgroundColor = item.badgeColor;
+    }
+    if (name === 'cropX' || name === 'cropY') {
+      item[name] = cropValue(e.target.value);
+      var ph = card.querySelector('.ph');
+      ph.style.setProperty('--crop-x', cropValue(item.cropX) + '%');
+      ph.style.setProperty('--crop-y', cropValue(item.cropY) + '%');
+      var out = card.querySelector('[data-crop-label="' + name + '"]');
+      if (out) out.textContent = item[name] + '%';
+    }
+  });
   $('#worksEd').addEventListener('click', function (e) {
     var b = e.target.closest('[data-w]'); if (!b) return;
     var i = +b.closest('.w').dataset.i, w = C.works, a = b.dataset.w;
@@ -440,7 +481,7 @@
     toast('Загружаем ' + files.length + ' фото…');
     files.reduce(function (p, f) {
       return p.then(function () { return compress(f); }).then(function (data) { return api('/api/upload', { method: 'POST', body: { data: data } }); })
-        .then(function (d) { if (d.ok) { C.works = C.works || []; C.works.push({ img: d.url, caption: '' }); drawWorks(); } else toast(d.error || 'Фото не загрузилось', true); });
+        .then(function (d) { if (d.ok) { C.works = C.works || []; C.works.push({ img: d.url, caption: '', badgeText: '', badgeColor: '#9a7436', cropX: 50, cropY: 50 }); drawWorks(); } else toast(d.error || 'Фото не загрузилось', true); });
     }, Promise.resolve()).then(function () { return save('works', C.works); });
   });
 

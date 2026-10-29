@@ -10,7 +10,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="preload" as="image" href="/assets/img/hero-plate.jpg">
-<link rel="stylesheet" href="/css/dusk.css?v=e3">
+<link rel="stylesheet" href="/css/dusk.css?v=e4">
 </head>
 <body>
 <div class="ambience" aria-hidden="true"><div class="flame-light"></div><div class="light-breath"></div></div>
@@ -66,10 +66,14 @@
 <section class="section" id="works">
   <div class="wrap">
     <div class="head rv"><p class="eyebrow">Наши работы</p><h2>Примеры работ</h2><p class="lead" data-t="worksLead">Гранит разных пород, гравировка и портреты. Подберём форму и камень под ваш участок.</p></div>
-    <div class="works" id="worksGrid">
-      <figure class="work glass rv" data-img="/assets/img/work-1.jpg"><div class="mat"><img src="/assets/img/work-1.jpg" loading="lazy" alt="Памятник из чёрного гранита с портретом"></div><p>Чёрный гранит, портрет</p></figure>
-      <figure class="work glass rv" data-img="/assets/img/work-2.jpg"><div class="mat"><img src="/assets/img/work-2.jpg" loading="lazy" alt="Гранитный крест"></div><p>Крест из габбро-диабаза</p></figure>
-      <figure class="work glass rv" data-img="/assets/img/work-3.jpg"><div class="mat"><img src="/assets/img/work-3.jpg" loading="lazy" alt="Памятник с крестом"></div><p>Стела с крестом</p></figure>
+    <div class="works-carousel" id="worksCarousel">
+      <button class="works-arrow works-prev" type="button" aria-label="Предыдущие работы" hidden>‹</button>
+      <div class="works works-track" id="worksGrid" tabindex="0" aria-label="Примеры выполненных работ">
+        <figure class="work glass rv in" data-img="/assets/img/work-1.jpg"><div class="mat"><img src="/assets/img/work-1.jpg" loading="lazy" alt="Памятник из чёрного гранита с портретом" style="object-position:50% 50%"></div><p>Чёрный гранит, портрет</p></figure>
+        <figure class="work glass rv in" data-img="/assets/img/work-2.jpg"><div class="mat"><img src="/assets/img/work-2.jpg" loading="lazy" alt="Гранитный крест" style="object-position:50% 50%"></div><p>Крест из габбро-диабаза</p></figure>
+        <figure class="work glass rv in" data-img="/assets/img/work-3.jpg"><div class="mat"><img src="/assets/img/work-3.jpg" loading="lazy" alt="Памятник с крестом" style="object-position:50% 50%"></div><p>Стела с крестом</p></figure>
+      </div>
+      <button class="works-arrow works-next" type="button" aria-label="Следующие работы" hidden>›</button>
     </div>
   </div>
 </section>
@@ -217,6 +221,6 @@
 <div class="lbx" id="lbx"><div class="in"><img id="lbimg" alt=""></div></div>
 
 <script src="/js/catalog-default.js?v=c2"></script>
-<script src="/js/site.js?v=e5"></script>
+<script src="/js/site.js?v=e6"></script>
 </body>
 </html>

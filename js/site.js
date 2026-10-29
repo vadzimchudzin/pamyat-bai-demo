@@ -174,6 +174,44 @@
     });
   }
   bindWorks();
+
+  /* ---------- карусель примеров работ ---------- */
+  var worksCarousel = $('#worksCarousel'), worksTrack = $('#worksGrid');
+  var worksPrev = worksCarousel && $('.works-prev', worksCarousel);
+  var worksNext = worksCarousel && $('.works-next', worksCarousel);
+  function refreshWorksCarousel() {
+    if (!worksCarousel || !worksTrack) return;
+    var max = Math.max(0, worksTrack.scrollWidth - worksTrack.clientWidth);
+    var left = worksTrack.scrollLeft > 3;
+    var right = worksTrack.scrollLeft < max - 3;
+    worksCarousel.classList.toggle('can-left', max > 3 && left);
+    worksCarousel.classList.toggle('can-right', max > 3 && right);
+    if (worksPrev) worksPrev.hidden = !(max > 3 && left);
+    if (worksNext) worksNext.hidden = !(max > 3 && right);
+  }
+  function moveWorks(direction) {
+    if (!worksTrack) return;
+    var card = $('.work', worksTrack);
+    var gap = 18;
+    if (card) {
+      var style = getComputedStyle(worksTrack);
+      gap = parseFloat(style.columnGap || style.gap || '18') || 18;
+    }
+    worksTrack.scrollBy({ left: direction * ((card ? card.getBoundingClientRect().width : worksTrack.clientWidth * 0.8) + gap), behavior: calm ? 'auto' : 'smooth' });
+  }
+  if (worksPrev) worksPrev.addEventListener('click', function () { moveWorks(-1); });
+  if (worksNext) worksNext.addEventListener('click', function () { moveWorks(1); });
+  if (worksTrack) {
+    worksTrack.addEventListener('scroll', refreshWorksCarousel, { passive:true });
+    worksTrack.addEventListener('keydown', function (e) {
+      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+        e.preventDefault(); moveWorks(e.key === 'ArrowLeft' ? -1 : 1);
+      }
+    });
+    if ('ResizeObserver' in window) new ResizeObserver(refreshWorksCarousel).observe(worksTrack);
+    else addEventListener('resize', refreshWorksCarousel);
+    refreshWorksCarousel();
+  }
   if (lbx) lbx.addEventListener('click', function () { lbx.classList.remove('on'); });
   addEventListener('keydown', function (e) { if (e.key === 'Escape' && lbx) lbx.classList.remove('on'); });
 
@@ -414,6 +452,20 @@
     if (k === 'instagram') return /^https?:/.test(v) ? v : 'https://instagram.com/' + v.replace(/^@/, '');
     return v;
   }
+  function workHtmlEscape(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch];
+    });
+  }
+  function workCrop(value) {
+    var n = Number(value);
+    return Number.isFinite(n) ? Math.max(0, Math.min(100, n)) : 50;
+  }
+  function workBadgeColor(value) {
+    var color = String(value || '').trim();
+    return /^#[0-9a-f]{6}$/i.test(color) ? color : '#9a7436';
+  }
+
   function applyContent(c) {
     if (!c) return;
     var T = c.texts || {};
@@ -430,11 +482,21 @@
       if (url) { a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.hidden = false; } else a.hidden = !!c.__live;
     });
     if ($('#cLegal') && (C.company || C.unp)) $('#cLegal').textContent = [C.company, C.unp ? 'УНП ' + C.unp : ''].filter(Boolean).join(' · ');
-    if (Array.isArray(c.works) && c.works.length && $('#worksGrid')) {
+    if (Array.isArray(c.works) && $('#worksGrid')) {
       $('#worksGrid').innerHTML = c.works.map(function (w) {
-        return '<figure class="work glass rv in"><div class="mat"><img src="' + w.img + '" loading="lazy" alt="' + (w.caption || 'Пример работы') + '"></div><p>' + (w.caption || '') + '</p></figure>';
+        w = w || {};
+        var caption = String(w.caption || '');
+        var badge = String(w.badgeText || '').trim();
+        var color = workBadgeColor(w.badgeColor);
+        var cropX = workCrop(w.cropX), cropY = workCrop(w.cropY);
+        return '<figure class="work glass rv in" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%">' +
+          '<div class="mat">' +
+            (badge ? '<span class="work-badge" style="--badge-color:' + color + '">' + workHtmlEscape(badge) + '</span>' : '') +
+            '<img src="' + workHtmlEscape(w.img || '') + '" loading="lazy" alt="' + workHtmlEscape(caption || 'Пример работы') + '">' +
+          '</div><p>' + workHtmlEscape(caption) + '</p></figure>';
       }).join('');
       bindWorks();
+      refreshWorksCarousel();
     }
     if (c.catalog && Array.isArray(c.catalog.categories)) { CAT = c.catalog; window.PAMYAT_CATALOG = CAT; document.dispatchEvent(new CustomEvent('pamyat:catalog', { detail: CAT })); }
     if (c.calc && Array.isArray(c.calc.steps)) CALC = c.calc.steps;
