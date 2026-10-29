@@ -201,8 +201,8 @@
     worksCarousel.classList.toggle('is-scrollable', max > 3);
     worksCarousel.classList.toggle('can-left', max > 3 && left);
     worksCarousel.classList.toggle('can-right', max > 3 && right);
-    if (worksPrev) { worksPrev.hidden = max <= 3 || !left; worksPrev.disabled = !left; worksPrev.setAttribute('aria-disabled', String(!left)); }
-    if (worksNext) { worksNext.hidden = max <= 3 || !right; worksNext.disabled = !right; worksNext.setAttribute('aria-disabled', String(!right)); }
+    if (worksPrev) { worksPrev.hidden = max <= 3; worksPrev.disabled = !left; worksPrev.setAttribute('aria-disabled', String(!left)); }
+    if (worksNext) { worksNext.hidden = max <= 3; worksNext.disabled = !right; worksNext.setAttribute('aria-disabled', String(!right)); }
     if (worksPagination) {
       var pages = max > 3 && step > 0 ? Math.max(1, worksTrack.children.length) : 1;
       if (Number(worksPagination.dataset.pageCount) !== pages) {
