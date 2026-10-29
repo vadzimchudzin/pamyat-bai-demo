@@ -169,7 +169,7 @@
   /* ---------- лайтбокс работ ---------- */
   var lbx = $('#lbx');
   function bindWorks() {
-    $('.work').forEach(function (w) {
+    $$('.work').forEach(function (w) {
       w.addEventListener('click', function (e) {
         if (e.target.closest('a')) return;
         var img = w.querySelector('.mat img');
@@ -214,7 +214,7 @@
         worksPagination.hidden = pages < 2;
       }
       var active = max > 3 && pages > 1 ? Math.max(0, Math.min(pages - 1, Math.round(worksTrack.scrollLeft / max * (pages - 1)))) : 0;
-      $('.works-dot', worksPagination).forEach(function (dot, i) {
+      $$('.works-dot', worksPagination).forEach(function (dot, i) {
         var on = i === active;
         dot.classList.toggle('active', on);
         if (on) dot.setAttribute('aria-current', 'true'); else dot.removeAttribute('aria-current');
