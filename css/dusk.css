@@ -1304,3 +1304,14 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
   mix-blend-mode:normal!important;
   background:#211b14!important;
 }
+
+/* Guarantee the lightbox gold frame is painted on all four edges of the image. */
+.lbx .in img,
+.lbx #lbimg{
+  border:3px solid #d8b56d!important;
+  outline:1px solid rgba(255,239,199,.55)!important;
+  outline-offset:-1px!important;
+  border-radius:16px!important;
+  box-sizing:border-box!important;
+  background:#211b14!important;
+}
