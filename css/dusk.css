@@ -1468,3 +1468,52 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
     text-align:left;
   }
 }
+
+
+/* Calculator summary must remain inside the right-hand panel, even for long option names. */
+#calc .summary{min-width:0;width:100%}
+#calc .summary #sum{
+  display:block;width:100%;min-width:0;max-width:100%;
+  margin:0 0 16px;padding:0;
+}
+#calc .summary #sum>li{
+  display:block;width:100%;min-width:0;max-width:100%;
+  box-sizing:border-box;
+}
+#calc .summary #sum>li .rw{
+  display:grid;grid-template-columns:minmax(0,1fr) max-content;
+  align-items:start;column-gap:12px;width:100%;min-width:0;max-width:100%;
+  box-sizing:border-box;
+}
+#calc .summary #sum>li .rw>span{
+  display:block;min-width:0;max-width:100%;
+  overflow-wrap:anywhere;word-break:normal;text-align:left;
+}
+#calc .summary #sum>li .rw>i{
+  display:block;justify-self:end;min-width:0;max-width:100%;
+  white-space:nowrap;text-align:right;
+}
+@media(max-width:420px){
+  #calc .summary #sum>li .rw{column-gap:8px;font-size:13px}
+  #calc .summary #sum>li .rw>i{font-size:12px}
+}
+
+/* Show each uploaded job photograph in full at 100%; use a soft blurred fill behind it. */
+.works-carousel .work .mat{background:#3b2c20}
+.works-carousel .work .mat .work-photo-backdrop{
+  position:absolute!important;z-index:0!important;inset:-3%!important;
+  width:106%!important;height:106%!important;max-width:none!important;max-height:none!important;
+  object-fit:cover!important;object-position:center!important;
+  border:0!important;border-radius:inherit!important;
+  filter:blur(13px) brightness(.48) saturate(.86)!important;
+  transform:scale(1.06)!important;opacity:.86;pointer-events:none;
+}
+.works-carousel .work .mat .work-photo-main,
+.works-carousel .work:hover .mat .work-photo-main{
+  position:absolute!important;z-index:1!important;inset:0!important;
+  width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;
+  object-fit:contain!important;object-position:var(--crop-x,50%) var(--crop-y,50%)!important;
+  border:0!important;border-radius:inherit!important;
+  transform:scale(var(--photo-zoom,1))!important;transform-origin:center center!important;
+  filter:saturate(1.01) contrast(1.025)!important;
+}

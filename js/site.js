@@ -172,7 +172,7 @@
     $$('.work').forEach(function (w) {
       w.addEventListener('click', function (e) {
         if (e.target.closest('a')) return;
-        var img = w.querySelector('.mat img');
+        var img = w.querySelector('.mat .work-photo-main');
         if (img && lbx && $('#lbimg')) { $('#lbimg').src = img.src; lbx.classList.add('on'); }
       });
     });
@@ -500,8 +500,9 @@
     return /^#[0-9a-f]{6}$/i.test(color) ? color : '#9a7436';
   }
   function workZoom(value) {
+    if (value == null || value === '') return 1;
     var n = Number(value);
-    return Number.isFinite(n) ? Math.max(1, Math.min(2.2, n)) : 1;
+    return Number.isFinite(n) ? Math.max(0.5, Math.min(2.2, n)) : 1;
   }
   /* Display-only captions for the four photos already in the database.
      Admin values always take precedence; these defaults don't write to Neon. */
@@ -542,7 +543,8 @@
         var cropX = workCrop(w.cropX), cropY = workCrop(w.cropY), zoom = workZoom(w.zoom);
         return '<figure class="work glass rv in" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%;--photo-zoom:' + zoom + '">' +
           '<div class="mat">' +
-            '<img src="' + workHtmlEscape(w.img || '') + '" loading="lazy" alt="' + workHtmlEscape(caption || 'Пример работы') + '">' +
+            '<img class="work-photo-backdrop" src="' + workHtmlEscape(w.img || '') + '" loading="lazy" alt="" aria-hidden="true">' +
+            '<img class="work-photo-main" src="' + workHtmlEscape(w.img || '') + '" loading="lazy" alt="' + workHtmlEscape(caption || 'Пример работы') + '">' +
             (badge ? '<span class="work-badge" style="--badge-color:' + color + '"><i aria-hidden="true"></i>' + workHtmlEscape(badge) + '</span>' : '') +
             '<div class="work-info">' +
               '<div class="work-copy">' +
