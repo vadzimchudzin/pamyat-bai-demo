@@ -544,3 +544,24 @@ tr.new td:first-child{box-shadow:inset 3px 0 0 #9a3a24}
    rgba(16,11,7,.90) 100%)!important;
  }
 }
+
+
+/* Portfolio upload preview: 100% shows the whole original frame, not an object-fit crop. */
+#worksEd .w .ph{background:#3b2c20}
+#worksEd .w .ph img.w-photo-backdrop{
+  position:absolute!important;z-index:0!important;inset:10px!important;
+  width:calc(100% - 20px)!important;height:calc(100% - 20px)!important;
+  max-width:none!important;max-height:none!important;
+  object-fit:cover!important;object-position:center!important;
+  border:0!important;border-radius:17px!important;
+  filter:blur(12px) brightness(.48) saturate(.86)!important;
+  transform:scale(1.06)!important;opacity:.88;pointer-events:none;
+}
+#worksEd .w .ph img.w-photo-main{
+  position:absolute!important;z-index:1!important;inset:10px!important;
+  width:calc(100% - 20px)!important;height:calc(100% - 20px)!important;
+  max-width:none!important;max-height:none!important;
+  object-fit:contain!important;object-position:var(--crop-x,50%) var(--crop-y,50%)!important;
+  border:0!important;border-radius:17px!important;
+  transform-origin:center center!important;filter:saturate(1.01) contrast(1.025)!important;
+}
