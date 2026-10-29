@@ -200,8 +200,8 @@
     var right = worksTrack.scrollLeft < max - 3;
     worksCarousel.classList.toggle('can-left', max > 3 && left);
     worksCarousel.classList.toggle('can-right', max > 3 && right);
-    if (worksPrev) worksPrev.hidden = !(max > 3 && left);
-    if (worksNext) worksNext.hidden = !(max > 3 && right);
+    if (worksPrev) { worksPrev.hidden = max <= 3; worksPrev.disabled = max <= 3 || !left; }
+    if (worksNext) { worksNext.hidden = max <= 3; worksNext.disabled = max <= 3 || !right; }
     if (worksPagination) {
       var pages = max > 3 && step > 0 ? Math.max(1, worksTrack.children.length) : 1;
       if (Number(worksPagination.dataset.pageCount) !== pages) {
@@ -498,6 +498,10 @@
     var color = String(value || '').trim();
     return /^#[0-9a-f]{6}$/i.test(color) ? color : '#9a7436';
   }
+  function workZoom(value) {
+    var n = Number(value);
+    return Number.isFinite(n) ? Math.max(1, Math.min(2.2, n)) : 1;
+  }
   /* Display-only captions for the four photos already in the database.
      Admin values always take precedence; these defaults don't write to Neon. */
   function workPresentationDefaults(work) {
@@ -534,8 +538,8 @@
         var description = String(w.description || '').trim() || defaults.description;
         var badge = String(w.badgeText || '').trim();
         var color = workBadgeColor(w.badgeColor);
-        var cropX = workCrop(w.cropX), cropY = workCrop(w.cropY);
-        return '<figure class="work glass rv in" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%">' +
+        var cropX = workCrop(w.cropX), cropY = workCrop(w.cropY), zoom = workZoom(w.zoom);
+        return '<figure class="work glass rv in" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%;--photo-zoom:' + zoom + '">' +
           '<div class="mat">' +
             '<img src="' + workHtmlEscape(w.img || '') + '" loading="lazy" alt="' + workHtmlEscape(caption || 'Пример работы') + '">' +
             (badge ? '<span class="work-badge" style="--badge-color:' + color + '"><i aria-hidden="true"></i>' + workHtmlEscape(badge) + '</span>' : '') +
@@ -544,7 +548,6 @@
                 (caption ? '<h3>' + workHtmlEscape(caption) + '</h3>' : '') +
                 (description ? '<p>' + workHtmlEscape(description) + '</p>' : '') +
               '</div>' +
-              '<button class="work-zoom" type="button" aria-label="Увеличить фотографию: ' + workHtmlEscape(caption || 'Пример работы') + '"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"></circle><path d="m15.5 15.5 4.2 4.2"></path></svg></button>' +
             '</div>' +
           '</div></figure>';
       }).join('');
