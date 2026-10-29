@@ -93,7 +93,7 @@
   }
   function calcHref(m) { return '/?model=' + encodeURIComponent(m.code) + '&cat=' + encodeURIComponent(cur.id) + '#calc'; }
   function catalogImageForLightbox(src) {
-    var match = String(src || '').match(/^\/assets\/catalog\/([A-Z]\\d{1,3}\\.webp)$/i);
+    var match = String(src || '').match(/^\/assets\/catalog\/([A-Z]\d{1,3}\.webp)$/i);
     return match ? '/api/catalog-image?name=' + encodeURIComponent(match[1]) : src;
   }
   function show(i) {

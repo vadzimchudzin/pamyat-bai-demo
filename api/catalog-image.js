@@ -11,15 +11,15 @@ module.exports = async function catalogImage(req, res) {
 
   const rawName = req.query && req.query.name;
   const name = Array.isArray(rawName) ? rawName[0] : rawName;
-  if (typeof name !== 'string' || !/^[A-Z]\\d{1,3}\\.webp$/i.test(name)) {
+  if (typeof name !== 'string' || !/^[A-Z]\d{1,3}\.webp$/i.test(name)) {
     res.statusCode = 400;
     return res.end('Invalid catalog image name');
   }
 
   try {
     const host = String(process.env.VERCEL_URL || 'pamyat-bai-demo.vercel.app')
-      .replace(/^https?:\\/\\//i, '')
-      .replace(/\\/+$/, '');
+      .replace(/^https?:\/\//i, '')
+      .replace(/\/+$/, '');
     const sourceUrl = 'https://' + host + '/assets/catalog/' + encodeURIComponent(name);
     const response = await fetch(sourceUrl);
     if (!response.ok) {
