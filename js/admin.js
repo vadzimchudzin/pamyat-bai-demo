@@ -420,6 +420,10 @@
     var c = String(v || '').trim();
     return /^#[0-9a-f]{6}$/i.test(c) ? c : '#9a7436';
   }
+  function workZoom(value) {
+    var n = Number(value);
+    return Number.isFinite(n) ? Math.max(1, Math.min(2.2, n)) : 1;
+  }
   function workPresentationDefaults(work) {
     var byImage = {
       '/api/img?id=1': { caption:'Памятник черный гранитный', description:'Двойной памятник с полированной поверхностью' },
@@ -436,20 +440,19 @@
       var defaults = workPresentationDefaults(x);
       var caption = String(x.caption || '').trim() || defaults.caption;
       var description = String(x.description || '').trim() || defaults.description;
-      var cropX = cropValue(x.cropX), cropY = cropValue(x.cropY), color = badgeColor(x.badgeColor);
+      var cropX = cropValue(x.cropX), cropY = cropValue(x.cropY), zoom = workZoom(x.zoom), color = badgeColor(x.badgeColor);
       var badge = String(x.badgeText || '').trim();
       return '<div class="w" data-i="' + i + '">' +
-        '<div class="ph" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%"><img src="' + esc(x.img || '') + '" alt="">' +
+        '<div class="ph" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%;--photo-zoom:' + zoom + '%"><img src="' + esc(x.img || '') + '" alt="" style="transform:scale(' + zoom + ')">' +
           '<span class="w-badge-preview" style="--badge-color:' + color + ';background-color:' + color + '"' + (badge ? '' : ' hidden') + '><i aria-hidden="true"></i>' + esc(badge) + '</span>' +
-          '<div class="w-work-info"><div class="w-work-copy"><strong data-work-title' + (caption ? '' : ' hidden') + '>' + esc(caption) + '</strong><span data-work-description' + (description ? '' : ' hidden') + '>' + esc(description) + '</span></div>' +
-            '<span class="w-zoom-preview" aria-hidden="true"><svg viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.3"></circle><path d="m15.5 15.5 4.2 4.2"></path></svg></span>' +
-          '</div></div>' +
+          '<div class="w-work-info"><div class="w-work-copy"><strong data-work-title' + (caption ? '' : ' hidden') + '>' + esc(caption) + '</strong><span data-work-description' + (description ? '' : ' hidden') + '>' + esc(description) + '</span></div></div></div>' +
         '<label>Заголовок карточки<input name="cap" value="' + esc(caption) + '" placeholder="Например: Памятник с портретом"></label>' +
         '<label>Описание карточки<textarea name="description" rows="2" placeholder="Кратко опишите работу">' + esc(description) + '</textarea></label>' +
         '<label>Текст плашки<input name="badgeText" value="' + esc(badge) + '" placeholder="Например: Новое"></label>' +
         '<label class="w-color-label">Цвет плашки<input type="color" name="badgeColor" value="' + color + '"></label>' +
         '<label class="w-crop-label">Кадр по горизонтали <output data-crop-label="cropX">' + cropX + '%</output><input type="range" name="cropX" min="0" max="100" step="1" value="' + cropX + '"></label>' +
         '<label class="w-crop-label">Кадр по вертикали <output data-crop-label="cropY">' + cropY + '%</output><input type="range" name="cropY" min="0" max="100" step="1" value="' + cropY + '"></label>' +
+        '<label class="w-crop-label">Масштаб фото <output data-photo-zoom-label>' + Math.round(zoom * 100) + '%</output><input type="range" name="zoom" min="1" max="2.2" step="0.05" value="' + zoom + '"></label>' +
         '<div class="tools"><span><button class="ic" data-w="up" type="button" aria-label="Переместить выше">↑</button> <button class="ic" data-w="down" type="button" aria-label="Переместить ниже">↓</button></span><button class="ic del" data-w="del" type="button" title="Убрать">✕</button></div>' +
       '</div>';
     }).join('') || '<p class="empty">Фото нет — загрузите первые.</p>';
@@ -458,6 +461,14 @@
     var card = e.target.closest('.w'); if (!card) return;
     var item = C.works[+card.dataset.i]; if (!item) return;
     var name = e.target.name;
+    if (name === 'zoom') {
+      item.zoom = workZoom(e.target.value);
+      var photo = card.querySelector('.ph img');
+      if (photo) photo.style.transform = 'scale(' + item.zoom + ')';
+      var zoomOut = card.querySelector('[data-photo-zoom-label]');
+      if (zoomOut) zoomOut.textContent = Math.round(item.zoom * 100) + '%';
+      return;
+    }
     if (name === 'cap') {
       item.caption = e.target.value;
       var title = card.querySelector('[data-work-title]');
@@ -471,12 +482,12 @@
     if (name === 'badgeText') {
       item.badgeText = e.target.value;
       var preview = card.querySelector('.w-badge-preview');
-      if (preview) { preview.textContent = item.badgeText; preview.hidden = !String(item.badgeText || '').trim(); }
+      if (preview) { preview.innerHTML = '<i aria-hidden="true"></i>' + esc(item.badgeText); preview.hidden = !String(item.badgeText || '').trim(); }
     }
     if (name === 'badgeColor') {
       item.badgeColor = badgeColor(e.target.value);
       var previewColor = card.querySelector('.w-badge-preview');
-      if (previewColor) previewColor.style.backgroundColor = item.badgeColor;
+      if (previewColor) { previewColor.style.backgroundColor = item.badgeColor; previewColor.style.setProperty('--badge-color', item.badgeColor); }
     }
     if (name === 'cropX' || name === 'cropY') {
       item[name] = cropValue(e.target.value);
@@ -518,7 +529,7 @@
     toast('Загружаем ' + files.length + ' фото…');
     files.reduce(function (p, f) {
       return p.then(function () { return compress(f); }).then(function (data) { return api('/api/upload', { method: 'POST', body: { data: data } }); })
-        .then(function (d) { if (d.ok) { C.works = C.works || []; C.works.push({ img: d.url, caption: '', badgeText: '', badgeColor: '#9a7436', cropX: 50, cropY: 50 }); drawWorks(); } else toast(d.error || 'Фото не загрузилось', true); });
+        .then(function (d) { if (d.ok) { C.works = C.works || []; C.works.push({ img: d.url, caption: '', description: '', badgeText: '', badgeColor: '#9a7436', cropX: 50, cropY: 50, zoom: 1 }); drawWorks(); } else toast(d.error || 'Фото не загрузилось', true); });
     }, Promise.resolve()).then(function () { return save('works', C.works); });
   });
 
