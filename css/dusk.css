@@ -1411,3 +1411,60 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
     mask-image:linear-gradient(to bottom,#000 0%,#000 66%,rgba(0,0,0,.96) 73%,rgba(0,0,0,.78) 83%,rgba(0,0,0,.42) 93%,transparent 100%)!important;
   }
 }
+
+/* Calculator layout: keep step helper text aligned under its heading and prevent long option notes from escaping. */
+#calc #q{min-width:0;width:100%}
+#calc #q .qtitle{
+  display:block;
+  margin:0 0 8px;
+  max-width:100%;
+  line-height:1.22;
+  text-align:left;
+}
+#calc #q .qsub{
+  display:block;
+  width:100%;
+  max-width:66ch;
+  margin:0 0 18px;
+  padding:0;
+  line-height:1.5;
+  text-align:left;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+#calc #q .radio,
+#calc #q .tog{
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
+}
+#calc #q .radio .t,
+#calc #q .tog .t{
+  flex:1 1 auto;
+  min-width:0;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  line-height:1.4;
+}
+#calc #q .tog .p{
+  flex:0 1 auto;
+  min-width:0;
+  max-width:52%;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:normal;
+  text-align:right;
+  line-height:1.4;
+}
+@media(max-width:720px){
+  #calc #q .qsub{max-width:100%;margin-bottom:16px}
+  #calc #q .tog{gap:10px;align-items:center}
+  #calc #q .tog .p{
+    max-width:calc(100% - 66px);
+    margin-left:62px;
+    margin-top:-4px;
+    flex:1 1 calc(100% - 66px);
+    text-align:left;
+  }
+}
