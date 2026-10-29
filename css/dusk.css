@@ -848,3 +848,6 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
 /* Keep the ambient warmth above the section backdrop but below the cards. */
 #works:before{z-index:0}
 #works .wrap{z-index:1}
+
+/* Dots represent each portfolio image, so intermediate dot positions remain selectable. */
+.works-carousel .works-track{scroll-snap-type:x proximity}
