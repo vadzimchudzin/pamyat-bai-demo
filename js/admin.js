@@ -264,7 +264,7 @@
       return '<div class="card catc" data-ci="' + ci + '">' +
         '<div class="top"><div class="cov"><div class="ph">' + catImg(cv.img) + '</div>' +
           '<label class="btn line sm">Обложка<input type="file" accept="image/*" data-up="cover" hidden></label>' +
-          '<label>Масштаб обложки <input type="range" min="0.8" max="2.2" step="0.05" name="zoom" value="' + (cv.zoom || 1) + '"></label></div>' +
+          '<label class="cover-zoom-label">Масштаб обложки <output data-zoom-label>' + Math.round((cv.zoom || 1) * 100) + '%</output><input type="range" min="0.8" max="2.2" step="0.05" name="zoom" value="' + (cv.zoom || 1) + '"></label></div>' +
         '<div><div class="f">' + field('name', 'Название раздела', c.name) + field('short', 'Короткое (для калькулятора)', c.short) +
           field('price', 'Цена «от», BYN', c.price == null ? '' : c.price, { type: 'number', ph: 'инд.' }) + '</div>' +
           '<div class="f2">' + field('inc', 'Что входит (через запятую)', c.inc) + field('desc', 'Описание', c.desc, { area: true, rows: 2 }) + '</div>' +
@@ -328,6 +328,15 @@
   }
   $('#catEd').addEventListener('input', function (e) {
     var inp = e.target;
+    if (inp.name === 'zoom') {
+      var card = inp.closest('.catc'), preview = card && card.querySelector('.cov .ph img'), out = card && card.querySelector('[data-zoom-label]');
+      var zoom = Math.max(0.8, Math.min(2.2, Number(inp.value) || 1));
+      if (preview) preview.style.transform = 'scale(' + zoom + ')';
+      if (out) out.textContent = Math.round(zoom * 100) + '%';
+      var category = C.catalog && C.catalog.categories[+(card && card.dataset.ci)];
+      if (category) { category.cover = category.cover || {}; category.cover.zoom = zoom; }
+      return;
+    }
     if (inp.name === 'kv' && !inp.disabled) inp.dataset.individualValue = inp.value;
     if (inp.name === 'commonSize') {
       var K = C.catalog || {};
