@@ -203,7 +203,7 @@
     if (worksPrev) worksPrev.hidden = !(max > 3 && left);
     if (worksNext) worksNext.hidden = !(max > 3 && right);
     if (worksPagination) {
-      var pages = max > 3 && step > 0 ? Math.max(1, Math.round(max / step) + 1) : 1;
+      var pages = max > 3 && step > 0 ? Math.max(1, worksTrack.children.length) : 1;
       if (Number(worksPagination.dataset.pageCount) !== pages) {
         worksPagination.dataset.pageCount = String(pages);
         worksPagination.innerHTML = Array.from({ length: pages }, function (_, i) {
