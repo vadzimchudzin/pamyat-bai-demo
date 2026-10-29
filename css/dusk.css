@@ -878,3 +878,11 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
 @media(prefers-reduced-motion:reduce){
   .works-carousel .works-track{scroll-behavior:auto}
 }
+
+
+/* Work-card photo zoom is controlled from the admin editor and applied to the crop itself. */
+.works-carousel .work .mat img,
+.works-carousel .work:hover .mat img{
+  transform:scale(var(--photo-zoom,1));
+  transform-origin:center center;
+}
