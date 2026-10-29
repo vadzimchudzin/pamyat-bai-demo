@@ -343,7 +343,7 @@
   function catOf(code) { var it = (CAT.items || []).filter(function (x) { return x.code === code; })[0]; return it ? it.cat : ''; }
   function build() {
     // шаг 1 «Памятник» = разделы каталога; дальше — шаги из админки; последний — контакты
-    var first = { id: 'monument', name: 'Памятник', type: 'radio', sub: 'Выберите тип — как в каталоге. Гранит и размеры согласуем лично.', catalog: true,
+    var first = { id: 'monument', name: 'Памятник', type: 'radio', sub: 'Выберите форму — как в каталоге. Гранит и размеры согласуем лично.', catalog: true,
       items: visibleCats().filter(function (c) { return c.calc !== false; }).map(function (c) { return { id: c.id, name: c.short || c.name, price: c.price == null ? null : +c.price }; }) };
     STEPS = [first].concat(CALC.filter(function (s) { return s.id !== 'monument' && s.items && s.items.length; }))
       .concat([{ id: '__contact', name: 'Контакты', type: 'contact' }]);
