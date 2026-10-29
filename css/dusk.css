@@ -1257,3 +1257,50 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
   text-shadow:0 1px 3px rgba(0,0,0,.35);
  }
 }
+
+/* Final visual pass: clear caption contrast and a thin gold photo frame in the lightbox. */
+.works-carousel .work .mat:after{
+  background:linear-gradient(180deg,
+    rgba(17,12,7,0) 38%,
+    rgba(17,12,7,.015) 46%,
+    rgba(17,12,7,.10) 55%,
+    rgba(17,12,7,.30) 65%,
+    rgba(17,12,7,.61) 78%,
+    rgba(17,12,7,.88) 100%)!important;
+}
+@media(max-width:900px){
+  .works-carousel .work .mat:after{
+    background:linear-gradient(180deg,
+      rgba(17,12,7,0) 35%,
+      rgba(17,12,7,.015) 44%,
+      rgba(17,12,7,.12) 54%,
+      rgba(17,12,7,.36) 65%,
+      rgba(17,12,7,.68) 79%,
+      rgba(17,12,7,.91) 100%)!important;
+  }
+}
+/* Lightbox: only a 3px gold rim, no oversized cream frame. */
+.lbx .in{
+  box-sizing:border-box!important;
+  padding:3px!important;
+  border:0!important;
+  border-radius:19px!important;
+  background:linear-gradient(135deg,#f0d9a7 0%,#b78a43 48%,#ead09a 100%)!important;
+  box-shadow:0 12px 38px rgba(0,0,0,.38),0 0 0 1px rgba(255,244,218,.34)!important;
+  overflow:hidden!important;
+  max-width:min(92vw,900px)!important;
+  max-height:calc(100dvh - 36px)!important;
+}
+.lbx .in img,.lbx #lbimg{
+  display:block!important;
+  box-sizing:border-box!important;
+  width:auto!important;
+  height:auto!important;
+  max-width:calc(92vw - 6px)!important;
+  max-height:calc(100dvh - 42px)!important;
+  object-fit:contain!important;
+  border:0!important;
+  border-radius:16px!important;
+  mix-blend-mode:normal!important;
+  background:#211b14!important;
+}
