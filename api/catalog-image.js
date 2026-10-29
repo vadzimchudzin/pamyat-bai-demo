@@ -17,13 +17,14 @@ module.exports = async function catalogImage(req, res) {
   }
 
   try {
-    const host = String(process.env.VERCEL_URL || 'pamyat-bai-demo.vercel.app')
-      .replace(/^https?:\/\//i, '')
-      .replace(/\/+$/, '');
-    const sourceUrl = 'https://' + host + '/assets/catalog/' + encodeURIComponent(name);
+    // Always read the original catalog file from the stable public site host.
+    // Using VERCEL_URL here can return a protected deployment/login HTML page.
+    const sourceUrl = 'https://pamyat-bai-demo.vercel.app/assets/catalog/' + encodeURIComponent(name);
     const response = await fetch(sourceUrl);
-    if (!response.ok) {
+    const contentType = String(response.headers.get('content-type') || '').toLowerCase();
+    if (!response.ok || !contentType.includes('image/')) {
       res.statusCode = response.status === 404 ? 404 : 502;
+      console.error('catalog source rejected', { name, status: response.status, contentType });
       return res.end('Catalog image unavailable');
     }
 
