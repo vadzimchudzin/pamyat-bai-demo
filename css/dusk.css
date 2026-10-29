@@ -1377,3 +1377,37 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
 }
 /* The rule before this eyebrow looked like a stray line when only the section edge was visible. */
 #works .head .eyebrow:before{display:none!important;content:none!important}
+
+/*
+  Remove the hard seam at the bottom of the hero.
+  Fade the complete scene into the page ambience instead of painting an opaque,
+  uniform-color strip with .hero:after.
+*/
+.hero{
+  background:transparent!important;
+  -webkit-mask-image:linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 66%,
+    rgba(0,0,0,.96) 73%,
+    rgba(0,0,0,.78) 83%,
+    rgba(0,0,0,.42) 93%,
+    transparent 100%
+  )!important;
+  mask-image:linear-gradient(
+    to bottom,
+    #000 0%,
+    #000 66%,
+    rgba(0,0,0,.96) 73%,
+    rgba(0,0,0,.78) 83%,
+    rgba(0,0,0,.42) 93%,
+    transparent 100%
+  )!important;
+}
+.hero:after{background:none!important}
+@media(prefers-reduced-motion:reduce){
+  .hero{
+    -webkit-mask-image:linear-gradient(to bottom,#000 0%,#000 66%,rgba(0,0,0,.96) 73%,rgba(0,0,0,.78) 83%,rgba(0,0,0,.42) 93%,transparent 100%)!important;
+    mask-image:linear-gradient(to bottom,#000 0%,#000 66%,rgba(0,0,0,.96) 73%,rgba(0,0,0,.78) 83%,rgba(0,0,0,.42) 93%,transparent 100%)!important;
+  }
+}
