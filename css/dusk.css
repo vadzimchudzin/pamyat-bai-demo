@@ -1018,3 +1018,11 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
  .works-carousel .works-prev{left:3px}.works-carousel .works-next{right:3px}
  .works-carousel .work .work-copy h3{font-size:21px}.works-carousel .work .work-copy p{font-size:12px}
 }
+
+/* Disabled arrow should remain visually aligned with its partner. */
+.works-carousel .works-arrow:disabled{
+  opacity:.74!important;
+  background:rgba(104,77,43,.42);
+  color:#fffdf6;
+  border-color:rgba(255,248,232,.58);
+}
