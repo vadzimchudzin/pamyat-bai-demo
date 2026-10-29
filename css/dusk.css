@@ -1345,3 +1345,34 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
   mix-blend-mode:normal!important;
   background:#211b14!important;
 }
+
+/* Background fallback: when reduced-motion is enabled, keep the sky visible as a still scene. */
+@media (prefers-reduced-motion: reduce){
+  .hero .sky .cl{
+    animation:none!important;
+    opacity:var(--o,.55)!important;
+    transform:none!important;
+    will-change:auto!important;
+  }
+  .hero .canvas{
+    animation:none!important;
+    transform:translate(var(--tx),-50%) scale(1.025)!important;
+    will-change:auto!important;
+  }
+  .hero-copy>*{
+    animation:none!important;
+    opacity:1!important;
+    transform:none!important;
+  }
+  .hero .sunsky .beams,
+  .hero .sun .halo,
+  .hero .sun .glow,
+  .hero .sun .core{
+    animation:none!important;
+    transform:none!important;
+  }
+  .hero .hero-scroll i{animation:none!important;opacity:0!important}
+  .rv{opacity:1!important;transform:none!important}
+}
+/* The rule before this eyebrow looked like a stray line when only the section edge was visible. */
+#works .head .eyebrow:before{display:none!important;content:none!important}
