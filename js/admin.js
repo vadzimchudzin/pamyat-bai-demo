@@ -248,7 +248,10 @@
 
   /* ---------- каталог: разделы, обложки, модели — всё редактируется ---------- */
   var openCats = {};
-  function catImg(src) { return src ? '<img src="' + esc(src) + '" alt="">' : '<span>✦</span>'; }
+  function catImg(src, zoom) {
+    var scale = Math.max(0.8, Math.min(2.2, Number(zoom) || 1));
+    return src ? '<img src="' + esc(src) + '" alt="" style="transform:scale(' + scale + ')">' : '<span>✦</span>';
+  }
   function drawCatalog() {
     var K = C.catalog || { categories: [], items: [] };
     $('#catGranite').value = K.granite || '';
@@ -262,7 +265,7 @@
       '</div>' + K.categories.map(function (c, ci) {
       var its = K.items.filter(function (x) { return x.cat === c.id; }), cv = c.cover || {};
       return '<div class="card catc" data-ci="' + ci + '">' +
-        '<div class="top"><div class="cov"><div class="ph">' + catImg(cv.img) + '</div>' +
+        '<div class="top"><div class="cov"><div class="ph">' + catImg(cv.img, cv.zoom) + '</div>' +
           '<label class="btn line sm">Обложка<input type="file" accept="image/*" data-up="cover" hidden></label>' +
           '<label class="cover-zoom-label">Масштаб обложки <output data-zoom-label>' + Math.round((cv.zoom || 1) * 100) + '%</output><input type="range" min="0.8" max="2.2" step="0.05" name="zoom" value="' + (cv.zoom || 1) + '"></label></div>' +
         '<div><div class="f">' + field('name', 'Название раздела', c.name) + field('short', 'Короткое (для калькулятора)', c.short) +
