@@ -1240,3 +1240,20 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
   .works-carousel .works-prev{left:9px!important}
   .works-carousel .works-next{right:9px!important}
 }
+
+/* Mobile reference adjustment: the caption sits on a distinct, visibly darker lower zone. */
+@media(max-width:900px){
+ .works-carousel .work .mat:after{
+  background:linear-gradient(180deg,
+   rgba(16,11,7,0) 38%,
+   rgba(16,11,7,.025) 47%,
+   rgba(16,11,7,.16) 57%,
+   rgba(16,11,7,.42) 68%,
+   rgba(16,11,7,.72) 82%,
+   rgba(16,11,7,.90) 100%)!important;
+ }
+ .works-carousel .work .work-info{
+  padding-top:78px!important;
+  text-shadow:0 1px 3px rgba(0,0,0,.35);
+ }
+}
