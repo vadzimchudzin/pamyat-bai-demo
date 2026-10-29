@@ -92,10 +92,27 @@
     });
   }
   function calcHref(m) { return '/?model=' + encodeURIComponent(m.code) + '&cat=' + encodeURIComponent(cur.id) + '#calc'; }
+  function catalogImageForLightbox(src) {
+    var match = String(src || '').match(/^\/assets\/catalog\/([A-Z]\\d{1,3}\\.webp)$/i);
+    return match ? '/api/catalog-image?name=' + encodeURIComponent(match[1]) : src;
+  }
   function show(i) {
     idx = (i + list.length) % list.length;
     var m = list[idx];
-    $('#clbImg').src = m.img; $('#clbImg').alt = (cur.short || '') + ' ' + m.code;
+    var img = $('#clbImg');
+    var originalSrc = m.img;
+    var enlargedSrc = catalogImageForLightbox(originalSrc);
+    img.onerror = null;
+    img.alt = (cur.short || '') + ' ' + m.code;
+    if (enlargedSrc !== originalSrc) {
+      img.onerror = function () {
+        img.onerror = null;
+        img.src = originalSrc;
+      };
+      img.src = enlargedSrc;
+    } else {
+      img.src = originalSrc;
+    }
     $('#clbK').textContent = cur.name; $('#clbT').textContent = (cur.short || '') + ' ' + (m.name || m.code);
     $('#clbD').innerHTML = kitHtml(cur); $('#clbG').textContent = CAT.granite || '';
     $('#clbCalc').href = calcHref(m);
