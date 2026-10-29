@@ -1185,3 +1185,58 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
 @media(prefers-reduced-motion:reduce){
   .works-carousel .work,.works-carousel .work .mat img,.works-carousel .works-arrow,.works-carousel .works-dot{transition:none!important}
 }
+
+/* Strict reference match: a clearly visible bottom gradient beneath the text and twin arrows. */
+.works-carousel .work .mat{isolation:isolate}
+.works-carousel .work .mat:after{
+  content:""!important;
+  display:block!important;
+  position:absolute!important;z-index:2!important;inset:0!important;
+  pointer-events:none!important;border-radius:inherit!important;
+  background:linear-gradient(180deg,
+    rgba(19,14,9,0) 39%,
+    rgba(19,14,9,.015) 48%,
+    rgba(19,14,9,.12) 58%,
+    rgba(19,14,9,.34) 69%,
+    rgba(19,14,9,.63) 82%,
+    rgba(19,14,9,.82) 100%)!important;
+}
+.works-carousel .work .work-info{
+  position:absolute!important;z-index:3!important;left:0;right:0;bottom:0;
+  padding:76px 20px 20px!important;
+  color:#fff;opacity:1!important;filter:none!important;
+}
+.works-carousel .work .work-copy{position:relative;z-index:3;opacity:1!important;filter:none!important}
+.works-carousel .work .work-copy h3{
+  color:#fff2dd!important;-webkit-text-fill-color:#fff2dd!important;
+  font-family:"Playfair Display",Georgia,serif!important;font-size:clamp(20px,1.48vw,23px)!important;font-weight:650!important;
+  line-height:1.2!important;letter-spacing:0!important;
+  text-shadow:0 2px 5px rgba(0,0,0,.85),0 1px 2px rgba(0,0,0,.9)!important;
+  -webkit-text-stroke:.1px rgba(255,250,239,.36);
+}
+.works-carousel .work .work-copy p{
+  color:#fffaf0!important;-webkit-text-fill-color:#fffaf0!important;
+  font-family:var(--sans)!important;font-size:13px!important;font-weight:500!important;line-height:1.45!important;
+  text-shadow:0 1px 4px rgba(0,0,0,.9),0 1px 1px rgba(0,0,0,.7)!important;
+}
+.works-carousel .work .work-badge{z-index:4!important}
+.works-carousel .works-arrow,
+.works-carousel .works-prev,
+.works-carousel .works-next{z-index:10!important;visibility:visible}
+.works-carousel .works-prev{left:14px!important;right:auto!important}
+.works-carousel .works-next{right:14px!important;left:auto!important}
+.works-carousel .works-arrow:disabled{
+  opacity:.52!important;pointer-events:auto;cursor:default;
+  background:rgba(111,80,39,.43)!important;
+}
+.works-carousel .works-arrow:disabled:hover{transform:none!important}
+@media(max-width:900px){
+  .works-carousel .work .work-info{padding:66px 16px 17px!important}
+}
+@media(max-width:560px){
+  .works-carousel .work .work-info{padding:60px 15px 16px!important}
+  .works-carousel .work .work-copy h3{font-size:21px!important}
+  .works-carousel .work .work-copy p{font-size:12px!important}
+  .works-carousel .works-prev{left:9px!important}
+  .works-carousel .works-next{right:9px!important}
+}
