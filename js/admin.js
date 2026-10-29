@@ -421,8 +421,9 @@
     return /^#[0-9a-f]{6}$/i.test(c) ? c : '#9a7436';
   }
   function workZoom(value) {
+    if (value == null || value === '') return 1;
     var n = Number(value);
-    return Number.isFinite(n) ? Math.max(1, Math.min(2.2, n)) : 1;
+    return Number.isFinite(n) ? Math.max(0.5, Math.min(2.2, n)) : 1;
   }
   function workPresentationDefaults(work) {
     var byImage = {
@@ -443,7 +444,9 @@
       var cropX = cropValue(x.cropX), cropY = cropValue(x.cropY), zoom = workZoom(x.zoom), color = badgeColor(x.badgeColor);
       var badge = String(x.badgeText || '').trim();
       return '<div class="w" data-i="' + i + '">' +
-        '<div class="ph" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%;--photo-zoom:' + zoom + '"><img src="' + esc(x.img || '') + '" alt="" style="transform:scale(' + zoom + ')">' +
+        '<div class="ph" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%;--photo-zoom:' + zoom + '">' +
+          '<img class="w-photo-backdrop" src="' + esc(x.img || '') + '" alt="" aria-hidden="true">' +
+          '<img class="w-photo-main" src="' + esc(x.img || '') + '" alt="" style="transform:scale(' + zoom + ')">' +
           '<span class="w-badge-preview" style="--badge-color:' + color + ';background-color:' + color + '"' + (badge ? '' : ' hidden') + '><i aria-hidden="true"></i>' + esc(badge) + '</span>' +
           '<div class="w-work-info"><div class="w-work-copy"><strong data-work-title' + (caption ? '' : ' hidden') + '>' + esc(caption) + '</strong><span data-work-description' + (description ? '' : ' hidden') + '>' + esc(description) + '</span></div></div></div>' +
         '<label>Заголовок карточки<input name="cap" value="' + esc(caption) + '" placeholder="Например: Памятник с портретом"></label>' +
@@ -452,7 +455,7 @@
         '<label class="w-color-label">Цвет плашки<input type="color" name="badgeColor" value="' + color + '"></label>' +
         '<label class="w-crop-label">Кадр по горизонтали <output data-crop-label="cropX">' + cropX + '%</output><input type="range" name="cropX" min="0" max="100" step="1" value="' + cropX + '"></label>' +
         '<label class="w-crop-label">Кадр по вертикали <output data-crop-label="cropY">' + cropY + '%</output><input type="range" name="cropY" min="0" max="100" step="1" value="' + cropY + '"></label>' +
-        '<label class="w-crop-label">Масштаб фото <output data-photo-zoom-label>' + Math.round(zoom * 100) + '%</output><input type="range" name="zoom" min="1" max="2.2" step="0.05" value="' + zoom + '"></label>' +
+        '<label class="w-crop-label">Масштаб фото (100% — весь кадр) <output data-photo-zoom-label>' + Math.round(zoom * 100) + '%</output><input type="range" name="zoom" min="0.5" max="2.2" step="0.05" value="' + zoom + '"></label>' +
         '<div class="tools"><span><button class="ic" data-w="up" type="button" aria-label="Переместить выше">↑</button> <button class="ic" data-w="down" type="button" aria-label="Переместить ниже">↓</button></span><button class="ic del" data-w="del" type="button" title="Убрать">✕</button></div>' +
       '</div>';
     }).join('') || '<p class="empty">Фото нет — загрузите первые.</p>';
@@ -463,7 +466,7 @@
     var name = e.target.name;
     if (name === 'zoom') {
       item.zoom = workZoom(e.target.value);
-      var photo = card.querySelector('.ph img');
+      var photo = card.querySelector('.ph .w-photo-main');
       if (photo) photo.style.transform = 'scale(' + item.zoom + ')';
       var zoomOut = card.querySelector('[data-photo-zoom-label]');
       if (zoomOut) zoomOut.textContent = Math.round(item.zoom * 100) + '%';
