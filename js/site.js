@@ -198,10 +198,11 @@
     var metrics = worksMetrics(), max = metrics.max, step = metrics.step;
     var left = worksTrack.scrollLeft > 3;
     var right = worksTrack.scrollLeft < max - 3;
+    worksCarousel.classList.toggle('is-scrollable', max > 3);
     worksCarousel.classList.toggle('can-left', max > 3 && left);
     worksCarousel.classList.toggle('can-right', max > 3 && right);
-    if (worksPrev) { worksPrev.hidden = max <= 3; worksPrev.disabled = max <= 3 || !left; }
-    if (worksNext) { worksNext.hidden = max <= 3; worksNext.disabled = max <= 3 || !right; }
+    if (worksPrev) { worksPrev.hidden = max <= 3; worksPrev.disabled = max <= 3 || !left; worksPrev.setAttribute('aria-disabled', String(max <= 3 || !left)); }
+    if (worksNext) { worksNext.hidden = max <= 3; worksNext.disabled = max <= 3 || !right; worksNext.setAttribute('aria-disabled', String(max <= 3 || !right)); }
     if (worksPagination) {
       var pages = max > 3 && step > 0 ? Math.max(1, worksTrack.children.length) : 1;
       if (Number(worksPagination.dataset.pageCount) !== pages) {
