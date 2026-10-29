@@ -844,3 +844,7 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
 @media(prefers-reduced-motion:reduce){
   .works-carousel .work,.works-carousel .work .mat img,.works-carousel .works-arrow,.works-carousel .works-dot{transition:none!important}
 }
+
+/* Keep the ambient warmth above the section backdrop but below the cards. */
+#works:before{z-index:0}
+#works .wrap{z-index:1}
