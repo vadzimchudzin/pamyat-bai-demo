@@ -429,8 +429,9 @@
       return '<div class="w" data-i="' + i + '">' +
         '<div class="ph" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%"><img src="' + esc(x.img || '') + '" alt="">' +
           '<span class="w-badge-preview" style="background-color:' + color + '"' + (badge ? '' : ' hidden') + '>' + esc(badge) + '</span></div>' +
-        '<label>Подпись под фото<input name="cap" value="' + esc(x.caption || '') + '" placeholder="Например: Памятник из чёрного гранита"></label>' +
-        '<label>Текст плашки<input name="badgeText" value="' + esc(badge) + '" placeholder="Например: Скидка, Новое, Хит"></label>' +
+        '<label>Заголовок карточки<input name="cap" value="' + esc(x.caption || '') + '" placeholder="Например: Памятник с портретом"></label>' +
+        '<label>Описание карточки<textarea name="description" rows="2" placeholder="Кратко опишите работу">' + esc(x.description || '') + '</textarea></label>' +
+        '<label>Текст плашки<input name="badgeText" value="' + esc(badge) + '" placeholder="Например: Новое"></label>' +
         '<label class="w-color-label">Цвет плашки<input type="color" name="badgeColor" value="' + color + '"></label>' +
         '<label class="w-crop-label">Кадр по горизонтали <output data-crop-label="cropX">' + cropX + '%</output><input type="range" name="cropX" min="0" max="100" step="1" value="' + cropX + '"></label>' +
         '<label class="w-crop-label">Кадр по вертикали <output data-crop-label="cropY">' + cropY + '%</output><input type="range" name="cropY" min="0" max="100" step="1" value="' + cropY + '"></label>' +
@@ -443,6 +444,7 @@
     var item = C.works[+card.dataset.i]; if (!item) return;
     var name = e.target.name;
     if (name === 'cap') item.caption = e.target.value;
+    if (name === 'description') item.description = e.target.value;
     if (name === 'badgeText') {
       item.badgeText = e.target.value;
       var preview = card.querySelector('.w-badge-preview');
