@@ -169,8 +169,12 @@
   /* ---------- лайтбокс работ ---------- */
   var lbx = $('#lbx');
   function bindWorks() {
-    $$('.work').forEach(function (w) {
-      w.addEventListener('click', function () { $('#lbimg').src = w.querySelector('img').src; lbx.classList.add('on'); });
+    $('.work').forEach(function (w) {
+      w.addEventListener('click', function (e) {
+        if (e.target.closest('a')) return;
+        var img = w.querySelector('.mat img');
+        if (img && lbx && $('#lbimg')) { $('#lbimg').src = img.src; lbx.classList.add('on'); }
+      });
     });
   }
   bindWorks();
@@ -486,14 +490,22 @@
       $('#worksGrid').innerHTML = c.works.map(function (w) {
         w = w || {};
         var caption = String(w.caption || '');
+        var description = String(w.description || '');
         var badge = String(w.badgeText || '').trim();
         var color = workBadgeColor(w.badgeColor);
         var cropX = workCrop(w.cropX), cropY = workCrop(w.cropY);
         return '<figure class="work glass rv in" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%">' +
           '<div class="mat">' +
-            (badge ? '<span class="work-badge" style="--badge-color:' + color + '">' + workHtmlEscape(badge) + '</span>' : '') +
             '<img src="' + workHtmlEscape(w.img || '') + '" loading="lazy" alt="' + workHtmlEscape(caption || 'Пример работы') + '">' +
-          '</div><p>' + workHtmlEscape(caption) + '</p></figure>';
+            (badge ? '<span class="work-badge" style="--badge-color:' + color + '"><i aria-hidden="true"></i>' + workHtmlEscape(badge) + '</span>' : '') +
+            '<div class="work-info">' +
+              '<div class="work-copy">' +
+                (caption ? '<h3>' + workHtmlEscape(caption) + '</h3>' : '') +
+                (description ? '<p>' + workHtmlEscape(description) + '</p>' : '') +
+              '</div>' +
+              '<button class="work-zoom" type="button" aria-label="Увеличить фотографию: ' + workHtmlEscape(caption || 'Пример работы') + '"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.3"></circle><path d="m15.5 15.5 4.2 4.2"></path></svg></button>' +
+            '</div>' +
+          '</div></figure>';
       }).join('');
       bindWorks();
       refreshWorksCarousel();
