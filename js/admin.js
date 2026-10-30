@@ -251,7 +251,7 @@
       '<label class="chk"><input type="checkbox" name="dimensionsEnabled"' + (d.enabled ? ' checked' : '') + '> Показывать шаг размеров</label></div>' +
       '<div class="calc-dim-grid">' +
       '<label>Название шага<input name="dimensionsName" value="' + esc(d.name) + '"></label>' +
-      '<label>Единица измерения<input name="dimensionsUnit" value="' + esc(d.unit) + '" maxlength="12"></label>' +
+      '<label>Единица измерения<input value="м — метры" disabled></label>' +
       '<label class="wide">Подсказка пользователю<input name="dimensionsSub" value="' + esc(d.sub) + '"></label>' +
       numField('dimensionsMin', 'Минимальный размер', d.min, '0.01', '0.01') +
       numField('dimensionsMax', 'Максимальный размер', d.max, '0.1', '0.1') +
@@ -344,7 +344,7 @@
       enabled: $('[name=dimensionsEnabled]', d).checked,
       name: $('[name=dimensionsName]', d).value.trim() || 'Размеры',
       sub: $('[name=dimensionsSub]', d).value.trim(),
-      unit: $('[name=dimensionsUnit]', d).value.trim() || 'м',
+      unit: 'м',
       min: Math.max(0.01, +$('[name=dimensionsMin]', d).value || 0.1),
       max: Math.max(0.01, +$('[name=dimensionsMax]', d).value || 100),
       step: Math.max(0.01, +$('[name=dimensionsStep]', d).value || 0.1),
@@ -366,7 +366,7 @@
             note: $('[name=inote]', it).value.trim() || undefined,
             pricing: {
               mode: mode,
-              quantity: q ? q.value : 'perimeter',
+              quantity: q && q.type !== 'hidden' ? q.value : (mode === 'area' ? 'area' : mode === 'linear' ? 'perimeter' : 'unit'),
               coefficient: {
                 enabled: enabled,
                 formula: $('[name=kformula]', it).value,
@@ -396,7 +396,12 @@
     C.calc = cal; drawCalc();
   });
   $('#calcEd').addEventListener('input', updateCalcPricingPreviews);
-  $('#calcEd').addEventListener('change', updateCalcPricingPreviews);
+  $('#calcEd').addEventListener('change', function (e) {
+    if (e.target && e.target.name === 'pmode') {
+      var cal = readCalc(); C.calc = cal; drawCalc(); return;
+    }
+    updateCalcPricingPreviews();
+  });
   $('#calcDimensionsEd').addEventListener('change', function (e) {
     if (e.target && e.target.name === 'dimensionsEnabled') {
       var d = readCalc(); C.calc = d; drawCalc();
