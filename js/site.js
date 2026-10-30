@@ -54,7 +54,7 @@
         var heroY = Math.max(-38, Math.min(0, heroTop * 0.11));
         heroCanvas.style.setProperty('--pamyat-hero-y', heroY.toFixed(2) + 'px');
       }
-      $('.works-carousel .work-photo-main, .cc .cover img').forEach(function (img) {
+      $$('.works-carousel .work-photo-main, .cc .cover img').forEach(function (img) {
         var frame = img.closest('.mat, .cover') || img.parentElement;
         if (!frame) return;
         var rect = frame.getBoundingClientRect();
