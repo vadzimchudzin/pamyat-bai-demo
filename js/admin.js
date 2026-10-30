@@ -287,8 +287,8 @@
               '<option value="width"' + (p.quantity === 'width' ? ' selected' : '') + '>Ширина</option>' +
               '</select></label>' : (p.mode === 'area' ? '<div class="quantity-fixed"><b>Количество</b><span>Площадь участка (м²)</span><input type="hidden" name="pquantity" value="area"></div>' : '<input type="hidden" name="pquantity" value="unit">')) +
             '<div class="coefficient-box">' +
-            '<div class="coefficient-title"><b>Коэффициент смещения</b><label class="chk"><input type="checkbox" name="kenabled"' + (k.enabled ? ' checked' : '') + '> Использовать</label></div>' +
-            '<p class="hint">Настройка независима для каждой позиции. Коэффициент умножает стоимость позиции после расчёта количества.</p>' +
+            '<div class="coefficient-title"><b>Коэффициент смещения</b><label class="chk"><input type="checkbox" name="kenabled"' + (k.enabled ? ' checked' : '') + (p.mode === 'fixed' ? ' disabled' : '') + '> Использовать</label></div>' +
+            '<p class="hint">' + (p.mode === 'fixed' ? 'Коэффициент включается для позиций с тарификацией за погонный или квадратный метр.' : 'Настройка независима для каждой позиции. Коэффициент умножает стоимость позиции после расчёта количества.') + '</p>' +
             '<div class="pricing-grid">' +
             '<label>Формула<select name="kformula"><option value="inverse"' + (k.formula === 'inverse' ? ' selected' : '') + '>Пропорциональная</option><option value="linear"' + (k.formula === 'linear' ? ' selected' : '') + '>Линейная</option></select></label>' +
             '<label>По какому размеру<select name="kbasis"><option value="area"' + (k.basis === 'area' ? ' selected' : '') + '>Площадь, м²</option><option value="perimeter"' + (k.basis === 'perimeter' ? ' selected' : '') + '>Периметр, м</option><option value="length"' + (k.basis === 'length' ? ' selected' : '') + '>Длина, м</option><option value="width"' + (k.basis === 'width' ? ' selected' : '') + '>Ширина, м</option></select></label>' +
