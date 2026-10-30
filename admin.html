@@ -68,7 +68,8 @@
     <!-- калькулятор -->
     <section class="pane" id="p-calc">
       <header><h2>Калькулятор</h2><div class="acts"><label class="chk price-sync"><input type="checkbox" id="sitePriceSync"> Использовать актуальный каталог цен</label><button class="btn line sm" id="addStep">+ Шаг</button><button class="btn gold sm" data-save="calc">Сохранить</button></div></header>
-      <p class="hint"><b>Шаг 1 «Памятник» берётся из раздела «Каталог» автоматически.</b> Ниже — остальные шаги. «Один вариант» — круглые переключатели, «несколько» — овальные тумблеры. Пустая цена = «индивидуальный расчёт». Подпись вместо цены — например «включено».</p>
+      <p class="hint"><b>Шаг 1 «Памятник» берётся из раздела «Каталог» автоматически.</b> Размеры автоматически вставляются вторым необязательным шагом. Для каждой позиции можно задать фиксированную цену, погонный/квадратный метр и собственную формулу коэффициента для небольших участков.</p>
+      <div class="card calc-dimensions-admin" id="calcDimensionsEd"></div>
       <div id="calcEd"></div>
     </section>
 
