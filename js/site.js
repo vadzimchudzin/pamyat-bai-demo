@@ -6,6 +6,75 @@
   var root = document.documentElement;
   var calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
+  /* Lenis: restrained wheel inertia, with native touch scrolling and reduced-motion support. */
+  var scrollEngine = null;
+  if (!calm && typeof window.Lenis === 'function') {
+    try {
+      scrollEngine = new window.Lenis({
+        lerp: 0.08,
+        smoothWheel: true,
+        wheelMultiplier: 0.9,
+        touchMultiplier: 1,
+        syncTouch: false,
+        anchors: true,
+        autoRaf: true,
+        respectReducedMotion: true,
+        overscroll: true
+      });
+      window.PAMYAT_LENIS = scrollEngine;
+    } catch (error) {
+      scrollEngine = null;
+    }
+  }
+
+  function smoothPageScroll(target, options) {
+    if (scrollEngine) {
+      scrollEngine.scrollTo(target, Object.assign({ duration: 0.72 }, options || {}));
+      return;
+    }
+    var behavior = calm ? 'auto' : 'smooth';
+    if (target && typeof target.scrollIntoView === 'function') {
+      target.scrollIntoView({ behavior: behavior });
+    } else {
+      window.scrollTo({ top: Number(target) || 0, behavior: behavior });
+    }
+  }
+
+  /* Small scroll-linked image drift: separate from hover zoom and the hero's slow camera animation. */
+  var parallaxFrame = 0;
+  function scheduleImageParallax() {
+    if (calm || parallaxFrame) return;
+    parallaxFrame = requestAnimationFrame(function () {
+      parallaxFrame = 0;
+      var viewport = window.innerHeight || document.documentElement.clientHeight || 800;
+      var heroCanvas = $('.hero .canvas');
+      var heroSection = heroCanvas && heroCanvas.closest('.hero');
+      if (heroSection) {
+        var heroTop = heroSection.getBoundingClientRect().top;
+        var heroY = Math.max(-38, Math.min(0, heroTop * 0.11));
+        heroCanvas.style.setProperty('--pamyat-hero-y', heroY.toFixed(2) + 'px');
+      }
+      $('.works-carousel .work-photo-main, .cc .cover img').forEach(function (img) {
+        var frame = img.closest('.mat, .cover') || img.parentElement;
+        if (!frame) return;
+        var rect = frame.getBoundingClientRect();
+        if (rect.bottom < -60 || rect.top > viewport + 60) {
+          img.style.setProperty('--pamyat-image-y', '0px');
+          return;
+        }
+        var center = rect.top + rect.height / 2;
+        var ratio = (viewport / 2 - center) / (viewport / 2 + rect.height / 2);
+        var limit = img.matches('.cc .cover img') ? 10 : 5;
+        var offset = Math.max(-limit, Math.min(limit, ratio * limit));
+        img.style.setProperty('--pamyat-image-y', offset.toFixed(2) + 'px');
+      });
+    });
+  }
+  window.addEventListener('scroll', scheduleImageParallax, { passive: true });
+  window.addEventListener('resize', scheduleImageParallax, { passive: true });
+  if (scrollEngine) scrollEngine.on('scroll', scheduleImageParallax);
+  scheduleImageParallax();
+
   /* ---------- шапка + тепло лампады по скроллу ---------- */
   var top = $('#top'), hero = $('#hero');
   /* меню на телефоне */
@@ -297,7 +366,7 @@
       b.addEventListener('click', function () {
         var p = (+it.dataset.f) / 245, r = story.getBoundingClientRect();
         var span = story.offsetHeight - $('.story-sticky', story).offsetHeight;
-        scrollTo({ top: scrollY + r.top + p * span + 2, behavior: 'smooth' });
+        smoothPageScroll(scrollY + r.top + p * span + 2, { duration: 0.82 });
       });
       rail.appendChild(b);
     });
@@ -385,7 +454,7 @@
   }
   function go(n) {
     step = Math.max(0, Math.min(STEPS.length - 1, n)); render();
-    if (innerWidth <= 720) { var p = $('#calc .panel'); if (p) scrollTo({ top: p.getBoundingClientRect().top + scrollY - 76, behavior: 'smooth' }); }
+    if (innerWidth <= 720) { var p = $('#calc .panel'); if (p) smoothPageScroll(p.getBoundingClientRect().top + scrollY - 76, { duration: 0.64 }); }
   }
   function render() {
     if (!$('#q') || !STEPS.length) return;
@@ -461,7 +530,7 @@
   }
   window.pamyatPickModel = function (code, cat) {
     MODEL = code; MODEL_CAT = cat || catOf(code) || MODEL_CAT; build(); step = 0; render();
-    var c = $('#calc'); if (c) c.scrollIntoView({ behavior: 'smooth' });
+    var c = $('#calc'); if (c) smoothPageScroll(c, { offset: -12, duration: 0.72 });
   };
 
   /* ---------- каталог на главной: крупно один элемент на раздел ---------- */

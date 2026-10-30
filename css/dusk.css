@@ -1588,3 +1588,28 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
 }
 .works-carousel .work .work-info{z-index:3!important}
 .works-carousel .work .work-badge{z-index:4!important}
+
+
+/* Lenis setup: native document height, no competing CSS smooth-scroll animation. */
+html.lenis,html.lenis body{height:auto}
+html.lenis.lenis-smooth{scroll-behavior:auto!important}
+html.lenis.lenis-smooth [data-lenis-prevent]{overscroll-behavior:contain}
+html.lenis.lenis-stopped{overflow:clip}
+html.lenis.lenis-smooth iframe{pointer-events:none}
+
+/* Scroll-linked parallax inspired by the layered image movement on the reference site. */
+.hero .canvas{
+  translate:0 var(--pamyat-hero-y,0px);
+  will-change:transform,translate;
+}
+.cc .cover img{
+  translate:0 var(--pamyat-image-y,0px);
+}
+.works-carousel .work .mat .work-photo-main{
+  translate:0 var(--pamyat-image-y,0px)!important;
+}
+@media(prefers-reduced-motion:reduce){
+  .hero .canvas{translate:none!important;will-change:auto!important}
+  .cc .cover img,
+  .works-carousel .work .mat .work-photo-main{translate:none!important}
+}
