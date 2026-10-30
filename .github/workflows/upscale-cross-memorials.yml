@@ -1,0 +1,153 @@
+name: AI enhance cross memorial catalog photos
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - ".github/workflows/upscale-cross-memorials.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: cross-memorial-ai-upscale
+  cancel-in-progress: false
+
+jobs:
+  upscale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Install Vulkan software renderer and utilities
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libvulkan1 mesa-vulkan-drivers vulkan-tools unzip
+          ICD="$(find /usr/share/vulkan/icd.d -maxdepth 1 -iname '*lvp*.json' -print -quit)"
+          if [ -z "$ICD" ]; then
+            echo "Mesa lavapipe Vulkan driver was not found."
+            find /usr/share/vulkan/icd.d -maxdepth 1 -type f -print || true
+            exit 1
+          fi
+          echo "VK_ICD_FILENAMES=$ICD" >> "$GITHUB_ENV"
+          vulkaninfo --summary
+
+      - name: Install Real-ESRGAN NCNN Vulkan
+        run: |
+          curl -fL --retry 3 --retry-delay 2 \
+            https://github.com/xinntao/Real-ESRGAN-ncnn-vulkan/releases/download/v0.2.5.0/realesrgan-ncnn-vulkan-20220424-ubuntu.zip \
+            -o /tmp/realesrgan-ncnn-vulkan.zip
+          mkdir -p /tmp/realesrgan
+          unzip -q /tmp/realesrgan-ncnn-vulkan.zip -d /tmp/realesrgan
+          BIN="$(find /tmp/realesrgan -type f -name 'realesrgan-ncnn-vulkan' -print -quit)"
+          if [ -z "$BIN" ]; then
+            echo "Real-ESRGAN executable was not found in the release archive."
+            find /tmp/realesrgan -maxdepth 3 -type f -print
+            exit 1
+          fi
+          chmod +x "$BIN"
+          echo "REALESRGAN_BIN=$BIN" >> "$GITHUB_ENV"
+          "$BIN" -h
+
+      - name: Install image output encoder
+        run: npm install --no-save --no-package-lock sharp@0.34.3
+
+      - name: AI upscale the 12 cross memorial originals
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/cross-ai
+          mapfile -t SOURCES < <(find assets/catalog-originals -maxdepth 1 -type f -regextype posix-extended -regex '.*/P(1[0-2]|[1-9])\\.webp' | sort -V)
+          if [ "${#SOURCES[@]}" -ne 12 ]; then
+            echo "Expected exactly 12 cross-category originals P1-P12; found ${#SOURCES[@]}."
+            printf '%s\\n' "${SOURCES[@]}"
+            exit 1
+          fi
+          for src in "${SOURCES[@]}"; do
+            name="$(basename "$src" .webp)"
+            echo "AI upscaling $name"
+            "$REALESRGAN_BIN" -i "$src" -o "/tmp/cross-ai/$name.png" \
+              -n realesrgan-x4plus -s 4 -t 128 -g 0 -f png
+            test -s "/tmp/cross-ai/$name.png"
+          done
+
+      - name: Preserve current versions and write enhanced WebP images
+        run: |
+          mkdir -p assets/catalog-before-ai-upscale
+          npm exec --yes --package=sharp@0.34.3 -- node --input-type=module <<'NODE'
+          import fs from 'node:fs/promises';
+          import path from 'node:path';
+          import sharp from 'sharp';
+
+          const names = Array.from({ length: 12 }, (_, i) => `P${i + 1}`);
+          const backupDir = 'assets/catalog-before-ai-upscale';
+          for (const name of names) {
+            const target = path.join('assets/catalog', `${name}.webp`);
+            const original = path.join('assets/catalog-originals', `${name}.webp`);
+            const ai = path.join('/tmp/cross-ai', `${name}.png`);
+            const backup = path.join(backupDir, `${name}.webp`);
+            const temp = path.join('assets/catalog', `.${name}.ai-upscale.webp`);
+
+            const [sourceMeta, targetMeta, aiMeta] = await Promise.all([
+              sharp(original).metadata(),
+              sharp(target).metadata(),
+              sharp(ai).metadata()
+            ]);
+            if (!sourceMeta.width || !sourceMeta.height || !targetMeta.width || !targetMeta.height) {
+              throw new Error(`Invalid dimensions for ${name}`);
+            }
+            const sourceRatio = sourceMeta.width / sourceMeta.height;
+            const targetRatio = targetMeta.width / targetMeta.height;
+            if (Math.abs(sourceRatio - targetRatio) > 0.005) {
+              throw new Error(`Aspect ratio mismatch for ${name}: source=${sourceRatio}, target=${targetRatio}`);
+            }
+            if (!aiMeta.width || !aiMeta.height || aiMeta.width < sourceMeta.width * 3.9) {
+              throw new Error(`AI x4 output validation failed for ${name}`);
+            }
+
+            try {
+              await fs.access(backup);
+            } catch {
+              await fs.copyFile(target, backup);
+            }
+
+            await sharp(ai)
+              .resize({
+                width: targetMeta.width,
+                height: targetMeta.height,
+                fit: 'fill',
+                kernel: sharp.kernel.lanczos3
+              })
+              .sharpen({ sigma: 0.55, m1: 0.14, m2: 0.38, x1: 2, y2: 8, y3: 18 })
+              .webp({ quality: 94, effort: 6, smartSubsample: true })
+              .toFile(temp);
+
+            const outputMeta = await sharp(temp).metadata();
+            if (outputMeta.width !== targetMeta.width || outputMeta.height !== targetMeta.height) {
+              throw new Error(`Output dimensions changed for ${name}`);
+            }
+            await fs.rename(temp, target);
+            console.log(`${name}: ${sourceMeta.width}x${sourceMeta.height} -> AI ${aiMeta.width}x${aiMeta.height} -> final ${outputMeta.width}x${outputMeta.height}`);
+          }
+          NODE
+
+      - name: Validate and commit enhanced photos
+        run: |
+          set -euo pipefail
+          test "$(find assets/catalog-before-ai-upscale -maxdepth 1 -type f -name 'P*.webp' | wc -l)" -eq 12
+          test "$(find assets/catalog -maxdepth 1 -type f -regextype posix-extended -regex '.*/P(1[0-2]|[1-9])\\.webp' | wc -l)" -eq 12
+          git add assets/catalog/P*.webp assets/catalog-before-ai-upscale/P*.webp
+          if git diff --cached --quiet; then
+            echo "No changes produced."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "AI upscale cross memorial catalog photos"
+          git push origin HEAD:main
