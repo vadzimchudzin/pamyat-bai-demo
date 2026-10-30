@@ -268,7 +268,7 @@ function estimatePricing(item, basePrice, dimensions) {
   if (!dimensions || !dimensions.provided) {
     return { qty: 1, unit, price, coefficient: 1, note: 'Размеры не указаны — использована базовая цена за единицу.' };
   }
-  const quantity = estimateMeasure(raw.quantity || (mode === 'area' ? 'area' : 'perimeter'), dimensions);
+  const quantity = mode === 'area' ? dimensions.area : estimateMeasure(raw.quantity || 'perimeter', dimensions);
   const k = raw.coefficient || {};
   let coefficient = 1;
   if (k.enabled === true) {
