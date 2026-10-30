@@ -64,13 +64,13 @@ jobs:
       - name: Install image output encoder
         run: npm install --no-save --no-package-lock sharp@0.34.3
 
-      - name: AI upscale the 12 cross memorial originals
+      - name: AI upscale the 2 cross memorial originals
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p /tmp/cross-ai
           SOURCES=()
-          for index in $(seq 1 12); do
+          for index in $(seq 1 2); do
             src="assets/catalog-originals/P${index}.webp"
             if [ ! -s "$src" ]; then
               echo "Missing source image: $src"
@@ -94,7 +94,7 @@ jobs:
           import path from 'node:path';
           import sharp from 'sharp';
 
-          const names = Array.from({ length: 12 }, (_, i) => `P${i + 1}`);
+          const names = Array.from({ length: 2 }, (_, i) => `P${i + 1}`);
           const backupDir = 'assets/catalog-before-ai-upscale';
           for (const name of names) {
             const target = path.join('assets/catalog', `${name}.webp`);
@@ -149,7 +149,7 @@ jobs:
       - name: Validate and commit enhanced photos
         run: |
           set -euo pipefail
-          for index in $(seq 1 12); do
+          for index in $(seq 1 2); do
             test -s "assets/catalog-before-ai-upscale/P${index}.webp"
             test -s "assets/catalog/P${index}.webp"
           done
