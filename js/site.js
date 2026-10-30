@@ -437,7 +437,7 @@
       quantity: raw.quantity || (mode === 'area' ? 'area' : mode === 'linear' ? 'perimeter' : 'unit'),
       coefficient: {
         enabled: k.enabled === true,
-        formula: k.formula === 'inverse' ? 'inverse' : 'linear',
+        formula: k.formula === 'linear' ? 'linear' : 'inverse',
         basis: k.basis || 'area',
         applyWhen: k.applyWhen || 'below',
         reference: Number.isFinite(+k.reference) && +k.reference > 0 ? +k.reference : 4,
@@ -495,7 +495,7 @@
     if (cfg.mode === 'fixed' || !dims.provided) {
       return { amount: roundMoney(base), quantity: 1, unit: cfg.mode === 'area' ? 'м²' : cfg.mode === 'linear' ? 'м.п.' : 'шт.', coefficient: 1, base: base, mode: cfg.mode };
     }
-    var quantity = measureValue(cfg.quantity, dims);
+    var quantity = cfg.mode === 'area' ? dims.area : measureValue(cfg.quantity, dims);
     if (!quantity || !Number.isFinite(quantity)) quantity = 1;
     var coefficient = itemCoefficient(cfg, dims);
     var unit = cfg.mode === 'area' || cfg.quantity === 'area' ? 'м²' : 'м.п.';
