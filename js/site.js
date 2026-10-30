@@ -859,7 +859,7 @@
       e.preventDefault();
       var fd = new FormData(f), btn = f.querySelector('button[type=submit]');
       var lead = { type: type, name: fd.get('name'), phone: fd.get('phone'), comment: fd.get('c') || '', source: location.href };
-      if (type === 'calc') { lead.price = individual() ? null : total(); lead.config = { summary: summary(), sel: S, model: MODEL }; }
+      if (type === 'calc') { lead.price = individual() ? null : total(); lead.config = { summary: summary(), sel: S, model: MODEL, dimensions: getDimensions(), calculations: selectedBreakdown() }; }
       function done() { f.style.display = 'none'; $(okSel).classList.add('on'); }
       if (window.PAMYAT_DEMO) return done();
       btn.disabled = true; btn.textContent = 'Отправляем…';
