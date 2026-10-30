@@ -546,7 +546,6 @@
         var cropX = workCrop(w.cropX), cropY = workCrop(w.cropY), zoom = workZoom(w.zoom);
         return '<figure class="work glass rv in" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%;--photo-zoom:' + zoom + '">' +
           '<div class="mat">' +
-            '<img class="work-photo-backdrop" src="' + workHtmlEscape(w.img || '') + '" loading="lazy" alt="" aria-hidden="true">' +
             '<img class="work-photo-main" src="' + workHtmlEscape(w.img || '') + '" loading="lazy" alt="' + workHtmlEscape(caption || 'Пример работы') + '">' +
             (badge ? '<span class="work-badge" style="--badge-color:' + color + '"><i aria-hidden="true"></i>' + workHtmlEscape(badge) + '</span>' : '') +
             '<div class="work-info">' +

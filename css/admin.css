@@ -566,3 +566,32 @@ tr.new td:first-child{box-shadow:inset 3px 0 0 #9a3a24}
   border:0!important;border-radius:17px!important;
   transform-origin:center center!important;filter:saturate(1.01) contrast(1.025)!important;
 }
+
+
+/* Admin work preview matches the public card: a uniform cover crop and a dark lower caption fade. */
+#worksEd .w .ph{
+  position:relative!important;overflow:hidden!important;isolation:isolate!important;
+  background:#bca98f!important;
+}
+#worksEd .w .ph img.w-photo-backdrop{display:none!important}
+#worksEd .w .ph img.w-photo-main{
+  position:absolute!important;z-index:1!important;inset:10px!important;
+  display:block!important;width:calc(100% - 20px)!important;height:calc(100% - 20px)!important;
+  max-width:none!important;max-height:none!important;
+  object-fit:cover!important;object-position:var(--crop-x,50%) var(--crop-y,50%)!important;
+  border:0!important;border-radius:17px!important;
+  transform-origin:center center!important;filter:saturate(1.02) contrast(1.035)!important;
+}
+#worksEd .w .ph:after{
+  content:""!important;display:block!important;position:absolute!important;z-index:2!important;
+  inset:10px!important;pointer-events:none!important;border-radius:17px!important;
+  background:linear-gradient(180deg,
+    rgba(17,12,7,0) 42%,
+    rgba(17,12,7,.015) 50%,
+    rgba(17,12,7,.11) 60%,
+    rgba(17,12,7,.32) 70%,
+    rgba(17,12,7,.66) 84%,
+    rgba(17,12,7,.92) 100%)!important;
+}
+#worksEd .w .w-work-info{z-index:3!important}
+#worksEd .w .w-badge-preview{z-index:4!important}

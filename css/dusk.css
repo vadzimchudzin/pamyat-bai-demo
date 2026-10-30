@@ -1555,3 +1555,36 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
   word-break:normal;
   box-sizing:border-box;
 }
+
+
+/* Final portfolio presentation: identical cover-filled image frames; click opens the original file. */
+.works-carousel .work .mat{
+  background:#bca98f!important;
+  isolation:isolate!important;
+}
+.works-carousel .work .mat .work-photo-backdrop{display:none!important}
+.works-carousel .work .mat .work-photo-main,
+.works-carousel .work:hover .mat .work-photo-main{
+  position:absolute!important;z-index:1!important;inset:0!important;
+  display:block!important;width:100%!important;height:100%!important;
+  max-width:none!important;max-height:none!important;
+  object-fit:cover!important;
+  object-position:var(--crop-x,50%) var(--crop-y,50%)!important;
+  border:0!important;border-radius:inherit!important;
+  transform:scale(var(--photo-zoom,1))!important;transform-origin:center center!important;
+  filter:saturate(1.02) contrast(1.035)!important;
+}
+/* The dark fade lives only in the lower caption area, not over the whole photograph. */
+.works-carousel .work .mat:after{
+  content:""!important;display:block!important;position:absolute!important;
+  z-index:2!important;inset:0!important;pointer-events:none!important;border-radius:inherit!important;
+  background:linear-gradient(180deg,
+    rgba(17,12,7,0) 42%,
+    rgba(17,12,7,.015) 50%,
+    rgba(17,12,7,.11) 60%,
+    rgba(17,12,7,.32) 70%,
+    rgba(17,12,7,.66) 84%,
+    rgba(17,12,7,.92) 100%)!important;
+}
+.works-carousel .work .work-info{z-index:3!important}
+.works-carousel .work .work-badge{z-index:4!important}

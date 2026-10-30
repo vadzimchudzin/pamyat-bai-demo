@@ -445,7 +445,6 @@
       var badge = String(x.badgeText || '').trim();
       return '<div class="w" data-i="' + i + '">' +
         '<div class="ph" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%;--photo-zoom:' + zoom + '">' +
-          '<img class="w-photo-backdrop" src="' + esc(x.img || '') + '" alt="" aria-hidden="true">' +
           '<img class="w-photo-main" src="' + esc(x.img || '') + '" alt="" style="transform:scale(' + zoom + ')">' +
           '<span class="w-badge-preview" style="--badge-color:' + color + ';background-color:' + color + '"' + (badge ? '' : ' hidden') + '><i aria-hidden="true"></i>' + esc(badge) + '</span>' +
           '<div class="w-work-info"><div class="w-work-copy"><strong data-work-title' + (caption ? '' : ' hidden') + '>' + esc(caption) + '</strong><span data-work-description' + (description ? '' : ' hidden') + '>' + esc(description) + '</span></div></div></div>' +
