@@ -228,7 +228,7 @@
       quantity: raw.quantity || (mode === 'area' ? 'area' : mode === 'linear' ? 'perimeter' : 'unit'),
       coefficient: {
         enabled: oldK.enabled === true,
-        formula: oldK.formula === 'inverse' ? 'inverse' : 'linear',
+        formula: oldK.formula === 'linear' ? 'linear' : 'inverse',
         basis: oldK.basis || 'area',
         applyWhen: oldK.applyWhen || 'below',
         reference: Number.isFinite(+oldK.reference) && +oldK.reference > 0 ? +oldK.reference : 4,
@@ -280,13 +280,12 @@
             '</div>' +
             '<details class="it-pricing"' + (p.mode !== 'fixed' || k.enabled ? ' open' : '') + '><summary>Расчёт количества и коэффициент смещения</summary>' +
             '<div class="pricing-grid">' +
-            (p.mode === 'linear' || p.mode === 'area' ? '<label>Как измерять количество<select name="pquantity">' +
+            (p.mode === 'linear' ? '<label>Как измерять погонный метр<select name="pquantity">' +
               '<option value="perimeter"' + (p.quantity === 'perimeter' ? ' selected' : '') + '>Периметр участка</option>' +
               '<option value="halfPerimeter"' + (p.quantity === 'halfPerimeter' ? ' selected' : '') + '>Половина периметра</option>' +
               '<option value="length"' + (p.quantity === 'length' ? ' selected' : '') + '>Длина</option>' +
               '<option value="width"' + (p.quantity === 'width' ? ' selected' : '') + '>Ширина</option>' +
-              (p.mode === 'area' ? '<option value="area"' + (p.quantity === 'area' ? ' selected' : '') + '>Площадь</option>' : '') +
-              '</select></label>' : '<input type="hidden" name="pquantity" value="unit">') +
+              '</select></label>' : (p.mode === 'area' ? '<div class="quantity-fixed"><b>Количество</b><span>Площадь участка (м²)</span><input type="hidden" name="pquantity" value="area"></div>' : '<input type="hidden" name="pquantity" value="unit">')) +
             '<div class="coefficient-box">' +
             '<div class="coefficient-title"><b>Коэффициент смещения</b><label class="chk"><input type="checkbox" name="kenabled"' + (k.enabled ? ' checked' : '') + '> Использовать</label></div>' +
             '<p class="hint">Настройка независима для каждой позиции. Коэффициент умножает стоимость позиции после расчёта количества.</p>' +
