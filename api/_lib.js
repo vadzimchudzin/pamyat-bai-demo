@@ -286,7 +286,7 @@ function estimatePricing(item, basePrice, dimensions) {
       coefficient = Math.min(max, Math.max(min, coefficient));
     }
   }
-  const adjustedPrice = Math.round(price * coefficient * 100) / 100;
+  const adjustedPrice = Math.round(price * coefficient * 1000000) / 1000000;
   const q = Math.round(quantity * 100) / 100;
   const notes = [
     'Размеры участка: ' + dimensions.length.toLocaleString('ru-RU') + ' × ' + dimensions.width.toLocaleString('ru-RU') + ' м',
