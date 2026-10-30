@@ -437,8 +437,11 @@
       var ids = x.type === 'multi' ? S[x.id] : [S[x.id]];
       var its = ids.map(function (id) { return item(x, id); }).filter(Boolean);
       var rws = its.length ? its.map(function (it) {
-        var pr = it.note ? it.note : it.price == null ? 'инд.' : it.price ? fmt(it.price) + ' BYN' : '';
-        return '<div class="rw"><span>' + it.name + (i === 0 && MODEL ? ' · ' + MODEL : '') + '</span><i>' + pr + '</i></div>';
+        var note = String(it.note || '').trim();
+        var hasPrice = it.price != null && Number(it.price) > 0;
+        var pr = hasPrice ? fmt(it.price) + ' BYN' : it.price == null ? (note || 'инд.') : note;
+        return '<div class="rw"><span>' + it.name + (i === 0 && MODEL ? ' · ' + MODEL : '') + '</span><i>' + pr + '</i></div>' +
+          (hasPrice && note ? '<div class="rw-note">' + note + '</div>' : '');
       }).join('') : '<div class="rw no"><span>не выбрано</span></div>';
       html += '<li><span class="lb">' + x.name + '</span>' + rws + '</li>';
     });
