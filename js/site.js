@@ -595,10 +595,15 @@
       if (s.type === 'contact' || s.type === 'dimensions' || (individual() && i > 0)) return;
       var rows = byStep[s.id] || [];
       var rws = rows.length ? rows.map(function (row) {
-        var note = row.mode !== 'fixed' && d.provided
-          ? fmt(row.quantity) + ' ' + row.unit + ' × ' + fmt(row.basePrice) + ' BYN' + (row.coefficient !== 1 ? ' · коэффициент ' + fmt(row.coefficient) : '')
+        var note = row.mode !== 'fixed'
+          ? (d.provided
+            ? fmt(row.quantity) + ' ' + row.unit + ' × ' + fmt(row.basePrice) + ' BYN' + (row.coefficient !== 1 ? ' · коэффициент ' + fmt(row.coefficient) : '')
+            : 'Размеры не указаны — базовая ставка за единицу')
           : '';
-        return '<div class="rw"><span>' + row.name + '</span><i>' + (row.price == null ? 'инд.' : money(row.price)) + '</i></div>' +
+        var amount = row.price == null ? 'инд.' : (row.mode !== 'fixed' && !d.provided
+          ? 'от ' + fmt(row.price) + ' BYN/' + row.unit
+          : money(row.price));
+        return '<div class="rw"><span>' + row.name + '</span><i>' + amount + '</i></div>' +
           (note ? '<div class="rw-note">' + note + '</div>' : '');
       }).join('') : '<div class="rw no"><span>не выбрано</span></div>';
       html += '<li><span class="lb">' + s.name + '</span>' + rws + '</li>';
@@ -719,7 +724,15 @@
   }
   if ($('#q')) {
     $('#prev').onclick = function () { if (step > 0) go(step - 1); };
-    var nextStep = function () { go(STEPS[step].catalog && individual() ? STEPS.length - 1 : step + 1); };
+    var nextStep = function () {
+      var current = STEPS[step];
+      if (current && current.type === 'dimensions' && !CALC_DIMENSIONS.allowSkip && !getDimensions().provided) {
+        var error = $('#dimError');
+        if (error) error.textContent = 'Укажите корректные длину и ширину участка, чтобы продолжить.';
+        return;
+      }
+      go(current.catalog && individual() ? STEPS.length - 1 : step + 1);
+    };
     $('#next').onclick = nextStep;
     if ($('#mnext')) $('#mnext').onclick = nextStep;
     // нижняя панель с ценой на телефоне — видна, пока на экране калькулятор
