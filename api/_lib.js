@@ -241,9 +241,11 @@ function leadKeyboard(id, currentStatus) {
     [{ text:'📄 Смета PDF', callback_data:'quote:' + id }]
   ] };
 }
-function estimateDimensionMetrics(raw) {
+function estimateDimensionMetrics(raw, config) {
   const length = Number(raw && raw.length), width = Number(raw && raw.width);
-  if (!Number.isFinite(length) || !Number.isFinite(width) || length <= 0 || width <= 0) {
+  const min = Math.max(0.01, Number(config && config.min) || 0.1);
+  const max = Math.max(min, Number(config && config.max) || 100);
+  if (!Number.isFinite(length) || !Number.isFinite(width) || length < min || width < min || length > max || width > max) {
     return { provided: false, length: null, width: null, area: null, perimeter: null };
   }
   return { provided: true, length, width, area: length * width, perimeter: 2 * (length + width) };
@@ -287,7 +289,7 @@ function estimatePricing(item, basePrice, dimensions) {
     }
   }
   const adjustedPrice = Math.round(price * coefficient * 1000000) / 1000000;
-  const q = Math.round(quantity * 100) / 100;
+  const q = Math.round(quantity * 1000000) / 1000000;
   const notes = [
     'Размеры участка: ' + dimensions.length.toLocaleString('ru-RU') + ' × ' + dimensions.width.toLocaleString('ru-RU') + ' м',
     'Площадь: ' + dimensions.area.toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + ' м²',
@@ -364,7 +366,7 @@ async function createEstimateFromLead(leadId, by) {
       }
       const fallbackArticle = item.article || item.sku || item.code || (st.id + '-' + item.id).toUpperCase();
       const basePrice = priceForTarget(target, item.price);
-      const dimensions = estimateDimensionMetrics(lead.config && lead.config.dimensions || {});
+      const dimensions = estimateDimensionMetrics(lead.config && lead.config.dimensions || {}, content.calc && content.calc.dimensions || {});
       const calculated = estimatePricing(item, basePrice, dimensions);
       const noteParts = [];
       if (item.note) noteParts.push(item.note);
