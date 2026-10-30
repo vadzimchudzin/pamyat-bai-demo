@@ -52,7 +52,14 @@ jobs:
             exit 1
           fi
           chmod +x "$BIN"
+          MODELS="$(find /tmp/realesrgan -type d -name models -print -quit)"
+          if [ -z "$MODELS" ]; then
+            echo "Real-ESRGAN model directory was not found."
+            find /tmp/realesrgan -maxdepth 3 -type f -print
+            exit 1
+          fi
           echo "REALESRGAN_BIN=$BIN" >> "$GITHUB_ENV"
+          echo "REALESRGAN_MODELS=$MODELS" >> "$GITHUB_ENV"
 
       - name: Install image output encoder
         run: npm install --no-save --no-package-lock sharp@0.34.3
@@ -62,24 +69,27 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p /tmp/cross-ai
-          mapfile -t SOURCES < <(find assets/catalog-originals -maxdepth 1 -type f -regextype posix-extended -regex '.*/P(1[0-2]|[1-9])\\.webp' | sort -V)
-          if [ "${#SOURCES[@]}" -ne 12 ]; then
-            echo "Expected exactly 12 cross-category originals P1-P12; found ${#SOURCES[@]}."
-            printf '%s\\n' "${SOURCES[@]}"
-            exit 1
-          fi
+          SOURCES=()
+          for index in $(seq 1 12); do
+            src="assets/catalog-originals/P${index}.webp"
+            if [ ! -s "$src" ]; then
+              echo "Missing source image: $src"
+              exit 1
+            fi
+            SOURCES+=("$src")
+          done
           for src in "${SOURCES[@]}"; do
             name="$(basename "$src" .webp)"
             echo "AI upscaling $name"
             "$REALESRGAN_BIN" -i "$src" -o "/tmp/cross-ai/$name.png" \
-              -n realesrgan-x4plus -s 4 -t 128 -g 0 -f png
+              -m "$REALESRGAN_MODELS" -n realesrgan-x4plus -s 4 -t 128 -g 0 -f png
             test -s "/tmp/cross-ai/$name.png"
           done
 
       - name: Preserve current versions and write enhanced WebP images
         run: |
           mkdir -p assets/catalog-before-ai-upscale
-          npm exec --yes --package=sharp@0.34.3 -- node --input-type=module <<'NODE'
+          node --input-type=module <<'NODE'
           import fs from 'node:fs/promises';
           import path from 'node:path';
           import sharp from 'sharp';
@@ -139,8 +149,10 @@ jobs:
       - name: Validate and commit enhanced photos
         run: |
           set -euo pipefail
-          test "$(find assets/catalog-before-ai-upscale -maxdepth 1 -type f -name 'P*.webp' | wc -l)" -eq 12
-          test "$(find assets/catalog -maxdepth 1 -type f -regextype posix-extended -regex '.*/P(1[0-2]|[1-9])\\.webp' | wc -l)" -eq 12
+          for index in $(seq 1 12); do
+            test -s "assets/catalog-before-ai-upscale/P${index}.webp"
+            test -s "assets/catalog/P${index}.webp"
+          done
           git add assets/catalog/P*.webp assets/catalog-before-ai-upscale/P*.webp
           if git diff --cached --quiet; then
             echo "No changes produced."
