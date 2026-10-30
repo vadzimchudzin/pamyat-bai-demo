@@ -646,9 +646,9 @@
         '<div class="qsub">' + escHtml(CALC_DIMENSIONS.sub) + '</div>' +
         '<div class="dimensions-card">' +
           '<div class="dimensions-fields">' +
-            '<label>Длина (' + escHtml(unit) + ')<input id="dimLength" type="text" inputmode="decimal" autocomplete="off" placeholder="Например, 2.2" value="' + escHtml(DIMS.length) + '"></label>' +
+            '<label>Длина (' + escHtml(unit) + ')<input id="dimLength" type="number" min="' + CALC_DIMENSIONS.min + '" max="' + CALC_DIMENSIONS.max + '" step="' + CALC_DIMENSIONS.step + '" inputmode="decimal" autocomplete="off" placeholder="Например, 2.2" value="' + escHtml(DIMS.length) + '"></label>' +
             '<span class="dimensions-multiply">×</span>' +
-            '<label>Ширина (' + escHtml(unit) + ')<input id="dimWidth" type="text" inputmode="decimal" autocomplete="off" placeholder="Например, 1.4" value="' + escHtml(DIMS.width) + '"></label>' +
+            '<label>Ширина (' + escHtml(unit) + ')<input id="dimWidth" type="number" min="' + CALC_DIMENSIONS.min + '" max="' + CALC_DIMENSIONS.max + '" step="' + CALC_DIMENSIONS.step + '" inputmode="decimal" autocomplete="off" placeholder="Например, 1.4" value="' + escHtml(DIMS.width) + '"></label>' +
           '</div>' +
           '<div class="dimensions-result">' +
             '<div><span>Площадь участка</span><b id="dimArea">' + (d.provided ? fmt(d.area) + ' м²' : '—') + '</b></div>' +
