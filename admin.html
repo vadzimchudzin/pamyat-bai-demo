@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/admin.css?v=a24">
+<link rel="stylesheet" href="/css/admin.css?v=a25">
 </head>
 <body>
 <div class="bg" aria-hidden="true"></div>
@@ -68,7 +68,8 @@
     <!-- калькулятор -->
     <section class="pane" id="p-calc">
       <header><h2>Калькулятор</h2><div class="acts"><label class="chk price-sync"><input type="checkbox" id="sitePriceSync"> Использовать актуальный каталог цен</label><button class="btn line sm" id="addStep">+ Шаг</button><button class="btn gold sm" data-save="calc">Сохранить</button></div></header>
-      <p class="hint"><b>Шаг 1 «Памятник» берётся из раздела «Каталог» автоматически.</b> Ниже — остальные шаги. «Один вариант» — круглые переключатели, «несколько» — овальные тумблеры. Пустая цена = «индивидуальный расчёт». Подпись вместо цены — например «включено».</p>
+      <p class="hint"><b>Шаг 1 «Памятник» берётся из раздела «Каталог» автоматически.</b> Размеры автоматически вставляются вторым необязательным шагом. Для каждой позиции можно задать фиксированную цену, погонный/квадратный метр и собственную формулу коэффициента для небольших участков.</p>
+      <div class="card calc-dimensions-admin" id="calcDimensionsEd"></div>
       <div id="calcEd"></div>
     </section>
 
@@ -170,6 +171,6 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="/js/admin.js?v=a19"></script>
+<script src="/js/admin.js?v=a20"></script>
 </body>
 </html>

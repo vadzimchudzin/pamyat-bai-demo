@@ -1613,3 +1613,29 @@ html.lenis.lenis-smooth iframe{pointer-events:none}
   .cc .cover img,
   .works-carousel .work .mat .work-photo-main{translate:none!important}
 }
+
+
+/* Необязательный шаг размеров участка */
+.q-optional{font:500 12px var(--sans);letter-spacing:0;text-transform:none;color:var(--dim);vertical-align:middle}
+.dimensions-card{padding:20px;border:1px solid rgba(214,176,122,.22);border-radius:18px;background:rgba(255,248,236,.035)}
+.dimensions-fields{display:grid;grid-template-columns:minmax(0,1fr) 28px minmax(0,1fr);gap:12px;align-items:end;max-width:620px}
+.dimensions-fields label{display:grid;gap:8px;color:var(--mut);font-size:13px}
+.dimensions-fields input{width:100%;min-width:0;padding:14px 15px;border:1px solid var(--line);border-radius:12px;background:rgba(10,10,12,.28);color:var(--ink);font:500 19px var(--sans);font-variant-numeric:tabular-nums}
+.dimensions-fields input:focus{outline:none;border-color:var(--gold)}
+.dimensions-multiply{display:grid;place-items:center;height:48px;color:var(--gold);font-size:20px}
+.dimensions-result{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:22px;padding-top:16px;border-top:1px solid var(--line);max-width:620px}
+.dimensions-result>div{display:grid;gap:5px}
+.dimensions-result span{color:var(--mut);font-size:12px}
+.dimensions-result b{font:600 23px var(--sans);color:var(--ink);font-variant-numeric:tabular-nums}
+.dimensions-error{min-height:18px;margin-top:9px;color:#d99a78;font-size:12px}
+.dimensions-hint{max-width:620px;margin-top:12px;color:var(--dim);font-size:12px;line-height:1.55}
+.dimensions-skip{margin-top:16px;padding:10px 15px;border:1px solid rgba(214,176,122,.38);border-radius:999px;background:transparent;color:var(--gold);font:500 12px var(--sans);cursor:pointer;transition:background .2s,border-color .2s}
+.dimensions-skip:hover{background:rgba(214,176,122,.09);border-color:var(--gold)}
+.summary li .rw-note{margin:4px 0 0 auto;max-width:260px;color:var(--dim);font-size:11px;line-height:1.45;text-align:right}
+@media(max-width:720px){
+  .dimensions-card{padding:15px}
+  .dimensions-fields{grid-template-columns:minmax(0,1fr) 18px minmax(0,1fr);gap:6px}
+  .dimensions-fields input{padding:12px 10px;font-size:17px}
+  .dimensions-result b{font-size:20px}
+  .summary li .rw-note{max-width:100%}
+}

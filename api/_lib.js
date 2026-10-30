@@ -241,6 +241,64 @@ function leadKeyboard(id, currentStatus) {
     [{ text:'📄 Смета PDF', callback_data:'quote:' + id }]
   ] };
 }
+function estimateDimensionMetrics(raw, config) {
+  const length = Number(raw && raw.length), width = Number(raw && raw.width);
+  const min = Math.max(0.01, Number(config && config.min) || 0.1);
+  const max = Math.max(min, Number(config && config.max) || 100);
+  if (!Number.isFinite(length) || !Number.isFinite(width) || length < min || width < min || length > max || width > max) {
+    return { provided: false, length: null, width: null, area: null, perimeter: null };
+  }
+  return { provided: true, length, width, area: length * width, perimeter: 2 * (length + width) };
+}
+function estimateMeasure(basis, dimensions) {
+  if (!dimensions || !dimensions.provided) return 1;
+  if (basis === 'perimeter') return dimensions.perimeter;
+  if (basis === 'halfPerimeter') return dimensions.perimeter / 2;
+  if (basis === 'length') return dimensions.length;
+  if (basis === 'width') return dimensions.width;
+  return dimensions.area;
+}
+function estimatePricing(item, basePrice, dimensions) {
+  const name = String(item && item.name || '');
+  const raw = item && item.pricing || {};
+  const inferred = /(?:м²|м2|кв\.?\s*м)/i.test(name) ? 'area'
+    : /(?:м\.?\s*п\.?|погонн(?:ый|ых)?\s+метр)/i.test(name) ? 'linear' : 'fixed';
+  const mode = raw.mode || inferred;
+  const unit = mode === 'area' || raw.quantity === 'area' ? 'м²' : mode === 'linear' ? 'м.п.' : (item.unit || 'шт.');
+  const price = Math.max(0, Number(basePrice) || 0);
+  if (mode !== 'area' && mode !== 'linear') return { qty: 1, unit, price, coefficient: 1, note: '' };
+  if (!dimensions || !dimensions.provided) {
+    return { qty: 1, unit, price, coefficient: 1, note: 'Размеры не указаны — использована базовая цена за единицу.' };
+  }
+  const quantity = mode === 'area' ? dimensions.area : estimateMeasure(raw.quantity || 'perimeter', dimensions);
+  const k = raw.coefficient || {};
+  let coefficient = 1;
+  if (k.enabled === true) {
+    const basis = k.basis || 'area';
+    const value = estimateMeasure(basis, dimensions);
+    const reference = Math.max(0.01, Number(k.reference) || 4);
+    const diff = value - reference;
+    const active = k.applyWhen === 'both' || (k.applyWhen === 'below' && diff < 0) || (k.applyWhen === 'above' && diff > 0);
+    if (active) {
+      const start = Math.max(0, Number(k.start) || 1);
+      coefficient = k.formula === 'inverse'
+        ? start * Math.pow(reference / Math.max(0.01, value), Math.max(0.01, Number(k.power) || 1))
+        : start + Math.abs(diff) * Math.max(0, Number(k.rate) || 0);
+      const min = Math.max(0, Number(k.min) || 0), max = Math.max(min, Number(k.max) || 2);
+      coefficient = Math.min(max, Math.max(min, coefficient));
+    }
+  }
+  const adjustedPrice = Math.round(price * coefficient * 1000000) / 1000000;
+  const q = Math.round(quantity * 1000000) / 1000000;
+  const notes = [
+    'Размеры участка: ' + dimensions.length.toLocaleString('ru-RU') + ' × ' + dimensions.width.toLocaleString('ru-RU') + ' м',
+    'Площадь: ' + dimensions.area.toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + ' м²',
+    'Коэффициент: ' + coefficient.toLocaleString('ru-RU', { maximumFractionDigits: 2 }),
+    'Базовая цена: ' + price.toLocaleString('ru-RU', { maximumFractionDigits: 2 }) + ' BYN/' + unit
+  ];
+  return { qty: q, unit, price: adjustedPrice, coefficient, note: notes.join('; ') };
+}
+
 async function createEstimateFromLead(leadId, by) {
   await init();
   const leadResult = await q(`select * from leads where id=$1 limit 1`, [leadId]);
@@ -307,12 +365,19 @@ async function createEstimateFromLead(leadId, by) {
         return;
       }
       const fallbackArticle = item.article || item.sku || item.code || (st.id + '-' + item.id).toUpperCase();
+      const basePrice = priceForTarget(target, item.price);
+      const dimensions = estimateDimensionMetrics(lead.config && lead.config.dimensions || {}, content.calc && content.calc.dimensions || {});
+      const calculated = estimatePricing(item, basePrice, dimensions);
+      const noteParts = [];
+      if (item.note) noteParts.push(item.note);
+      if (item.price == null) noteParts.push('Цена не задана в каталоге — подтвердить вручную');
+      if (calculated.note) noteParts.push(calculated.note);
       rows.push({
         article: articleForTarget(target, fallbackArticle),
         name: st.name + ' · ' + item.name,
-        unit: item.unit || 'шт.', qty: 1,
-        price: priceForTarget(target, item.price),
-        note: item.note || (item.price == null ? 'Цена не задана в каталоге — подтвердить вручную' : '')
+        unit: calculated.unit, qty: calculated.qty,
+        price: calculated.price,
+        note: noteParts.join(' · ')
       });
     });
   });

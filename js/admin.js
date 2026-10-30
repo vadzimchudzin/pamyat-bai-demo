@@ -204,29 +204,182 @@
   });
 
   /* ---------- калькулятор ---------- */
+  function calcDimensionsConfig() {
+    var d = C.calc && C.calc.dimensions || {};
+    return {
+      enabled: d.enabled !== false,
+      name: d.name || 'Размеры',
+      sub: d.sub || 'Укажите длину и ширину участка. Это необязательно — без размеров расчёт останется по базовым ценам.',
+      unit: d.unit || 'м',
+      min: Number.isFinite(+d.min) && +d.min > 0 ? +d.min : 0.1,
+      max: Number.isFinite(+d.max) && +d.max > 0 ? +d.max : 100,
+      step: Number.isFinite(+d.step) && +d.step > 0 ? +d.step : 0.1,
+      allowSkip: d.allowSkip !== false
+    };
+  }
+  function defaultPricing(it) {
+    var raw = it && it.pricing || {}, name = String(it && it.name || '');
+    var detected = /(?:м²|м2|кв\.?\s*м)/i.test(name) ? 'area'
+      : /(?:м\.?\s*п\.?|погонн(?:ый|ых)?\s+метр)/i.test(name) ? 'linear' : 'fixed';
+    var mode = raw.mode || detected;
+    var oldK = raw.coefficient || {};
+    return {
+      mode: mode === 'area' || mode === 'linear' ? mode : 'fixed',
+      quantity: raw.quantity || (mode === 'area' ? 'area' : mode === 'linear' ? 'perimeter' : 'unit'),
+      coefficient: {
+        enabled: oldK.enabled === true,
+        formula: oldK.formula === 'linear' ? 'linear' : 'inverse',
+        basis: oldK.basis || 'area',
+        applyWhen: oldK.applyWhen || 'below',
+        reference: Number.isFinite(+oldK.reference) && +oldK.reference > 0 ? +oldK.reference : 4,
+        start: Number.isFinite(+oldK.start) && +oldK.start > 0 ? +oldK.start : 1,
+        rate: Number.isFinite(+oldK.rate) && +oldK.rate >= 0 ? +oldK.rate : 0.15,
+        power: Number.isFinite(+oldK.power) && +oldK.power > 0 ? +oldK.power : 1,
+        min: Number.isFinite(+oldK.min) && +oldK.min >= 0 ? +oldK.min : 1,
+        max: Number.isFinite(+oldK.max) && +oldK.max > 0 ? +oldK.max : 2
+      }
+    };
+  }
+  function numField(name, label, value, step, min, max) {
+    return '<label>' + label + '<input name="' + name + '" type="number" step="' + step + '" min="' + min + '"' +
+      (max == null ? '' : ' max="' + max + '"') + ' value="' + esc(value) + '"></label>';
+  }
+  function drawCalcDimensions() {
+    var d = calcDimensionsConfig();
+    $('#calcDimensionsEd').innerHTML =
+      '<div class="calc-admin-head"><div><b>Шаг 2 — размеры участка</b><p class="hint">Шаг автоматически добавляется сразу после выбора памятника. Клиент может его пропустить; без размеров сохраняются базовые цены.</p></div>' +
+      '<label class="chk"><input type="checkbox" name="dimensionsEnabled"' + (d.enabled ? ' checked' : '') + '> Показывать шаг размеров</label></div>' +
+      '<div class="calc-dim-grid">' +
+      '<label>Название шага<input name="dimensionsName" value="' + esc(d.name) + '"></label>' +
+      '<label>Единица измерения<input value="м — метры" disabled></label>' +
+      '<label class="wide">Подсказка пользователю<input name="dimensionsSub" value="' + esc(d.sub) + '"></label>' +
+      numField('dimensionsMin', 'Минимальный размер', d.min, '0.01', '0.01') +
+      numField('dimensionsMax', 'Максимальный размер', d.max, '0.1', '0.1') +
+      numField('dimensionsStep', 'Шаг ввода', d.step, '0.01', '0.01') +
+      '<label class="chk"><input type="checkbox" name="dimensionsAllowSkip"' + (d.allowSkip ? ' checked' : '') + '> Разрешить пропуск шага</label>' +
+      '</div>';
+  }
   function drawCalc() {
     var steps = ((C.calc && C.calc.steps) || []).filter(function (s) { return s.id !== 'monument'; });
+    drawCalcDimensions();
     $('#calcEd').innerHTML = steps.map(function (s, si) {
       return '<div class="card step" data-si="' + si + '" data-id="' + esc(s.id) + '">' +
         '<div class="step-head">' + field('name', 'Шаг ' + (si + 1) + ' — название вкладки', s.name) + field('sub', 'Подсказка под заголовком', s.sub) +
         '<label>Выбор<select name="type"><option value="radio"' + (s.type !== 'multi' ? ' selected' : '') + '>Один вариант</option><option value="multi"' + (s.type === 'multi' ? ' selected' : '') + '>Несколько</option></select></label>' +
         '<div class="tools"><button class="ic" data-act="s-up" title="Выше">↑</button><button class="ic" data-act="s-down" title="Ниже">↓</button><button class="ic del" data-act="s-del" title="Удалить шаг">✕</button></div></div>' +
-        '<div class="colh"><span>Позиция</span><span>Цена, BYN</span><span>Подпись вместо цены</span><span></span></div>' +
-        '<div class="items">' + s.items.map(function (it, ii) {
-          return '<div class="it" data-ii="' + ii + '" data-id="' + esc(it.id) + '"><input name="iname" value="' + esc(it.name) + '" placeholder="Название">' +
-            '<input name="iprice" type="number" min="0" step="10" value="' + (it.price == null ? '' : it.price) + '" placeholder="инд. расчёт">' +
-            '<input name="inote" value="' + esc(it.note || '') + '" placeholder="например: включено">' +
-            '<div class="tools"><button class="ic" data-act="i-up">↑</button><button class="ic" data-act="i-down">↓</button><button class="ic del" data-act="i-del">✕</button></div></div>';
+        '<div class="colh calc-colh"><span>Позиция</span><span>Базовая цена, BYN</span><span>Подпись</span><span>Тарификация</span><span></span></div>' +
+        '<div class="items">' + (s.items || []).map(function (it, ii) {
+          var p = defaultPricing(it), k = p.coefficient;
+          return '<div class="it calc-it" data-ii="' + ii + '" data-id="' + esc(it.id) + '">' +
+            '<div class="it-main">' +
+            '<input name="iname" value="' + esc(it.name) + '" placeholder="Название">' +
+            '<input name="iprice" type="number" min="0" step="0.01" value="' + (it.price == null ? '' : it.price) + '" placeholder="инд. расчёт">' +
+            '<input name="inote" value="' + esc(it.note || '') + '" placeholder="Подпись / примечание">' +
+            '<select name="pmode" aria-label="Тип тарификации"><option value="fixed"' + (p.mode === 'fixed' ? ' selected' : '') + '>Фиксированная</option><option value="linear"' + (p.mode === 'linear' ? ' selected' : '') + '>За пог. метр</option><option value="area"' + (p.mode === 'area' ? ' selected' : '') + '>За м²</option></select>' +
+            '<div class="tools"><button class="ic" data-act="i-up" title="Выше">↑</button><button class="ic" data-act="i-down" title="Ниже">↓</button><button class="ic del" data-act="i-del" title="Удалить">✕</button></div>' +
+            '</div>' +
+            '<details class="it-pricing"' + (p.mode !== 'fixed' || k.enabled ? ' open' : '') + '><summary>Расчёт количества и коэффициент смещения</summary>' +
+            '<div class="pricing-grid">' +
+            (p.mode === 'linear' ? '<label>Как измерять погонный метр<select name="pquantity">' +
+              '<option value="perimeter"' + (p.quantity === 'perimeter' ? ' selected' : '') + '>Периметр участка</option>' +
+              '<option value="halfPerimeter"' + (p.quantity === 'halfPerimeter' ? ' selected' : '') + '>Половина периметра</option>' +
+              '<option value="length"' + (p.quantity === 'length' ? ' selected' : '') + '>Длина</option>' +
+              '<option value="width"' + (p.quantity === 'width' ? ' selected' : '') + '>Ширина</option>' +
+              '</select></label>' : (p.mode === 'area' ? '<div class="quantity-fixed"><b>Количество</b><span>Площадь участка (м²)</span><input type="hidden" name="pquantity" value="area"></div>' : '<input type="hidden" name="pquantity" value="unit">')) +
+            '<div class="coefficient-box">' +
+            '<div class="coefficient-title"><b>Коэффициент смещения</b><label class="chk"><input type="checkbox" name="kenabled"' + (k.enabled ? ' checked' : '') + (p.mode === 'fixed' ? ' disabled' : '') + '> Использовать</label></div>' +
+            '<p class="hint">' + (p.mode === 'fixed' ? 'Коэффициент включается для позиций с тарификацией за погонный или квадратный метр.' : 'Настройка независима для каждой позиции. Коэффициент умножает стоимость позиции после расчёта количества.') + '</p>' +
+            '<div class="pricing-grid">' +
+            '<label>Формула<select name="kformula"><option value="inverse"' + (k.formula === 'inverse' ? ' selected' : '') + '>Пропорциональная</option><option value="linear"' + (k.formula === 'linear' ? ' selected' : '') + '>Линейная</option></select></label>' +
+            '<label>По какому размеру<select name="kbasis"><option value="area"' + (k.basis === 'area' ? ' selected' : '') + '>Площадь, м²</option><option value="perimeter"' + (k.basis === 'perimeter' ? ' selected' : '') + '>Периметр, м</option><option value="length"' + (k.basis === 'length' ? ' selected' : '') + '>Длина, м</option><option value="width"' + (k.basis === 'width' ? ' selected' : '') + '>Ширина, м</option></select></label>' +
+            '<label>Когда применять<select name="kwhen"><option value="below"' + (k.applyWhen === 'below' ? ' selected' : '') + '>Когда меньше отправной точки</option><option value="above"' + (k.applyWhen === 'above' ? ' selected' : '') + '>Когда больше отправной точки</option><option value="both"' + (k.applyWhen === 'both' ? ' selected' : '') + '>В обе стороны</option></select></label>' +
+            numField('kreference', 'Отправная точка', k.reference, '0.01', '0.01') +
+            numField('kstart', 'Коэффициент в отправной точке', k.start, '0.01', '0') +
+            numField('krate', 'Изменение за единицу (для линейной)', k.rate, '0.01', '0') +
+            numField('kpower', 'Степень (для пропорциональной)', k.power, '0.01', '0.01') +
+            numField('kmin', 'Минимальный коэффициент', k.min, '0.01', '0') +
+            numField('kmax', 'Максимальный коэффициент', k.max, '0.01', '0.01') +
+            '</div><div class="coefficient-preview" data-kpreview>Пример коэффициента будет рассчитан автоматически.</div>' +
+            '</div></div></details></div>';
         }).join('') + '</div>' +
         '<button class="btn line sm" data-act="i-add" style="margin-top:12px">+ Позиция</button></div>';
     }).join('') || '<p class="empty">Шагов нет — добавьте первый.</p>';
+    updateCalcPricingPreviews();
+  }
+  function previewCoefficient(k, sample) {
+    if (!k.enabled) return 1;
+    var diff = sample - k.reference, active = k.applyWhen === 'both' || (k.applyWhen === 'below' && diff < 0) || (k.applyWhen === 'above' && diff > 0);
+    if (!active) return 1;
+    var value;
+    if (k.formula === 'inverse') value = k.start * Math.pow(k.reference / Math.max(0.01, sample), k.power);
+    else value = k.start + Math.abs(diff) * k.rate;
+    return Math.min(Math.max(k.min, value), Math.max(k.min, k.max));
+  }
+  function updateCalcPricingPreviews() {
+    $$('#calcEd .calc-it').forEach(function (row) {
+      var box = $('[data-kpreview]', row); if (!box) return;
+      var k = {
+        enabled: $('[name=kenabled]', row).checked,
+        formula: $('[name=kformula]', row).value,
+        reference: Math.max(0.01, +$('[name=kreference]', row).value || 4),
+        start: Math.max(0, +$('[name=kstart]', row).value || 1),
+        rate: Math.max(0, +$('[name=krate]', row).value || 0),
+        power: Math.max(0.01, +$('[name=kpower]', row).value || 1),
+        min: Math.max(0, +$('[name=kmin]', row).value || 0),
+        max: Math.max(0.01, +$('[name=kmax]', row).value || 2),
+        applyWhen: $('[name=kwhen]', row).value
+      };
+      if (!k.enabled) { box.textContent = 'Коэффициент отключён — стоимость рассчитывается без надбавки.'; return; }
+      var a = previewCoefficient(k, Math.max(0.1, k.reference / 2));
+      var b = previewCoefficient(k, k.reference);
+      var c = previewCoefficient(k, k.reference * 1.5);
+      box.textContent = 'Проверка: при размере ' + (k.reference / 2).toFixed(2) + ' → ×' + a.toFixed(2) +
+        '; в отправной точке ' + k.reference.toFixed(2) + ' → ×' + b.toFixed(2) +
+        '; при размере ' + (k.reference * 1.5).toFixed(2) + ' → ×' + c.toFixed(2) + '.';
+    });
   }
   function readCalc() {
-    return { steps: $$( '#calcEd .step').map(function (st) {
+    var d = $('#calcDimensionsEd'), dims = {
+      enabled: $('[name=dimensionsEnabled]', d).checked,
+      name: $('[name=dimensionsName]', d).value.trim() || 'Размеры',
+      sub: $('[name=dimensionsSub]', d).value.trim(),
+      unit: 'м',
+      min: Math.max(0.01, +$('[name=dimensionsMin]', d).value || 0.1),
+      max: Math.max(0.01, +$('[name=dimensionsMax]', d).value || 100),
+      step: Math.max(0.01, +$('[name=dimensionsStep]', d).value || 0.1),
+      allowSkip: $('[name=dimensionsAllowSkip]', d).checked
+    };
+    if (dims.max < dims.min) dims.max = dims.min;
+    return { dimensions: dims, steps: $$('#calcEd .step').map(function (st) {
       return { id: st.dataset.id, name: $('[name=name]', st).value.trim() || 'Шаг', sub: $('[name=sub]', st).value.trim(), type: $('[name=type]', st).value,
         items: $$('.it', st).map(function (it) {
-          var p = $('[name=iprice]', it).value.trim();
-          return { id: it.dataset.id, name: $('[name=iname]', it).value.trim() || 'Позиция', price: p === '' ? null : Math.max(0, Math.round(+p)), note: $('[name=inote]', it).value.trim() || undefined };
+          var p = $('[name=iprice]', it).value.trim(), mode = $('[name=pmode]', it).value;
+          var q = $('[name=pquantity]', it);
+          var enabled = $('[name=kenabled]', it).checked;
+          var minK = Math.max(0, +$('[name=kmin]', it).value || 0);
+          var maxK = Math.max(minK, +$('[name=kmax]', it).value || 2);
+          return {
+            id: it.dataset.id,
+            name: $('[name=iname]', it).value.trim() || 'Позиция',
+            price: p === '' ? null : Math.max(0, Math.round(+p * 100) / 100),
+            note: $('[name=inote]', it).value.trim() || undefined,
+            pricing: {
+              mode: mode,
+              quantity: q && q.type !== 'hidden' ? q.value : (mode === 'area' ? 'area' : mode === 'linear' ? 'perimeter' : 'unit'),
+              coefficient: {
+                enabled: enabled,
+                formula: $('[name=kformula]', it).value,
+                basis: $('[name=kbasis]', it).value,
+                applyWhen: $('[name=kwhen]', it).value,
+                reference: Math.max(0.01, +$('[name=kreference]', it).value || 4),
+                start: Math.max(0, +$('[name=kstart]', it).value || 1),
+                rate: Math.max(0, +$('[name=krate]', it).value || 0),
+                power: Math.max(0.01, +$('[name=kpower]', it).value || 1),
+                min: minK,
+                max: maxK
+              }
+            }
+          };
         }).filter(function (x) { return x.name; }) };
     }) };
   }
@@ -238,8 +391,20 @@
     if (a === 's-del' && confirm('Удалить шаг «' + arr[si].name + '»?')) arr.splice(si, 1);
     if (a === 'i-up') mv(arr[si].items, ii, -1); if (a === 'i-down') mv(arr[si].items, ii, 1);
     if (a === 'i-del') arr[si].items.splice(ii, 1);
-    if (a === 'i-add') arr[si].items.push({ id: slug('item'), name: 'Новая позиция', price: 0 });
+    if (a === 'i-add') arr[si].items.push({ id: slug('item'), name: 'Новая позиция', price: 0, pricing: { mode: 'fixed' } });
     C.calc = cal; drawCalc();
+  });
+  $('#calcEd').addEventListener('input', updateCalcPricingPreviews);
+  $('#calcEd').addEventListener('change', function (e) {
+    if (e.target && e.target.name === 'pmode') {
+      var cal = readCalc(); C.calc = cal; drawCalc(); return;
+    }
+    updateCalcPricingPreviews();
+  });
+  $('#calcDimensionsEd').addEventListener('change', function (e) {
+    if (e.target && e.target.name === 'dimensionsEnabled') {
+      var d = readCalc(); C.calc = d; drawCalc();
+    }
   });
   $('#addStep').addEventListener('click', function () {
     var cal = readCalc(); cal.steps.push({ id: slug('step'), name: 'Новый шаг', type: 'radio', sub: '', items: [{ id: slug('item'), name: 'Вариант', price: 0 }] });

@@ -406,51 +406,222 @@
     { id: 'decor', name: 'Декор', type: 'multi', sub: 'Дополните композицию вазой, искусственной травой или белым щебнем.', items: [
       { id: 'vase', name: 'Гранитная ваза / лампада', price: 200 }, { id: 'grass', name: 'Искусственная трава / белый щебень', price: 80 }] }
   ];
+  var CALC_DIMENSIONS = { enabled: true, name: 'Размеры', sub: 'Укажите длину и ширину участка. Это необязательно — без размеров расчёт останется по базовым ценам.', unit: 'м', min: 0.1, max: 100, step: 0.1, allowSkip: true };
+  var DIMS = { length: '', width: '' };
   var Q = new URLSearchParams(location.search);
   var STEPS = [], S = {}, step = 0, MODEL = Q.get('model') || '', MODEL_CAT = Q.get('cat') || '';
   function visibleCats() { return (CAT.categories || []).filter(function (c) { return c.visible !== false; }); }
   function catOf(code) { var it = (CAT.items || []).filter(function (x) { return x.code === code; })[0]; return it ? it.cat : ''; }
-  function build() {
-    // шаг 1 «Памятник» = разделы каталога; дальше — шаги из админки; последний — контакты
-    var first = { id: 'monument', name: 'Памятник', type: 'radio', sub: 'Выберите форму — как в каталоге. Гранит и размеры согласуем лично.', catalog: true,
-      items: visibleCats().filter(function (c) { return c.calc !== false; }).map(function (c) { return { id: c.id, name: c.short || c.name, price: c.price == null ? null : +c.price }; }) };
-    STEPS = [first].concat(CALC.filter(function (s) { return s.id !== 'monument' && s.items && s.items.length; }))
-      .concat([{ id: '__contact', name: 'Контакты', type: 'contact' }]);
-    var old = S; S = {};
-    STEPS.forEach(function (s) {
-      if (s.type === 'contact') return;
-      var keep = old[s.id], ok = s.type === 'multi' ? (keep || []).filter(function (id) { return item(s, id); }) : (item(s, keep) ? keep : '');
-      S[s.id] = ok;
-    });
-    var mc = MODEL_CAT || (MODEL && catOf(MODEL));
-    if (mc && item(first, mc)) S.monument = mc;
-    if (step >= STEPS.length) step = 0;
+  function normalizeDimensionsConfig(raw) {
+    raw = raw || {};
+    var min = Number(raw.min), max = Number(raw.max), stepSize = Number(raw.step);
+    return {
+      enabled: raw.enabled !== false,
+      name: String(raw.name || 'Размеры'),
+      sub: String(raw.sub || 'Укажите длину и ширину участка. Это необязательно — без размеров расчёт останется по базовым ценам.'),
+      unit: String(raw.unit || 'м'),
+      min: Number.isFinite(min) && min > 0 ? min : 0.1,
+      max: Number.isFinite(max) && max > 0 ? max : 100,
+      step: Number.isFinite(stepSize) && stepSize > 0 ? stepSize : 0.1,
+      allowSkip: raw.allowSkip !== false
+    };
   }
-  function fmt(n) { return Number(n).toLocaleString('ru-RU'); }
+  function pricingConfig(it) {
+    var raw = it && it.pricing || {}, name = String(it && it.name || '');
+    var inferred = /(?:м²|м2|кв\.?\s*м)/i.test(name) ? 'area'
+      : /(?:м\.?\s*п\.?|погонн(?:ый|ых)?\s+метр)/i.test(name) ? 'linear' : 'fixed';
+    var mode = raw.mode || inferred, k = raw.coefficient || {};
+    mode = mode === 'area' || mode === 'linear' ? mode : 'fixed';
+    return {
+      mode: mode,
+      quantity: raw.quantity || (mode === 'area' ? 'area' : mode === 'linear' ? 'perimeter' : 'unit'),
+      coefficient: {
+        enabled: k.enabled === true,
+        formula: k.formula === 'linear' ? 'linear' : 'inverse',
+        basis: k.basis || 'area',
+        applyWhen: k.applyWhen || 'below',
+        reference: Number.isFinite(+k.reference) && +k.reference > 0 ? +k.reference : 4,
+        start: Number.isFinite(+k.start) && +k.start >= 0 ? +k.start : 1,
+        rate: Number.isFinite(+k.rate) && +k.rate >= 0 ? +k.rate : 0.15,
+        power: Number.isFinite(+k.power) && +k.power > 0 ? +k.power : 1,
+        min: Number.isFinite(+k.min) && +k.min >= 0 ? +k.min : 1,
+        max: Number.isFinite(+k.max) && +k.max > 0 ? +k.max : 2
+      }
+    };
+  }
+  function parseMeasure(value) {
+    if (value == null || String(value).trim() === '') return NaN;
+    return Number(String(value).trim().replace(',', '.'));
+  }
+  function getDimensions() {
+    var length = parseMeasure(DIMS.length), width = parseMeasure(DIMS.width), cfg = CALC_DIMENSIONS;
+    var valid = Number.isFinite(length) && Number.isFinite(width) &&
+      length >= cfg.min && width >= cfg.min && length <= cfg.max && width <= cfg.max;
+    if (!valid) return { provided: false, length: null, width: null, area: null, perimeter: null };
+    return {
+      provided: true,
+      length: length,
+      width: width,
+      area: length * width,
+      perimeter: 2 * (length + width)
+    };
+  }
+  function measureValue(basis, d) {
+    if (!d || !d.provided) return 0;
+    if (basis === 'perimeter') return d.perimeter;
+    if (basis === 'halfPerimeter') return d.perimeter / 2;
+    if (basis === 'length') return d.length;
+    if (basis === 'width') return d.width;
+    return d.area;
+  }
+  function itemCoefficient(cfg, d) {
+    var k = cfg && cfg.coefficient;
+    if (!k || !k.enabled || !d || !d.provided) return 1;
+    var value = measureValue(k.basis || 'area', d), reference = Math.max(0.01, Number(k.reference) || 4);
+    var diff = value - reference;
+    var active = k.applyWhen === 'both' || (k.applyWhen === 'below' && diff < 0) || (k.applyWhen === 'above' && diff > 0);
+    if (!active) return 1;
+    var factor = k.formula === 'inverse'
+      ? (Number(k.start) || 1) * Math.pow(reference / Math.max(0.01, value), Math.max(0.01, Number(k.power) || 1))
+      : (Number(k.start) || 1) + Math.abs(diff) * Math.max(0, Number(k.rate) || 0);
+    var min = Math.max(0, Number(k.min) || 0), max = Math.max(min, Number(k.max) || 2);
+    return Math.min(max, Math.max(min, factor));
+  }
+  function roundMoney(n) { return Math.round((Number(n) + Number.EPSILON) * 100) / 100; }
+  function calcItemPrice(it, d) {
+    var base = it && it.price != null ? Math.max(0, Number(it.price) || 0) : null;
+    var cfg = pricingConfig(it), dims = d || getDimensions();
+    if (base == null) return { amount: null, quantity: 0, unit: '', coefficient: 1, base: null, mode: cfg.mode };
+    if (cfg.mode === 'fixed' || !dims.provided) {
+      return { amount: roundMoney(base), quantity: 1, unit: cfg.mode === 'area' ? 'м²' : cfg.mode === 'linear' ? 'м.п.' : 'шт.', coefficient: 1, base: base, mode: cfg.mode };
+    }
+    var quantity = cfg.mode === 'area' ? dims.area : measureValue(cfg.quantity, dims);
+    if (!quantity || !Number.isFinite(quantity)) quantity = 1;
+    var coefficient = itemCoefficient(cfg, dims);
+    var unit = cfg.mode === 'area' || cfg.quantity === 'area' ? 'м²' : 'м.п.';
+    return {
+      amount: roundMoney(base * quantity * coefficient),
+      quantity: roundMoney(quantity),
+      unit: unit,
+      coefficient: roundMoney(coefficient),
+      base: base,
+      mode: cfg.mode
+    };
+  }
+  function fmt(n) { return Number(n).toLocaleString('ru-RU', { maximumFractionDigits: 2 }); }
+  function money(n) { return fmt(roundMoney(n)) + ' BYN'; }
+  function unitName(it) {
+    var p = pricingConfig(it);
+    if (p.mode === 'area' || p.quantity === 'area') return 'м²';
+    if (p.mode === 'linear') return 'м.п.';
+    return 'BYN';
+  }
   function item(s, id) { return (s.items || []).filter(function (x) { return x.id === id; })[0]; }
-  function priceLabel(it) { if (it.note) return it.note; if (it.price == null) return 'инд. расчёт'; return 'от ' + fmt(it.price); }
+  function priceLabel(it) {
+    if (it.note && (it.price == null || Number(it.price) === 0)) return it.note;
+    if (it.price == null) return 'инд. расчёт';
+    var p = pricingConfig(it), d = getDimensions(), out = calcItemPrice(it, d);
+    if (p.mode !== 'fixed') {
+      if (d.provided) return money(out.amount);
+      return 'от ' + fmt(it.price) + ' BYN/' + unitName(it);
+    }
+    if (it.note) return it.note;
+    return 'от ' + fmt(it.price);
+  }
   function individual() { return STEPS.some(function (s) { return s.type === 'radio' && item(s, S[s.id]) && item(s, S[s.id]).price == null; }); }
-  function total() {
-    var t = 0;
+  function selectedIds(s) { return s.type === 'multi' ? (S[s.id] || []) : (S[s.id] ? [S[s.id]] : []); }
+  function selectedBreakdown() {
+    var result = [];
     STEPS.forEach(function (s) {
-      if (s.type === 'contact') return;
-      (s.type === 'multi' ? S[s.id] : [S[s.id]]).forEach(function (id) { var it = item(s, id); if (it && it.price) t += +it.price; });
+      if (s.type === 'contact' || s.type === 'dimensions') return;
+      selectedIds(s).forEach(function (id) {
+        var it = item(s, id); if (!it) return;
+        var p = calcItemPrice(it, getDimensions());
+        result.push({
+          stepId: s.id, itemId: id, step: s.name, name: it.name,
+          price: p.amount, quantity: p.quantity, unit: p.unit, basePrice: p.base,
+          coefficient: p.coefficient, mode: p.mode
+        });
+      });
     });
-    return t;
+    return result;
+  }
+  function total() {
+    return roundMoney(selectedBreakdown().reduce(function (sum, row) {
+      return row.price == null ? sum : sum + Number(row.price || 0);
+    }, 0));
   }
   function summary() {
-    return STEPS.filter(function (s) { return s.type !== 'contact'; }).map(function (s) {
-      var ids = s.type === 'multi' ? S[s.id] : [S[s.id]];
-      return s.name + ': ' + (ids.map(function (id) { var it = item(s, id); return it ? it.name : ''; }).filter(Boolean).join(', ') || '—');
-    }).join('; ') + (MODEL ? '; Модель: ' + MODEL : '');
+    var d = getDimensions();
+    var lines = [];
+    if (d.provided) {
+      lines.push('Размеры участка: ' + fmt(d.length) + ' × ' + fmt(d.width) + ' ' + CALC_DIMENSIONS.unit +
+        '; площадь: ' + fmt(d.area) + ' м²; периметр: ' + fmt(d.perimeter) + ' м');
+    } else lines.push('Размеры участка: не указаны — использованы базовые цены');
+    selectedBreakdown().forEach(function (row) {
+      var line = row.step + ': ' + row.name + ' — ' + (row.price == null ? 'индивидуальный расчёт' : money(row.price));
+      if (row.mode !== 'fixed' && d.provided) {
+        line += ' (' + fmt(row.quantity) + ' ' + row.unit + ' × ' + fmt(row.basePrice) + ' × коэффициент ' + fmt(row.coefficient) + ')';
+      }
+      lines.push(line);
+    });
+    if (MODEL) lines.push('Модель: ' + MODEL);
+    return lines.join('\n');
   }
   var lastTotal = '';
   function drawTotal() {
     var tv = $('#tv'); if (!tv) return;
-    var any = STEPS.some(function (s) { return s.type !== 'contact' && (s.type === 'multi' ? S[s.id].length : S[s.id]); });
-    var txt = individual() ? 'Индивидуально' : any ? 'от ' + fmt(total()) + ' BYN' : '0 BYN';
+    var any = selectedBreakdown().length > 0;
+    var txt = individual() ? 'Индивидуально' : any ? (getDimensions().provided ? fmt(total()) + ' BYN' : 'от ' + fmt(total()) + ' BYN') : '0 BYN';
     if ($('#mtv')) $('#mtv').textContent = txt;
     if (txt !== lastTotal) { tv.textContent = txt; tv.classList.remove('bump'); void tv.offsetWidth; tv.classList.add('bump'); lastTotal = txt; }
+  }
+  function renderSummary() {
+    var box = $('#sum'); if (!box) return;
+    var d = getDimensions(), html = '';
+    if (d.provided) {
+      html += '<li><span class="lb">Размеры участка</span><div class="rw"><span>' +
+        fmt(d.length) + ' × ' + fmt(d.width) + ' ' + CALC_DIMENSIONS.unit + '</span><i>' +
+        fmt(d.area) + ' м² · периметр ' + fmt(d.perimeter) + ' м</i></div></li>';
+    } else if (CALC_DIMENSIONS.enabled) {
+      html += '<li><span class="lb">Размеры участка</span><div class="rw no"><span>не указаны</span><i>базовый расчёт</i></div></li>';
+    }
+    var breakdown = selectedBreakdown(), byStep = {};
+    breakdown.forEach(function (row) {
+      if (!byStep[row.stepId]) byStep[row.stepId] = [];
+      byStep[row.stepId].push(row);
+    });
+    STEPS.forEach(function (s, i) {
+      if (s.type === 'contact' || s.type === 'dimensions' || (individual() && i > 0)) return;
+      var rows = byStep[s.id] || [];
+      var rws = rows.length ? rows.map(function (row) {
+        var note = row.mode !== 'fixed'
+          ? (d.provided
+            ? fmt(row.quantity) + ' ' + row.unit + ' × ' + fmt(row.basePrice) + ' BYN' + (row.coefficient !== 1 ? ' · коэффициент ' + fmt(row.coefficient) : '')
+            : 'Размеры не указаны — базовая ставка за единицу')
+          : '';
+        var amount = row.price == null ? 'инд.' : (row.mode !== 'fixed' && !d.provided
+          ? 'от ' + fmt(row.price) + ' BYN/' + row.unit
+          : money(row.price));
+        return '<div class="rw"><span>' + row.name + '</span><i>' + amount + '</i></div>' +
+          (note ? '<div class="rw-note">' + note + '</div>' : '');
+      }).join('') : '<div class="rw no"><span>не выбрано</span></div>';
+      html += '<li><span class="lb">' + s.name + '</span>' + rws + '</li>';
+    });
+    box.innerHTML = html;
+    drawTotal();
+  }
+  function refreshDimensionsPreview() {
+    var d = getDimensions(), area = $('#dimArea'), perimeter = $('#dimPerimeter'), error = $('#dimError');
+    if (area) area.textContent = d.provided ? fmt(d.area) + ' м²' : '—';
+    if (perimeter) perimeter.textContent = d.provided ? fmt(d.perimeter) + ' м' : '—';
+    if (error) {
+      var hasLength = String(DIMS.length || '').trim() !== '', hasWidth = String(DIMS.width || '').trim() !== '';
+      error.textContent = hasLength && hasWidth && !d.provided
+        ? 'Проверьте размеры: допустимый диапазон ' + fmt(CALC_DIMENSIONS.min) + '–' + fmt(CALC_DIMENSIONS.max) + ' ' + CALC_DIMENSIONS.unit + '.'
+        : '';
+    }
+    renderSummary();
   }
   function go(n) {
     step = Math.max(0, Math.min(STEPS.length - 1, n)); render();
@@ -474,6 +645,33 @@
         '<p class="muted">Нажимая кнопку, вы соглашаетесь с политикой обработки персональных данных.</p></form><div class="ok" id="cok">Спасибо! Перезвоним в рабочее время и уточним детали.</div>';
       bindForm('#cform', '#cok', 'calc');
       $('#qback').onclick = function () { go(individual() ? 0 : step - 1); };
+    } else if (s.type === 'dimensions') {
+      var d = getDimensions(), unit = CALC_DIMENSIONS.unit;
+      $('#q').innerHTML = '<div class="qtitle">' + escHtml(CALC_DIMENSIONS.name) + (CALC_DIMENSIONS.allowSkip ? ' <span class="q-optional">(необязательно)</span>' : '') + '</div>' +
+        '<div class="qsub">' + escHtml(CALC_DIMENSIONS.sub) + '</div>' +
+        '<div class="dimensions-card">' +
+          '<div class="dimensions-fields">' +
+            '<label>Длина (' + escHtml(unit) + ')<input id="dimLength" type="number" min="' + CALC_DIMENSIONS.min + '" max="' + CALC_DIMENSIONS.max + '" step="' + CALC_DIMENSIONS.step + '" inputmode="decimal" autocomplete="off" placeholder="Например, 2.2" value="' + escHtml(DIMS.length) + '"></label>' +
+            '<span class="dimensions-multiply">×</span>' +
+            '<label>Ширина (' + escHtml(unit) + ')<input id="dimWidth" type="number" min="' + CALC_DIMENSIONS.min + '" max="' + CALC_DIMENSIONS.max + '" step="' + CALC_DIMENSIONS.step + '" inputmode="decimal" autocomplete="off" placeholder="Например, 1.4" value="' + escHtml(DIMS.width) + '"></label>' +
+          '</div>' +
+          '<div class="dimensions-result">' +
+            '<div><span>Площадь участка</span><b id="dimArea">' + (d.provided ? fmt(d.area) + ' м²' : '—') + '</b></div>' +
+            '<div><span>Периметр</span><b id="dimPerimeter">' + (d.provided ? fmt(d.perimeter) + ' м' : '—') + '</b></div>' +
+          '</div>' +
+          '<p class="dimensions-error" id="dimError"></p>' +
+          '<p class="dimensions-hint">' + (CALC_DIMENSIONS.allowSkip ? 'Размеры не обязательны. Если пропустить этот шаг, калькулятор покажет базовые цены без пересчёта по площади и периметру.' : 'Укажите оба размера, чтобы рассчитать стоимость по площади и периметру.') + '</p>' +
+          (CALC_DIMENSIONS.allowSkip ? '<button type="button" class="dimensions-skip" id="dimSkip">Не указывать размеры — пропустить</button>' : '') +
+        '</div>';
+      ['dimLength','dimWidth'].forEach(function (id) {
+        var input = $('#' + id);
+        if (!input) return;
+        input.addEventListener('input', function () {
+          DIMS[id === 'dimLength' ? 'length' : 'width'] = input.value;
+          refreshDimensionsPreview();
+        });
+      });
+      if ($('#dimSkip')) $('#dimSkip').onclick = function () { DIMS.length = ''; DIMS.width = ''; go(step + 1); };
     } else {
       var pick = s.catalog && S.monument && S.monument !== 'individual'
         ? '<a class="pick" href="/catalog#' + S.monument + '">' + (MODEL ? 'Модель ' + MODEL + ' · выбрать другую' : 'Выбрать модель в каталоге') + ' →</a>' : '';
@@ -499,31 +697,46 @@
     $('#prev').style.display = step ? '' : 'none';
     $('#next').innerHTML = (s.catalog && individual() ? 'Заказать звонок' : 'Далее') + ' <span class="arr">→</span>';
     if ($('#mnext')) { $('#mnext').innerHTML = $('#next').innerHTML; $('#mnext').style.display = s.type === 'contact' ? 'none' : ''; }
-    var html = '';
-    var indiv = individual();
-    STEPS.forEach(function (x, i) {
-      if (x.type === 'contact' || (indiv && i > 0)) return;
-      var ids = x.type === 'multi' ? S[x.id] : [S[x.id]];
-      var its = ids.map(function (id) { return item(x, id); }).filter(Boolean);
-      var rws = its.length ? its.map(function (it) {
-        var note = String(it.note || '').trim();
-        var hasPrice = it.price != null && Number(it.price) > 0;
-        var pr = hasPrice ? fmt(it.price) + ' BYN' : it.price == null ? (note || 'инд.') : note;
-        return '<div class="rw"><span>' + it.name + (i === 0 && MODEL ? ' · ' + MODEL : '') + '</span><i>' + pr + '</i></div>' +
-          (hasPrice && note ? '<div class="rw-note">' + note + '</div>' : '');
-      }).join('') : '<div class="rw no"><span>не выбрано</span></div>';
-      html += '<li><span class="lb">' + x.name + '</span>' + rws + '</li>';
+    renderSummary();
+  }
+  function build() {
+    // Шаг 1 — памятник из каталога; шаг 2 — необязательные размеры; далее — редактируемые шаги калькулятора.
+    var first = { id: 'monument', name: 'Памятник', type: 'radio', sub: 'Выберите форму — как в каталоге. Гранит и размеры согласуем лично.', catalog: true,
+      items: visibleCats().filter(function (c) { return c.calc !== false; }).map(function (c) { return { id: c.id, name: c.short || c.name, price: c.price == null ? null : +c.price }; }) };
+    var nextSteps = [first];
+    if (CALC_DIMENSIONS.enabled !== false) nextSteps.push({ id: '__dimensions', name: CALC_DIMENSIONS.name || 'Размеры', type: 'dimensions' });
+    STEPS = nextSteps.concat(CALC.filter(function (s) { return s.id !== 'monument' && s.items && s.items.length; }))
+      .concat([{ id: '__contact', name: 'Контакты', type: 'contact' }]);
+    var old = S; S = {};
+    STEPS.forEach(function (s) {
+      if (s.type === 'contact' || s.type === 'dimensions') return;
+      var keep = old[s.id], ok = s.type === 'multi' ? (keep || []).filter(function (id) { return item(s, id); }) : (item(s, keep) ? keep : '');
+      S[s.id] = ok;
     });
-    $('#sum').innerHTML = html;
-    drawTotal();
+    var mc = MODEL_CAT || (MODEL && catOf(MODEL));
+    if (mc && item(first, mc)) S.monument = mc;
+    if (step >= STEPS.length) step = 0;
+  }
+  function escHtml(value) {
+    return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
+      return { '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' }[ch];
+    });
   }
   if ($('#q')) {
     $('#prev').onclick = function () { if (step > 0) go(step - 1); };
-    var nextStep = function () { go(STEPS[step].catalog && individual() ? STEPS.length - 1 : step + 1); };
+    var nextStep = function () {
+      var current = STEPS[step];
+      if (current && current.type === 'dimensions' && !CALC_DIMENSIONS.allowSkip && !getDimensions().provided) {
+        var error = $('#dimError');
+        if (error) error.textContent = 'Укажите корректные длину и ширину участка, чтобы продолжить.';
+        return;
+      }
+      go(current.catalog && individual() ? STEPS.length - 1 : step + 1);
+    };
     $('#next').onclick = nextStep;
     if ($('#mnext')) $('#mnext').onclick = nextStep;
     // нижняя панель с ценой на телефоне — видна, пока на экране калькулятор
-    if ($('#mbar')) document.body.appendChild($('#mbar'));   // вне стекла: иначе position:fixed привязывается к панели
+    if ($('#mbar')) document.body.appendChild($('#mbar'));
     if ('IntersectionObserver' in window && $('#mbar')) new IntersectionObserver(function (es) {
       es.forEach(function (e) { $('#mbar').classList.toggle('on', e.isIntersecting); });
     }, { rootMargin: '-30% 0px -30% 0px' }).observe($('#calc .calc'));
@@ -629,7 +842,7 @@
       refreshWorksCarousel();
     }
     if (c.catalog && Array.isArray(c.catalog.categories)) { CAT = c.catalog; window.PAMYAT_CATALOG = CAT; document.dispatchEvent(new CustomEvent('pamyat:catalog', { detail: CAT })); }
-    if (c.calc && Array.isArray(c.calc.steps)) CALC = c.calc.steps;
+    if (c.calc && Array.isArray(c.calc.steps)) { CALC = c.calc.steps; CALC_DIMENSIONS = normalizeDimensionsConfig(c.calc.dimensions); }
     drawTeaser(); build(); render(); themes();
   }
   window.PAMYAT_CATALOG = CAT; window.pamyatThemes = themes;
@@ -659,7 +872,7 @@
       e.preventDefault();
       var fd = new FormData(f), btn = f.querySelector('button[type=submit]');
       var lead = { type: type, name: fd.get('name'), phone: fd.get('phone'), comment: fd.get('c') || '', source: location.href };
-      if (type === 'calc') { lead.price = individual() ? null : total(); lead.config = { summary: summary(), sel: S, model: MODEL }; }
+      if (type === 'calc') { lead.price = individual() ? null : total(); lead.config = { summary: summary(), sel: S, model: MODEL, dimensions: getDimensions(), calculations: selectedBreakdown() }; }
       function done() { f.style.display = 'none'; $(okSel).classList.add('on'); }
       if (window.PAMYAT_DEMO) return done();
       btn.disabled = true; btn.textContent = 'Отправляем…';
