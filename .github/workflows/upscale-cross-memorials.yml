@@ -53,7 +53,6 @@ jobs:
           fi
           chmod +x "$BIN"
           echo "REALESRGAN_BIN=$BIN" >> "$GITHUB_ENV"
-          "$BIN" -h
 
       - name: Install image output encoder
         run: npm install --no-save --no-package-lock sharp@0.34.3
