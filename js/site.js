@@ -572,7 +572,7 @@
   function drawTotal() {
     var tv = $('#tv'); if (!tv) return;
     var any = selectedBreakdown().length > 0;
-    var txt = individual() ? 'Индивидуально' : any ? 'от ' + fmt(total()) + ' BYN' : '0 BYN';
+    var txt = individual() ? 'Индивидуально' : any ? (getDimensions().provided ? fmt(total()) + ' BYN' : 'от ' + fmt(total()) + ' BYN') : '0 BYN';
     if ($('#mtv')) $('#mtv').textContent = txt;
     if (txt !== lastTotal) { tv.textContent = txt; tv.classList.remove('bump'); void tv.offsetWidth; tv.classList.add('bump'); lastTotal = txt; }
   }
