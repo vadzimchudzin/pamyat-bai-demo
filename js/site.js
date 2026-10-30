@@ -647,7 +647,7 @@
       $('#qback').onclick = function () { go(individual() ? 0 : step - 1); };
     } else if (s.type === 'dimensions') {
       var d = getDimensions(), unit = CALC_DIMENSIONS.unit;
-      $('#q').innerHTML = '<div class="qtitle">' + escHtml(CALC_DIMENSIONS.name) + ' <span class="q-optional">(необязательно)</span></div>' +
+      $('#q').innerHTML = '<div class="qtitle">' + escHtml(CALC_DIMENSIONS.name) + (CALC_DIMENSIONS.allowSkip ? ' <span class="q-optional">(необязательно)</span>' : '') + '</div>' +
         '<div class="qsub">' + escHtml(CALC_DIMENSIONS.sub) + '</div>' +
         '<div class="dimensions-card">' +
           '<div class="dimensions-fields">' +
@@ -660,7 +660,7 @@
             '<div><span>Периметр</span><b id="dimPerimeter">' + (d.provided ? fmt(d.perimeter) + ' м' : '—') + '</b></div>' +
           '</div>' +
           '<p class="dimensions-error" id="dimError"></p>' +
-          '<p class="dimensions-hint">Размеры не обязательны. Если пропустить этот шаг, калькулятор покажет базовые цены без пересчёта по площади и периметру.</p>' +
+          '<p class="dimensions-hint">' + (CALC_DIMENSIONS.allowSkip ? 'Размеры не обязательны. Если пропустить этот шаг, калькулятор покажет базовые цены без пересчёта по площади и периметру.' : 'Укажите оба размера, чтобы рассчитать стоимость по площади и периметру.') + '</p>' +
           (CALC_DIMENSIONS.allowSkip ? '<button type="button" class="dimensions-skip" id="dimSkip">Не указывать размеры — пропустить</button>' : '') +
         '</div>';
       ['dimLength','dimWidth'].forEach(function (id) {
