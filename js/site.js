@@ -829,7 +829,7 @@
       refreshWorksCarousel();
     }
     if (c.catalog && Array.isArray(c.catalog.categories)) { CAT = c.catalog; window.PAMYAT_CATALOG = CAT; document.dispatchEvent(new CustomEvent('pamyat:catalog', { detail: CAT })); }
-    if (c.calc && Array.isArray(c.calc.steps)) CALC = c.calc.steps;
+    if (c.calc && Array.isArray(c.calc.steps)) { CALC = c.calc.steps; CALC_DIMENSIONS = normalizeDimensionsConfig(c.calc.dimensions); }
     drawTeaser(); build(); render(); themes();
   }
   window.PAMYAT_CATALOG = CAT; window.pamyatThemes = themes;
