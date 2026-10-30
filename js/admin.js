@@ -225,7 +225,7 @@
     var oldK = raw.coefficient || {};
     return {
       mode: mode === 'area' || mode === 'linear' ? mode : 'fixed',
-      quantity: raw.quantity || 'perimeter',
+      quantity: raw.quantity || (mode === 'area' ? 'area' : mode === 'linear' ? 'perimeter' : 'unit'),
       coefficient: {
         enabled: oldK.enabled === true,
         formula: oldK.formula === 'inverse' ? 'inverse' : 'linear',
@@ -397,8 +397,8 @@
   });
   $('#calcEd').addEventListener('input', updateCalcPricingPreviews);
   $('#calcEd').addEventListener('change', updateCalcPricingPreviews);
-  $('#calcDimensionsEd').addEventListener('change', function () {
-    if (event.target && event.target.name === 'dimensionsEnabled') {
+  $('#calcDimensionsEd').addEventListener('change', function (e) {
+    if (e.target && e.target.name === 'dimensionsEnabled') {
       var d = readCalc(); C.calc = d; drawCalc();
     }
   });
