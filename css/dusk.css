@@ -1517,3 +1517,40 @@ body,h1,h2,h3,.logo,.live b,.mc .t b{font-variant-numeric:lining-nums proportion
   transform:scale(var(--photo-zoom,1))!important;transform-origin:center center!important;
   filter:saturate(1.01) contrast(1.025)!important;
 }
+
+
+/* Long option notes belong below the option row, never in the fixed price column. */
+#calc .summary #sum>li .rw{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) max-content;
+  align-items:start;
+  column-gap:12px;
+  width:100%;
+  min-width:0;
+  max-width:100%;
+  box-sizing:border-box;
+}
+#calc .summary #sum>li .rw>span{
+  min-width:0;
+  overflow-wrap:anywhere;
+  word-break:normal;
+  text-align:left;
+}
+#calc .summary #sum>li .rw>i{
+  justify-self:end;
+  white-space:nowrap;
+}
+#calc .summary #sum>li .rw-note{
+  display:block;
+  width:100%;
+  max-width:100%;
+  min-width:0;
+  margin:4px 0 2px;
+  color:var(--gold);
+  font-size:12px;
+  line-height:1.45;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  word-break:normal;
+  box-sizing:border-box;
+}
