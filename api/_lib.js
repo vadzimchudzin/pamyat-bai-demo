@@ -231,7 +231,7 @@ function leadKeyboard(id, currentStatus) {
   };
   const button = (status, callback) => ({
     // A separate green dot on the first line marks the active stage without the old checkmark label.
-    text: current === status ? '🟢\\n' + names[status] : names[status],
+    text: current === status ? '🟢\n' + names[status] : names[status],
     callback_data: callback + id
   });
   return { inline_keyboard: [
