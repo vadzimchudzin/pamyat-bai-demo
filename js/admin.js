@@ -854,14 +854,26 @@
   });
   $('#noteDelete').addEventListener('click', function () {
     if (!activeNoteId || !confirm('Удалить заметку «' + $('#noteTitle').value + '»?')) return;
-    api('/api/notes?id=' + encodeURIComponent(activeNoteId), { method: 'DELETE' }).then(function (d) {
-      if (!d.ok) return toast(d.error || 'Не удалось удалить заметку', true);
+    api('/api/notes?id=' + encodeURIComponent(activeNoteId) + '&version=' + encodeURIComponent(activeNoteVersion), { method: 'DELETE' }).then(function (d) {
+      if (!d.ok) {
+        if (d.status === 409 && d.note) {
+          var latestIndex = NOTES.findIndex(function (n) { return Number(n.id) === Number(d.note.id); });
+          if (latestIndex >= 0) NOTES[latestIndex] = d.note; else NOTES.unshift(d.note);
+          renderNotesList();
+          $('#noteMeta').textContent = 'Заметку уже обновил ' + (d.note.updated_by || 'другой сотрудник') + '. Обновите версию перед удалением.';
+          $('#noteReloadLatest').hidden = false;
+        }
+        return toast(d.error || 'Не удалось удалить заметку', true);
+      }
       NOTES = NOTES.filter(function (n) { return Number(n.id) !== Number(activeNoteId); });
       showNoteEditor(null);
       toast('Заметка удалена');
     });
   });
   $('#notesReload').addEventListener('click', loadNotes);
+  setInterval(function () {
+    if (!$('#app').hidden && $('#p-notes').classList.contains('on')) loadNotes();
+  }, 20000);
 
 
   /* ---------- финансовый отдел: прайс-лист ---------- */
