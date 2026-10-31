@@ -635,3 +635,14 @@ tr.new td:first-child{box-shadow:inset 3px 0 0 #9a3a24}
 .quantity-fixed{display:grid;gap:4px;align-content:start;padding:8px 10px;border:1px solid rgba(154,116,54,.18);border-radius:9px;background:rgba(154,116,54,.06);font-size:12px}
 .quantity-fixed b{font-size:12px;color:var(--ink)}
 .quantity-fixed span{color:var(--mut);font-size:11px}
+
+/* Calculator: hide browser-native number steppers (Chrome, Edge, Firefox). */
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}

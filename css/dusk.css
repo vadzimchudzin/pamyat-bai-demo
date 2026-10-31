@@ -1639,3 +1639,14 @@ html.lenis.lenis-smooth iframe{pointer-events:none}
   .dimensions-result b{font-size:20px}
   .summary li .rw-note{max-width:100%}
 }
+
+/* Calculator: hide browser-native number steppers (Chrome, Edge, Firefox). */
+input[type="number"] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
