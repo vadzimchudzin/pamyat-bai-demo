@@ -23,6 +23,7 @@ async function init() {
     await q(`create table if not exists leads (id serial primary key, created_at timestamptz default now(), type text, name text, phone text,
       comment text, price integer, config jsonb, source text, status text default 'новая', taken_by text, tg_msg_id bigint, history jsonb default '[]'::jsonb)`);
     await q(`create table if not exists admin_log (id serial primary key, at timestamptz default now(), action text, detail text, ip text, ok boolean default true)`);
+    await q(`create table if not exists team_notes (id serial primary key, title text not null default 'Новая заметка', body text not null default '', created_by text not null default '', updated_by text not null default '', created_at timestamptz default now(), updated_at timestamptz default now(), version integer not null default 1)`);
     await q(`create table if not exists price_catalog (
       id smallint primary key default 1 check (id=1),
       items jsonb not null default '[]'::jsonb,
