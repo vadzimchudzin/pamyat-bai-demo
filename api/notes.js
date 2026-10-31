@@ -71,9 +71,16 @@ module.exports = async (req, res) => {
 
     if (req.method === 'DELETE') {
       const id = Number.parseInt((req.query && req.query.id) || '0', 10);
-      if (!Number.isInteger(id) || id < 1) return L.send(res, 400, { ok: false, error: 'Некорректный номер заметки' });
-      const deleted = await L.q('delete from team_notes where id=$1 returning id', [id]);
-      if (!deleted.rows[0]) return L.send(res, 404, { ok: false, error: 'Заметка не найдена' });
+      const version = Number.parseInt((req.query && req.query.version) || '0', 10);
+      if (!Number.isInteger(id) || id < 1 || !Number.isInteger(version) || version < 1) {
+        return L.send(res, 400, { ok: false, error: 'Некорректный номер или версия заметки' });
+      }
+      const deleted = await L.q('delete from team_notes where id=$1 and version=$2 returning id', [id, version]);
+      if (!deleted.rows[0]) {
+        const latest = await L.q('select id,title,body,created_by,updated_by,created_at,updated_at,version from team_notes where id=$1', [id]);
+        if (!latest.rows[0]) return L.send(res, 404, { ok: false, error: 'Заметка не найдена' });
+        return L.send(res, 409, { ok: false, error: 'Заметку уже изменил другой сотрудник', note: noteRow(latest.rows[0]) });
+      }
       await L.log(req, 'Общие заметки', 'удалена заметка №' + id + ' · ' + session.u);
       return L.send(res, 200, { ok: true });
     }
