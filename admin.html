@@ -8,7 +8,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/admin.css?v=a26">
+<link rel="stylesheet" href="/css/admin.css?v=a27">
 </head>
 <body>
 <div class="bg" aria-hidden="true"></div>
@@ -44,6 +44,7 @@
       <button data-p="pricebook">Актуальный каталог цен</button>
       <button data-p="estimates">Сметы</button>
       <div class="nav-label">Система</div>
+      <button data-p="notes">Общие заметки</button>
       <button data-p="log">Журнал</button>
       <button data-p="security">Безопасность</button>
     </nav>
@@ -151,6 +152,41 @@
       </section>
     </section>
 
+    <!-- общие заметки команды -->
+    <section class="pane" id="p-notes">
+      <header>
+        <h2>Общие заметки</h2>
+        <div class="acts wrap">
+          <button class="btn line sm" id="notesReload">Обновить</button>
+          <button class="btn gold sm" id="noteNew">+ Новая заметка</button>
+        </div>
+      </header>
+      <p class="hint">Общее рабочее пространство команды. Все сотрудники с доступом в админку могут создавать, редактировать и удалять заметки. Список синхронизируется автоматически каждые 20 секунд; автор и время последнего изменения отображаются у каждой записи.</p>
+      <div class="notes-layout">
+        <aside class="card notes-list" id="notesList"><p class="empty">Загрузка заметок…</p></aside>
+        <section class="card notes-editor" id="noteEditor" hidden>
+          <div class="notes-editor-head">
+            <label class="notes-title">Заголовок заметки
+              <input id="noteTitle" maxlength="160" placeholder="Например, задачи на эту неделю">
+            </label>
+            <div class="acts wrap">
+              <button class="btn line sm" id="noteDelete" type="button">Удалить</button>
+              <button class="btn gold sm" id="noteSave" type="button">Сохранить</button>
+            </div>
+          </div>
+          <textarea id="noteBody" rows="18" maxlength="20000" placeholder="Запишите сюда информацию для команды…"></textarea>
+          <div class="notes-editor-foot">
+            <span id="noteMeta" class="notes-meta">Новая заметка</span>
+            <button class="btn line sm" id="noteReloadLatest" type="button" hidden>Загрузить свежую версию</button>
+          </div>
+        </section>
+        <div class="card notes-empty" id="notesEmpty">
+          <b>Выберите заметку</b>
+          <span>Откройте запись слева или создайте новую. Изменения становятся доступны всей команде после сохранения.</span>
+        </div>
+      </div>
+    </section>
+
     <!-- журнал -->
     <section class="pane" id="p-log">
       <header><h2>Журнал</h2><button class="btn line sm" id="logReload">Обновить</button></header>
@@ -171,6 +207,6 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="/js/admin.js?v=a20"></script>
+<script src="/js/admin.js?v=a22"></script>
 </body>
 </html>
