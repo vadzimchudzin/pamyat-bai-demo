@@ -230,8 +230,8 @@ function leadKeyboard(id, currentStatus) {
     'отказ':'Отказ'
   };
   const button = (status, callback) => ({
-    // Plain text marker: avoid the ▶ glyph that Telegram renders as a blue media icon.
-    text: current === status ? '✓ СЕЙЧАС: ' + names[status] : names[status],
+    // A separate green dot on the first line marks the active stage without the old checkmark label.
+    text: current === status ? '🟢\n' + names[status] : names[status],
     callback_data: callback + id
   });
   return { inline_keyboard: [
