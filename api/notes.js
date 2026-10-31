@@ -2,10 +2,10 @@
 const L = require('./_lib');
 
 function cleanTitle(value) {
-  return String(value == null ? '' : value).replace(/[\\u0000-\\u001f]/g, ' ').trim().slice(0, 160);
+  return String(value == null ? '' : value).split(String.fromCharCode(0)).join('').trim().slice(0, 160);
 }
 function cleanBody(value) {
-  return String(value == null ? '' : value).replace(/\\u0000/g, '').slice(0, 20000);
+  return String(value == null ? '' : value).split(String.fromCharCode(0)).join('').slice(0, 20000);
 }
 function noteRow(row) {
   return row ? {
