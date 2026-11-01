@@ -426,29 +426,9 @@
       allowSkip: raw.allowSkip !== false
     };
   }
-  function pricingConfig(it) {
-    var raw = it && it.pricing || {}, name = String(it && it.name || '');
-    var inferred = /(?:м²|м2|кв\.?\s*м)/i.test(name) ? 'area'
-      : /(?:м\.?\s*п\.?|погонн(?:ый|ых)?\s+метр)/i.test(name) ? 'linear' : 'fixed';
-    var mode = raw.mode || inferred, k = raw.coefficient || {};
-    mode = mode === 'area' || mode === 'linear' ? mode : 'fixed';
-    return {
-      mode: mode,
-      quantity: raw.quantity || (mode === 'area' ? 'area' : mode === 'linear' ? 'perimeter' : 'unit'),
-      coefficient: {
-        enabled: k.enabled === true,
-        formula: k.formula === 'linear' ? 'linear' : 'inverse',
-        basis: k.basis || 'area',
-        applyWhen: k.applyWhen || 'below',
-        reference: Number.isFinite(+k.reference) && +k.reference > 0 ? +k.reference : 4,
-        start: Number.isFinite(+k.start) && +k.start >= 0 ? +k.start : 1,
-        rate: Number.isFinite(+k.rate) && +k.rate >= 0 ? +k.rate : 0.15,
-        power: Number.isFinite(+k.power) && +k.power > 0 ? +k.power : 1,
-        min: Number.isFinite(+k.min) && +k.min >= 0 ? +k.min : 1,
-        max: Number.isFinite(+k.max) && +k.max > 0 ? +k.max : 2
-      }
-    };
-  }
+  var PP = window.PamyatPricing;
+  var CALC_BASE = PP.normalizeBase(null);
+  function pricingConfig(it) { return PP.normalizePricing(it); }
   function parseMeasure(value) {
     if (value == null || String(value).trim() === '') return NaN;
     return Number(String(value).trim().replace(',', '.'));
@@ -466,52 +446,15 @@
       perimeter: 2 * (length + width)
     };
   }
-  function measureValue(basis, d) {
-    if (!d || !d.provided) return 0;
-    if (basis === 'perimeter') return d.perimeter;
-    if (basis === 'halfPerimeter') return d.perimeter / 2;
-    if (basis === 'length') return d.length;
-    if (basis === 'width') return d.width;
-    return d.area;
-  }
-  function itemCoefficient(cfg, d) {
-    var k = cfg && cfg.coefficient;
-    if (!k || !k.enabled || !d || !d.provided) return 1;
-    var value = measureValue(k.basis || 'area', d), reference = Math.max(0.01, Number(k.reference) || 4);
-    var diff = value - reference;
-    var active = k.applyWhen === 'both' || (k.applyWhen === 'below' && diff < 0) || (k.applyWhen === 'above' && diff > 0);
-    if (!active) return 1;
-    var factor = k.formula === 'inverse'
-      ? (Number(k.start) || 1) * Math.pow(reference / Math.max(0.01, value), Math.max(0.01, Number(k.power) || 1))
-      : (Number(k.start) || 1) + Math.abs(diff) * Math.max(0, Number(k.rate) || 0);
-    var min = Math.max(0, Number(k.min) || 0), max = Math.max(min, Number(k.max) || 2);
-    return Math.min(max, Math.max(min, factor));
-  }
   function roundMoney(n) { return Math.round((Number(n) + Number.EPSILON) * 100) / 100; }
   function calcItemPrice(it, d) {
-    var base = it && it.price != null ? Math.max(0, Number(it.price) || 0) : null;
-    var cfg = pricingConfig(it), dims = d || getDimensions();
-    if (base == null) return { amount: null, quantity: 0, unit: '', coefficient: 1, base: null, mode: cfg.mode };
-    if (cfg.mode === 'fixed' || !dims.provided) {
-      return { amount: roundMoney(base), quantity: 1, unit: cfg.mode === 'area' ? 'м²' : cfg.mode === 'linear' ? 'м.п.' : 'шт.', coefficient: 1, base: base, mode: cfg.mode };
-    }
-    var quantity = cfg.mode === 'area' ? dims.area : measureValue(cfg.quantity, dims);
-    if (!quantity || !Number.isFinite(quantity)) quantity = 1;
-    var coefficient = itemCoefficient(cfg, dims);
-    var unit = cfg.mode === 'area' || cfg.quantity === 'area' ? 'м²' : 'м.п.';
-    return {
-      amount: roundMoney(base * quantity * coefficient),
-      quantity: roundMoney(quantity),
-      unit: unit,
-      coefficient: roundMoney(coefficient),
-      base: base,
-      mode: cfg.mode
-    };
+    return PP.calcItem(it, d || getDimensions(), { base: CALC_BASE });
   }
   function fmt(n) { return Number(n).toLocaleString('ru-RU', { maximumFractionDigits: 2 }); }
   function money(n) { return fmt(roundMoney(n)) + ' BYN'; }
   function unitName(it) {
     var p = pricingConfig(it);
+    if (p.mode === 'curve') return 'BYN';
     if (p.mode === 'area' || p.quantity === 'area') return 'м²';
     if (p.mode === 'linear') return 'м.п.';
     return 'BYN';
@@ -521,6 +464,9 @@
     if (it.note && (it.price == null || Number(it.price) === 0)) return it.note;
     if (it.price == null) return 'инд. расчёт';
     var p = pricingConfig(it), d = getDimensions(), out = calcItemPrice(it, d);
+    if (p.mode === 'curve') {
+      return d.provided ? money(out.amount) : 'от ' + fmt(out.amount) + ' BYN';
+    }
     if (p.mode !== 'fixed') {
       if (d.provided) return money(out.amount);
       return 'от ' + fmt(it.price) + ' BYN/' + unitName(it);
@@ -540,7 +486,8 @@
         result.push({
           stepId: s.id, itemId: id, step: s.name, name: it.name,
           price: p.amount, quantity: p.quantity, unit: p.unit, basePrice: p.base,
-          coefficient: p.coefficient, mode: p.mode
+          coefficient: p.coefficient, mode: p.mode,
+          mainAmount: p.mainAmount, trimAmount: p.trimAmount, note: p.note || ''
         });
       });
     });
@@ -560,7 +507,10 @@
     } else lines.push('Размеры участка: не указаны — использованы базовые цены');
     selectedBreakdown().forEach(function (row) {
       var line = row.step + ': ' + row.name + ' — ' + (row.price == null ? 'индивидуальный расчёт' : money(row.price));
-      if (row.mode !== 'fixed' && d.provided) {
+      if (row.mode === 'curve') {
+        if (row.trimAmount > 0) line += ' (в т.ч. подрезка плитки ' + money(row.trimAmount) + ')';
+        if (row.note) line += ' [' + row.note + ']';
+      } else if (row.mode !== 'fixed' && d.provided) {
         line += ' (' + fmt(row.quantity) + ' ' + row.unit + ' × ' + fmt(row.basePrice) + ' × коэффициент ' + fmt(row.coefficient) + ')';
       }
       lines.push(line);
@@ -595,12 +545,16 @@
       if (s.type === 'contact' || s.type === 'dimensions' || (individual() && i > 0)) return;
       var rows = byStep[s.id] || [];
       var rws = rows.length ? rows.map(function (row) {
-        var note = row.mode !== 'fixed'
+        var note = row.mode === 'curve'
+          ? [row.trimAmount > 0 ? 'в т.ч. подрезка плитки ' + money(row.trimAmount) : '', row.note].filter(Boolean).join(' · ')
+          : row.mode !== 'fixed'
           ? (d.provided
             ? fmt(row.quantity) + ' ' + row.unit + ' × ' + fmt(row.basePrice) + ' BYN' + (row.coefficient !== 1 ? ' · коэффициент ' + fmt(row.coefficient) : '')
             : 'Размеры не указаны — базовая ставка за единицу')
           : '';
-        var amount = row.price == null ? 'инд.' : (row.mode !== 'fixed' && !d.provided
+        var amount = row.price == null ? 'инд.' : (row.mode === 'curve' && !d.provided
+          ? 'от ' + money(row.price)
+          : row.mode !== 'fixed' && row.mode !== 'curve' && !d.provided
           ? 'от ' + fmt(row.price) + ' BYN/' + row.unit
           : money(row.price));
         return '<div class="rw"><span>' + row.name + '</span><i>' + amount + '</i></div>' +
@@ -842,7 +796,7 @@
       refreshWorksCarousel();
     }
     if (c.catalog && Array.isArray(c.catalog.categories)) { CAT = c.catalog; window.PAMYAT_CATALOG = CAT; document.dispatchEvent(new CustomEvent('pamyat:catalog', { detail: CAT })); }
-    if (c.calc && Array.isArray(c.calc.steps)) { CALC = c.calc.steps; CALC_DIMENSIONS = normalizeDimensionsConfig(c.calc.dimensions); }
+    if (c.calc && Array.isArray(c.calc.steps)) { CALC = c.calc.steps; CALC_DIMENSIONS = normalizeDimensionsConfig(c.calc.dimensions); CALC_BASE = PP.normalizeBase(c.calc.base); }
     drawTeaser(); build(); render(); themes();
   }
   window.PAMYAT_CATALOG = CAT; window.pamyatThemes = themes;
