@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/admin.css?v=a27">
+<link rel="stylesheet" href="/css/calc-admin.css?v=k1">
 </head>
 <body>
 <div class="bg" aria-hidden="true"></div>
@@ -69,7 +70,8 @@
     <!-- калькулятор -->
     <section class="pane" id="p-calc">
       <header><h2>Калькулятор</h2><div class="acts"><label class="chk price-sync"><input type="checkbox" id="sitePriceSync"> Использовать актуальный каталог цен</label><button class="btn line sm" id="addStep">+ Шаг</button><button class="btn gold sm" data-save="calc">Сохранить</button></div></header>
-      <p class="hint"><b>Шаг 1 «Памятник» берётся из раздела «Каталог» автоматически.</b> Размеры автоматически вставляются вторым необязательным шагом. Для каждой позиции можно задать фиксированную цену, погонный/квадратный метр и собственную формулу коэффициента для небольших участков.</p>
+      <p class="hint"><b>Шаг 1 «Памятник» берётся из раздела «Каталог» автоматически.</b> Размеры вставляются вторым необязательным шагом. Для каждой позиции можно задать фиксированную цену или расчёт «по размеру участка»: затраты, резерв, наценка, подрезка плитки — и сразу увидеть кривую цен относительно базовой точки.</p>
+      <div class="card calc-base-admin" id="calcBaseEd"></div>
       <div class="card calc-dimensions-admin" id="calcDimensionsEd"></div>
       <div id="calcEd"></div>
     </section>
@@ -207,6 +209,9 @@
 </div>
 
 <div class="toast" id="toast" hidden></div>
-<script src="/js/admin.js?v=a22"></script>
+<script src="/js/pricing.js?v=p1"></script>
+<script src="/js/admin.js?v=a24"></script>
+<script src="/js/admin-calc.js?v=k1"></script>
+<script src="/js/admin-notes.js?v=n1"></script>
 </body>
 </html>

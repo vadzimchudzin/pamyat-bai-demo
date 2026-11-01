@@ -1,0 +1,70 @@
+/* Калькулятор в админке: базовая точка, расчёт по размеру участка, график кривой цен */
+.calc-base-admin{border-color:rgba(154,116,54,.32);background:linear-gradient(135deg,rgba(154,116,54,.08),rgba(255,255,255,.02))}
+.base-grid{display:grid;grid-template-columns:repeat(3,minmax(140px,1fr));gap:12px;align-items:end}
+.base-facts{grid-column:1/-1;display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--mut)}
+.base-facts b{color:var(--ink)}
+.nf{display:grid;gap:5px;font-size:12px;color:var(--mut);align-content:start;min-width:0}
+.nf>span{font-weight:600;color:var(--ink);font-size:12px}
+.nf input,.nf select{padding:8px 10px;font-size:13px}
+.nf small{font-size:11px;line-height:1.4;color:var(--dim)}
+.calc-help{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.calc-help summary{cursor:pointer;font-weight:600;font-size:13px;color:var(--gold)}
+.calc-help ol{margin:10px 0 0 20px;display:grid;gap:7px;font-size:13px;line-height:1.55;color:var(--mut)}
+.calc-help b{color:var(--ink)}
+
+.calc-price-ro{background:rgba(154,116,54,.09)!important;font-weight:700;cursor:default}
+.calc-it.is-curve{padding-bottom:14px}
+.curve-panel{margin:10px 0 2px;padding:14px;border:1px solid rgba(154,116,54,.22);border-radius:14px;background:rgba(255,252,246,.6)}
+.curve-warn{margin-bottom:12px;padding:10px 12px;border-radius:10px;background:rgba(196,126,50,.13);color:#7a4a14;font-size:12px;line-height:1.5}
+.curve-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.curve-grid fieldset{border:1px solid var(--line);border-radius:12px;padding:10px 12px 12px;display:grid;gap:10px;align-content:start;min-width:0;background:rgba(255,255,255,.55)}
+.curve-grid legend{padding:0 6px;font:600 12px var(--sans);color:var(--gold)}
+.curve-grid .fit{display:grid;gap:6px}
+.curve-grid .fit .btn{justify-self:start}
+.trim-set.off{opacity:.55}
+.trim-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.trim-grid .nf input:disabled{background:#eee6d8;cursor:not-allowed}
+.curve-out{margin-top:16px;display:grid;gap:12px}
+.curve-out h4{font:600 13px var(--sans);color:var(--ink);margin:0 0 8px}
+.curve-cols{display:grid;grid-template-columns:minmax(300px,5fr) minmax(320px,6fr);gap:18px;align-items:start}
+.bd-table{font-size:12px;width:100%}
+.bd-table td{padding:6px 6px;border-bottom:1px solid var(--line);vertical-align:top}
+.bd-table td small{display:block;margin:2px 0 0;font-size:11px;color:var(--dim)}
+.bd-table td:nth-child(2){color:var(--mut)}
+.bd-table .amt{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bd-table .big{font-size:16px;color:var(--gold)}
+.chart-bar{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:6px}
+.chart-bar h4{margin:0}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:#fff}
+.seg button{border:0;background:none;padding:5px 11px;font:500 11px var(--sans);color:var(--mut);cursor:pointer}
+.seg button.on{background:linear-gradient(180deg,#c9a46a,#9a7436);color:#fff}
+.chart-box{border:1px solid var(--line);border-radius:12px;background:#fff;padding:6px 4px 2px}
+.curve-svg{width:100%;height:auto;display:block;font-family:var(--sans)}
+.curve-svg .gl{stroke:rgba(70,52,32,.1);stroke-width:1}
+.curve-svg .ax{fill:var(--dim);font-size:11px}
+.curve-svg .axt{fill:var(--mut);font-size:11px}
+.curve-svg .axis{stroke:rgba(70,52,32,.35)}
+.curve-svg .price{fill:none;stroke:#9a7436;stroke-width:3;stroke-linejoin:round;stroke-linecap:round}
+.curve-svg .cost{fill:none;stroke:#8b8378;stroke-width:2;stroke-dasharray:6 5}
+.curve-svg .basel{stroke:#b8924f;stroke-width:1.2;stroke-dasharray:3 4}
+.curve-svg .basep{fill:#fff;stroke:#9a7436;stroke-width:3}
+.curve-svg .basetx{fill:var(--ink);font-size:12px;font-weight:700;paint-order:stroke;stroke:#fff;stroke-width:4px;stroke-linejoin:round}
+.curve-svg .hv line{stroke:#2a241c;stroke-width:1;opacity:.45}
+.curve-svg .hv circle{fill:#2a241c}
+.curve-svg .hit{fill:transparent;cursor:crosshair}
+.chart-legend{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:11px;color:var(--mut)}
+.lg:before{content:"";display:inline-block;width:18px;height:0;border-top:3px solid #9a7436;vertical-align:middle;margin-right:5px}
+.lg.cost:before{border-top:2px dashed #8b8378}
+.lg.base:before{width:9px;height:9px;border:3px solid #9a7436;border-radius:50%;background:#fff;vertical-align:-2px}
+.readout{flex:1 1 100%;min-height:18px;font-size:12px;color:var(--ink)}
+.size-table{min-width:560px;font-size:12px}
+.size-table th,.size-table td{padding:6px 8px}
+.size-table td:not(:first-child),.size-table th:not(:first-child){text-align:right;font-variant-numeric:tabular-nums}
+.size-table tr.base td{background:rgba(154,116,54,.1)}
+.size-table i{font-style:normal;font-size:10px;color:var(--gold);margin-left:4px;text-transform:uppercase;letter-spacing:.08em}
+@media(max-width:1180px){.curve-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.curve-cols{grid-template-columns:1fr}}
+@media(max-width:860px){.base-grid{grid-template-columns:repeat(2,minmax(120px,1fr))}}
+@media(max-width:560px){.curve-grid,.base-grid,.trim-grid{grid-template-columns:1fr}}
+.calc-colh,.it-main{grid-template-columns:minmax(170px,1.5fr) 120px minmax(130px,1fr) 185px 112px}
+@media(max-width:1100px){.calc-colh,.it-main{grid-template-columns:minmax(150px,1.5fr) 100px minmax(115px,1fr) 170px 106px}}
+@media(max-width:860px){.it-main{grid-template-columns:1fr 1fr}.calc-colh{display:none}}

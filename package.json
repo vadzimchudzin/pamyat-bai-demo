@@ -2,6 +2,9 @@
   "name": "pamyat-bai",
   "private": true,
   "description": "ПАМЯТЬ.БАЙ — сайт и админка",
+  "scripts": {
+    "test": "node --test tests/*.test.js"
+  },
   "engines": {
     "node": ">=18"
   },
