@@ -775,8 +775,8 @@
       $('#worksGrid').innerHTML = c.works.map(function (w) {
         w = w || {};
         var defaults = workPresentationDefaults(w);
-        var caption = String(w.caption || '').trim() || defaults.caption;
-        var description = String(w.description || '').trim() || defaults.description;
+        var caption = String(w.caption || '').trim() || (w.presentationEdited ? '' : defaults.caption);
+        var description = String(w.description || '').trim() || (w.presentationEdited ? '' : defaults.description);
         var badge = String(w.badgeText || '').trim();
         var color = workBadgeColor(w.badgeColor);
         var cropX = workCrop(w.cropX), cropY = workCrop(w.cropY), zoom = workZoom(w.zoom);

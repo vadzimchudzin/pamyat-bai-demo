@@ -9,6 +9,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="/css/admin.css?v=a27">
+<link rel="stylesheet" href="/css/admin-works.css?v=1">
 <link rel="stylesheet" href="/css/calc-admin.css?v=k1">
 </head>
 <body>
@@ -79,7 +80,7 @@
     <!-- примеры работ -->
     <section class="pane" id="p-works">
       <header><h2>Примеры работ</h2><div class="acts"><label class="btn line sm">+ Загрузить фото<input type="file" id="worksFile" accept="image/*" multiple hidden></label><button class="btn gold sm" data-save="works">Сохранить</button></div></header>
-      <p class="hint">Фото автоматически заполняет карточку одинакового размера. Настройте кадр по горизонтали и вертикали и масштаб от 50% до 220%. При открытии карточки посетитель увидит исходное фото целиком. После настройки нажмите «Сохранить».</p>
+      <p class="hint">Рамка в карточке показывает ровно то, что увидит посетитель. Тяните фото мышью, меняйте масштаб ползунком (50–220%), правьте заголовок и описание — пустое поле остаётся пустым. Если фото не грузится, нажмите «Заменить фото» или «Перенести фото на сайт». После настройки нажмите «Сохранить».</p>
       <div class="works" id="worksEd"></div>
     </section>
 
@@ -210,7 +211,8 @@
 
 <div class="toast" id="toast" hidden></div>
 <script src="/js/pricing.js?v=p1"></script>
-<script src="/js/admin.js?v=a24"></script>
+<script src="/js/admin.js?v=a25"></script>
+<script src="/js/admin-works.js?v=1"></script>
 <script src="/js/admin-calc.js?v=k1"></script>
 <script src="/js/admin-notes.js?v=n1"></script>
 </body>

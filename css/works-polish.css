@@ -62,3 +62,7 @@
   #worksCarousel .works-prev{left:12px!important}
   #worksCarousel .works-next{right:auto!important;left:calc(84vw - 52px)!important}
 }
+
+/* ---------- кадр: масштаб считается от точки «кадра» X/Y — как в редакторе админки ---------- */
+#worksCarousel .work .mat .work-photo-main,
+#worksCarousel .work:hover .mat .work-photo-main{transform-origin:var(--crop-x,50%) var(--crop-y,50%)!important}
