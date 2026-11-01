@@ -318,77 +318,7 @@
   if (lbx) lbx.addEventListener('click', function () { lbx.classList.remove('on'); });
   addEventListener('keydown', function (e) { if (e.key === 'Escape' && lbx) lbx.classList.remove('on'); });
 
-  /* ---------- визуализация установки (компактная, по скроллу) ---------- */
-  var story = $('#story');
-  if (story) (function () {
-    var cv = $('canvas', story), ctx = cv.getContext('2d');
-    var items = $$('.sc-item', story), rail = $('.rail', story), fill = $('.rail-line i', story);
-    var chap = $('.sc-chapter', story), num = $('.sc-n', story);
-    var small = matchMedia('(max-width: 820px)').matches;
-    var list = window.STORY_FRAMES || null;                       // превью: кадры вшиты
-    var N = list ? list.length : +story.dataset.count;
-    var base = small ? story.dataset.framesM : story.dataset.frames;
-    var scale = list ? (N - 1) / 245 : 1;                          // кадры каталога 0..245
-    var imgs = new Array(N), cur = -1, want = 0;
-    function url(i) { return list ? list[i] : base + 'f' + String(i).padStart(4, '0') + '.webp'; }
-    function load(i) {
-      if (imgs[i]) return;
-      var im = new Image(); im.decoding = 'async'; im.src = url(i); imgs[i] = im;
-      im.onload = function () { if (Math.abs(i - want) < 3) draw(want, true); };
-    }
-    // прогрессивная загрузка: каждый 8-й, потом остальные
-    for (var s = 0; s < N; s += 8) load(s);
-    setTimeout(function () { for (var i = 0; i < N; i++) load(i); }, 1200);
-
-    function size() {
-      var r = cv.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1);
-      cv.width = Math.round(r.width * d); cv.height = Math.round(r.height * d); cur = -1; draw(want, true);
-    }
-    function nearest(i) {
-      for (var k = 0; k < N; k++) {
-        var a = imgs[i - k], b = imgs[i + k];
-        if (a && a.complete && a.naturalWidth) return a;
-        if (b && b.complete && b.naturalWidth) return b;
-      }
-      return null;
-    }
-    function draw(i, force) {
-      if (i === cur && !force) return;
-      var im = nearest(i); if (!im) return;
-      cur = i;
-      var cw = cv.width, ch = cv.height, ir = im.naturalWidth / im.naturalHeight, cr = cw / ch, w, h;
-      if (cr > ir) { w = cw; h = cw / ir; } else { h = ch; w = ch * ir; }
-      ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2, w, h);
-    }
-    // кнопки этапов
-    items.forEach(function (it, k) {
-      var b = document.createElement('button'); b.type = 'button'; b.textContent = it.dataset.chapter;
-      b.addEventListener('click', function () {
-        var p = (+it.dataset.f) / 245, r = story.getBoundingClientRect();
-        var span = story.offsetHeight - $('.story-sticky', story).offsetHeight;
-        smoothPageScroll(scrollY + r.top + p * span + 2, { duration: 0.82 });
-      });
-      rail.appendChild(b);
-    });
-    var btns = $$('button', rail);
-    function tick() {
-      var r = story.getBoundingClientRect();
-      var span = story.offsetHeight - $('.story-sticky', story).offsetHeight;
-      var p = Math.min(1, Math.max(0, -r.top / Math.max(1, span)));
-      var f = p * 245;                                  // кадр в шкале оригинала
-      want = Math.round(f * scale);
-      draw(want);
-      var k = 0; items.forEach(function (it, j) { if (f >= +it.dataset.f) k = j; });
-      items.forEach(function (it, j) { it.classList.toggle('on', j === k); });
-      btns.forEach(function (b, j) { b.classList.toggle('on', j === k); });
-      chap.textContent = items[k].dataset.chapter; num.textContent = String(k + 1).padStart(2, '0');
-      fill.style.width = (p * 100).toFixed(1) + '%';
-    }
-    var raf = 0;
-    addEventListener('scroll', function () { if (!raf) raf = requestAnimationFrame(function () { raf = 0; tick(); }); }, { passive: true });
-    addEventListener('resize', size);
-    size(); tick();
-  })();
+  /* ---------- визуализация установки: см. js/story.js ---------- */
 
   /* ---------- данные: каталог и калькулятор (из админки, иначе — по умолчанию) ---------- */
   var CAT = window.PAMYAT_CATALOG_DEFAULT || { categories: [], items: [] };
