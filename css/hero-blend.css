@@ -1,0 +1,46 @@
+/*
+  Hero → "Примеры работ": убираем жёсткий шов.
+  0) причина шва: параллакс канваса (site.js) сдвигает картинку вверх до 38px, внизу открывается пустая полоса — градиент делаем полностью непрозрачным на последних 52px.
+  1) маска у .hero отключена (в части браузеров она «обрезала» картинку резкой линией);
+  2) вместо неё — плавный градиент (smoothstep) поверх нижней части hero;
+  3) цвет градиента продолжается в начале #works и растворяется в общем фоне.
+*/
+:root{--hero-fade:236,224,208}
+.hero{
+  -webkit-mask-image:none!important;mask-image:none!important;
+  background:transparent!important
+}
+.hero:after{
+  content:""!important;position:absolute!important;left:0!important;right:0!important;bottom:-1px!important;top:auto!important;
+  height:clamp(200px,42%,380px)!important;z-index:2!important;pointer-events:none!important;
+  background:linear-gradient(to bottom,
+    rgba(var(--hero-fade),0) 0%,
+    rgba(var(--hero-fade),0.028) calc((100% - 52px)*0.1),
+    rgba(var(--hero-fade),0.104) calc((100% - 52px)*0.2),
+    rgba(var(--hero-fade),0.216) calc((100% - 52px)*0.3),
+    rgba(var(--hero-fade),0.352) calc((100% - 52px)*0.4),
+    rgba(var(--hero-fade),0.5) calc((100% - 52px)*0.5),
+    rgba(var(--hero-fade),0.648) calc((100% - 52px)*0.6),
+    rgba(var(--hero-fade),0.784) calc((100% - 52px)*0.7),
+    rgba(var(--hero-fade),0.896) calc((100% - 52px)*0.8),
+    rgba(var(--hero-fade),0.972) calc((100% - 52px)*0.9),
+    rgba(var(--hero-fade),1) calc((100% - 52px)*1),
+    rgb(var(--hero-fade)) 100%)!important
+}
+#works{position:relative;isolation:isolate}
+#works:after{
+  content:"";position:absolute;left:0;right:0;top:-1px;height:clamp(140px,18vw,240px);z-index:0;pointer-events:none;
+  background:linear-gradient(to bottom,
+    rgb(var(--hero-fade)) 0%,
+    rgba(var(--hero-fade),.972) 10%,
+    rgba(var(--hero-fade),.896) 20%,
+    rgba(var(--hero-fade),.784) 30%,
+    rgba(var(--hero-fade),.648) 40%,
+    rgba(var(--hero-fade),.5) 50%,
+    rgba(var(--hero-fade),.352) 60%,
+    rgba(var(--hero-fade),.216) 70%,
+    rgba(var(--hero-fade),.104) 80%,
+    rgba(var(--hero-fade),.028) 90%,
+    rgba(var(--hero-fade),0) 100%)
+}
+@media(max-width:760px){.hero:after{height:clamp(160px,34%,300px)!important}}

@@ -1,0 +1,54 @@
+/* «Примеры работ» в админке: живой кадр 1:1 как на сайте (пропорции как у карточки на сайте, object-fit: cover, масштаб от точки кадра), плавное затемнение снизу. */
+#worksEd.works{grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:18px;align-items:start}
+#worksEd .wk-toolbar{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;padding:12px 16px;border:1px solid var(--line);border-radius:14px;background:rgba(255,252,246,.72)}
+#worksEd .wk-toolbar .chk{font-size:13px;white-space:nowrap}
+#worksEd .wk-help{flex:1;min-width:220px;font-size:12px;line-height:1.5;color:var(--mut)}
+#worksEd .wk-help b{color:var(--gold)}
+
+#worksEd .wk{gap:10px;padding:12px;overflow:visible}
+#worksEd .wk:hover{transform:none}
+#worksEd .wk-stage{position:relative;overflow:hidden;border-radius:14px;padding:9% 9%;background:linear-gradient(145deg,#d9ccb7,#c3b298);cursor:grab;touch-action:none;user-select:none;-webkit-user-select:none}
+#worksEd .wk-stage.is-drag{cursor:grabbing}
+#worksEd .wk-frame{position:relative;aspect-ratio:.89;border-radius:14px;background:linear-gradient(160deg,#cdbb9f,#a38c6c);box-shadow:0 8px 22px rgba(40,28,16,.3);isolation:isolate}
+#worksEd:not(.show-all) .wk-frame{overflow:hidden}
+#worksEd .wk-img{position:absolute;inset:0;display:block;width:100%;height:100%;max-width:none;max-height:none;object-fit:cover;
+  object-position:var(--crop-x,50%) var(--crop-y,50%);transform-origin:var(--crop-x,50%) var(--crop-y,50%);transform:scale(var(--photo-zoom,1));
+  pointer-events:none;user-select:none;-webkit-user-drag:none;color:transparent;font-size:0;filter:saturate(1.02) contrast(1.035)}
+#worksEd .wk-frame.is-broken .wk-img{opacity:0}
+#worksEd .wk-broken{display:none;position:absolute;inset:0;z-index:1;align-items:center;justify-content:center;text-align:center;padding:14px;color:#fff;font-size:12px;line-height:1.5;text-shadow:0 1px 3px rgba(0,0,0,.5)}
+#worksEd .wk-frame.is-broken .wk-broken{display:flex}
+
+/* рамка кадра; за её пределами фото затемняется */
+#worksEd .wk-frame:before{content:"";position:absolute;inset:0;z-index:2;border-radius:14px;pointer-events:none;box-shadow:inset 0 0 0 1.5px rgba(255,238,208,.95)}
+#worksEd.show-all .wk-frame:before{box-shadow:0 0 0 800px rgba(26,18,10,.6),inset 0 0 0 1.5px rgba(255,238,208,.95)}
+
+/* затемнение: нижние 30%, от 0 до 50%, плавная кривая (smoothstep) — без видимой границы */
+#worksEd .wk-frame:after{
+  content:"";position:absolute;left:0;right:0;bottom:0;height:30%;z-index:3;pointer-events:none;border-radius:0 0 14px 14px;
+  background:linear-gradient(to top,rgba(10,7,4,.5) 0%,rgba(10,7,4,.486) 10%,rgba(10,7,4,.448) 20%,rgba(10,7,4,.392) 30%,rgba(10,7,4,.324) 40%,rgba(10,7,4,.25) 50%,rgba(10,7,4,.176) 60%,rgba(10,7,4,.108) 70%,rgba(10,7,4,.052) 80%,rgba(10,7,4,.014) 90%,rgba(10,7,4,0) 100%)
+}
+#worksEd .wk-info{position:absolute;z-index:4;left:0;right:0;bottom:0;display:flex;flex-direction:column;gap:5px;padding:0 13px 12px;pointer-events:none}
+#worksEd .wk-info strong{display:block;font:600 17px/1.18 "Playfair Display",Georgia,serif;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 14px rgba(0,0,0,.32);overflow-wrap:anywhere}
+#worksEd .wk-info span{display:block;font:500 11.5px/1.45 var(--sans);color:rgba(255,255,255,.95);text-shadow:0 1px 3px rgba(0,0,0,.5);overflow-wrap:anywhere}
+#worksEd .wk-info [hidden]{display:none!important}
+#worksEd .wk-badge{position:absolute;z-index:5;top:10px;left:10px;display:inline-flex;align-items:center;gap:6px;max-width:calc(100% - 20px);padding:6px 11px;border:1px solid rgba(255,255,255,.58);border-radius:7px;color:#fff;
+  background-image:linear-gradient(135deg,color-mix(in srgb,var(--badge-color,#9a7436) 84%,rgba(255,255,255,.32)),color-mix(in srgb,var(--badge-color,#9a7436) 78%,rgba(23,17,10,.4)));
+  font:650 10px/1.3 var(--sans);letter-spacing:.065em;text-transform:uppercase;text-shadow:0 1px 2px rgba(0,0,0,.48);box-shadow:0 2px 4px rgba(31,22,12,.18),0 7px 18px rgba(31,22,12,.22),inset 0 1px 0 rgba(255,255,255,.4)}
+#worksEd .wk-badge em{font-style:normal;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#worksEd .wk-badge i{width:5px;height:5px;flex:0 0 5px;border-radius:50%;background:currentColor}
+#worksEd .wk-badge[hidden]{display:none!important}
+
+/* масштаб */
+#worksEd .wk-zoom{display:grid;grid-template-columns:34px 1fr 34px 48px;gap:8px;align-items:center}
+#worksEd .wk-zoom input[type=range]{padding:0;border:0;background:transparent;accent-color:var(--gold);cursor:pointer}
+#worksEd .wk-zoom output{text-align:right;color:var(--gold);font-size:13px;font-weight:600;font-variant-numeric:tabular-nums}
+#worksEd .wk-visible{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;color:var(--mut)}
+#worksEd .wk-visible .link{font-size:12px;white-space:nowrap}
+#worksEd .wk-badge-row{display:grid;grid-template-columns:1fr 84px;gap:10px;align-items:end}
+#worksEd .wk-badge-row .w-color-label{display:grid;grid-template-columns:1fr;gap:5px}
+#worksEd .wk-badge-row input[type=color]{width:100%;height:40px;padding:4px;cursor:pointer}
+#worksEd .wk .tools{align-items:center;gap:8px}
+#worksEd .wk .wk-replace{margin:0;cursor:pointer;color:var(--ink)}
+@media(max-width:560px){#worksEd.works{grid-template-columns:1fr}}
+
+#worksEd .wk .ic.del{font-size:20px;line-height:1}
