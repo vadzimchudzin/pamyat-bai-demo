@@ -1,0 +1,64 @@
+/* Примеры работ: аккуратные стрелки, мягкое затемнение под подписью, шрифты, запасной вид битого фото.
+   Подключается после dusk.css. Настройки затемнения: --shade-h (высота) и --shade-max (макс. непрозрачность, зашита в стопах). */
+#worksCarousel{--shade-h:30%}
+
+/* ---------- фото: без «Пример работы» вместо картинки ---------- */
+#worksCarousel .work .mat{background:linear-gradient(160deg,#cdbb9f,#a38c6c)!important}
+#worksCarousel .work .mat img{color:transparent!important;font-size:0!important;background:transparent}
+#worksCarousel .work.is-broken .mat img{opacity:0!important}
+#worksCarousel .work.is-broken .mat:before{
+  content:"";position:absolute;inset:0;z-index:1;opacity:.5;
+  background:radial-gradient(circle at 50% 42%,rgba(255,255,255,.35),transparent 55%)
+}
+
+/* ---------- затемнение: нижние 30% фото, от 0 до 50%, без видимой границы ---------- */
+#worksCarousel .work .mat:after{
+  content:""!important;display:block!important;position:absolute!important;
+  left:0!important;right:0!important;bottom:0!important;top:auto!important;inset:auto 0 0 0!important;
+  height:var(--shade-h,30%)!important;z-index:2!important;pointer-events:none!important;border-radius:0 0 inherit inherit!important;
+  background:linear-gradient(to top,rgba(10,7,4,0.500) 0%,rgba(10,7,4,0.486) 10%,rgba(10,7,4,0.448) 20%,rgba(10,7,4,0.392) 30%,rgba(10,7,4,0.324) 40%,rgba(10,7,4,0.250) 50%,rgba(10,7,4,0.176) 60%,rgba(10,7,4,0.108) 70%,rgba(10,7,4,0.052) 80%,rgba(10,7,4,0.014) 90%,rgba(10,7,4,0.000) 100%)!important
+}
+#worksCarousel .work:after{background:none!important}
+
+/* ---------- шрифты: Playfair Display (заголовок) + Inter (описание) ---------- */
+#worksCarousel .work .work-copy h3{
+  margin:0 0 7px!important;font-family:var(--serif,"Playfair Display",Georgia,serif)!important;font-weight:600!important;
+  font-size:clamp(19px,1.45vw,23px)!important;text-wrap:balance;line-height:1.18!important;letter-spacing:.005em!important;text-transform:none!important;
+  color:#fff!important;text-shadow:0 1px 2px rgba(0,0,0,.4),0 2px 16px rgba(0,0,0,.32)!important
+}
+#worksCarousel .work .work-copy p{
+  font-family:var(--sans,"Inter",system-ui,sans-serif)!important;font-weight:500!important;font-size:13.5px!important;line-height:1.5!important;
+  letter-spacing:0!important;color:rgba(255,255,255,.95)!important;text-shadow:0 1px 3px rgba(0,0,0,.5)!important;max-width:36ch
+}
+
+/* ---------- дорожка: тень карточек больше не обрезается жёсткой линией ---------- */
+#worksCarousel .works-track{
+  width:calc(100% + 32px)!important;max-width:none!important;margin:-8px -16px -26px!important;
+  padding:18px 16px 48px!important;scroll-padding-inline:16px
+}
+
+/* ---------- стрелки: ровные круги по центру фото ---------- */
+#worksCarousel .works-arrow{
+  position:absolute!important;z-index:6!important;top:var(--arrow-y,50%)!important;bottom:auto!important;margin:-23px 0 0!important;
+  width:46px!important;height:46px!important;padding:0!important;display:grid!important;place-items:center!important;
+  font-size:0!important;line-height:0!important;color:#fff!important;
+  border:1px solid rgba(255,255,255,.45)!important;border-radius:50%!important;
+  background:rgba(24,17,10,.36)!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.28),inset 0 1px 0 rgba(255,255,255,.2)!important;
+  -webkit-backdrop-filter:blur(10px) saturate(1.2);backdrop-filter:blur(10px) saturate(1.2);
+  transform:none!important;transition:background .25s ease,border-color .25s ease,opacity .25s ease,scale .25s ease!important
+}
+#worksCarousel .works-arrow svg{display:block;width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+#worksCarousel .works-prev{left:24px!important;right:auto!important}
+#worksCarousel .works-next{right:24px!important;left:auto!important}
+#worksCarousel .works-arrow:hover{background:rgba(154,116,54,.88)!important;border-color:rgba(255,255,255,.75)!important;scale:1.06}
+#worksCarousel .works-arrow:active{scale:.96}
+#worksCarousel .works-arrow:focus-visible{outline:2px solid #f0d4a3;outline-offset:3px}
+#worksCarousel .works-arrow:disabled{opacity:0!important;pointer-events:none!important}
+@media(max-width:900px){#worksCarousel .works-prev{left:18px!important}#worksCarousel .works-next{right:18px!important}}
+@media(max-width:560px){
+  #worksCarousel .works-arrow{width:40px!important;height:40px!important;margin-top:-20px!important}
+  #worksCarousel .works-arrow svg{width:18px;height:18px}
+  #worksCarousel .works-prev{left:12px!important}
+  #worksCarousel .works-next{right:auto!important;left:calc(84vw - 52px)!important}
+}
