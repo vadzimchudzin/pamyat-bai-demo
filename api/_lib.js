@@ -1,6 +1,7 @@
 /* Общий код API: база данных, вход, журнал, Telegram. Файлы с «_» Vercel не публикует как адреса. */
 const crypto = require('crypto');
 const DEFAULTS = require('./_defaults');
+const PP = require('../js/pricing.js');
 
 /* ---------- база (Postgres: Neon / Vercel Postgres / любой) ---------- */
 let pool = null, ready = null;
@@ -76,6 +77,8 @@ async function saveContent(c) {
 function publicContent(c) {
   const p = JSON.parse(JSON.stringify(c));
   p.telegram = { enabled: !!(c.telegram && c.telegram.enabled && c.telegram.token && c.telegram.chat) };
+  // Себестоимость, резерв и наценка не должны уходить на публичный сайт — только готовые ставки.
+  if (p.calc) p.calc = PP.sanitizeCalcForPublic(p.calc);
   return p;
 }
 
@@ -368,6 +371,30 @@ async function createEstimateFromLead(leadId, by) {
       const fallbackArticle = item.article || item.sku || item.code || (st.id + '-' + item.id).toUpperCase();
       const basePrice = priceForTarget(target, item.price);
       const dimensions = estimateDimensionMetrics(lead.config && lead.config.dimensions || {}, content.calc && content.calc.dimensions || {});
+      const pricingMode = item.pricing && item.pricing.mode;
+      if (pricingMode === 'curve') {
+        // Кривая цен: цена зависит от размеров участка; без размеров — цена базового участка.
+        const cr = PP.calcItem(item, dimensions, { base: content.calc && content.calc.base });
+        const curveNotes = [];
+        if (item.note) curveNotes.push(item.note);
+        if (cr.note) curveNotes.push(cr.note);
+        if (dimensions.provided) curveNotes.unshift('Размеры участка: ' + dimensions.length + ' × ' + dimensions.width + ' м (' + (Math.round(dimensions.area * 100) / 100) + ' м²)');
+        rows.push({
+          article: articleForTarget(target, fallbackArticle),
+          name: st.name + ' · ' + item.name,
+          unit: 'компл.', qty: 1,
+          price: cr.mainAmount,
+          note: curveNotes.join(' · ')
+        });
+        if (cr.trimAmount > 0) {
+          rows.push({
+            article: articleForTarget(target, fallbackArticle) + '-TRIM',
+            name: st.name + ' · ' + item.name + ' — подрезка плитки',
+            unit: 'компл.', qty: 1, price: cr.trimAmount, note: ''
+          });
+        }
+        return;
+      }
       const calculated = estimatePricing(item, basePrice, dimensions);
       const noteParts = [];
       if (item.note) noteParts.push(item.note);
