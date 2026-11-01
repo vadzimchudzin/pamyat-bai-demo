@@ -374,7 +374,15 @@ async function createEstimateFromLead(leadId, by) {
       const pricingMode = item.pricing && item.pricing.mode;
       if (pricingMode === 'curve') {
         // Кривая цен: цена зависит от размеров участка; без размеров — цена базового участка.
-        const cr = PP.calcItem(item, dimensions, { base: content.calc && content.calc.base });
+        // Если для позиции включена синхронизация с финансовым прайсом, она задаёт цену в базовой точке.
+        const syncedPrice = book.siteSync ? (book.items || []).find(function (p) {
+          return String(p.siteTarget || '') === target && p.price !== null && p.price !== '' &&
+            Number.isFinite(Number(p.price));
+        }) : null;
+        const cr = PP.calcItem(item, dimensions, {
+          base: content.calc && content.calc.base,
+          basePrice: syncedPrice ? Math.max(0, Number(syncedPrice.price)) : undefined
+        });
         const curveNotes = [];
         if (item.note) curveNotes.push(item.note);
         if (cr.note) curveNotes.push(cr.note);
