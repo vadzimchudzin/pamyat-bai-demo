@@ -1,0 +1,134 @@
+name: Catalog media (AI 4K + accessories)
+
+# Фото каталога в 4K: Real-ESRGAN (realesr-animevideov3 ×4) из assets/catalog-originals,
+# плюс уменьшенные копии md/ (1600) и sm/ (640) для сетки и карточки.
+# Аксессуары (вазы, лампады…) — студийные рендеры Blender по tools/media/accessories.py.
+on:
+  push:
+    branches: [feat/calc-catalog-polish]
+    paths:
+      - ".github/workflows/catalog-media.yml"
+      - "tools/media/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: catalog-media-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  upscale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Vulkan (software) + Real-ESRGAN
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libvulkan1 mesa-vulkan-drivers unzip > /dev/null
+          ICD="$(find /usr/share/vulkan/icd.d -maxdepth 1 -iname '*lvp*.json' -print -quit)"
+          test -n "$ICD"; echo "VK_ICD_FILENAMES=$ICD" >> "$GITHUB_ENV"
+          curl -fsSL --retry 3 https://github.com/xinntao/Real-ESRGAN/releases/download/v0.2.5.0/realesrgan-ncnn-vulkan-20220424-ubuntu.zip -o /tmp/re.zip
+          mkdir -p /tmp/re && unzip -q /tmp/re.zip -d /tmp/re
+          BIN="$(find /tmp/re -type f -name realesrgan-ncnn-vulkan -print -quit)"; chmod +x "$BIN"
+          echo "RE_BIN=$BIN" >> "$GITHUB_ENV"
+          echo "RE_MODELS=$(find /tmp/re -type d -name models -print -quit)" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save --no-package-lock sharp@0.34.3
+      - name: AI upscale shard ${{ matrix.shard }}
+        run: |
+          set -euo pipefail
+          : > /tmp/list.txt
+          ACC='^(V1|V2|L1|L2|S1|T1|T2|G1)$'   # аксессуары — рендеры, не апскейл
+          for f in assets/catalog/*.webp; do
+            code="$(basename "$f" .webp)"
+            echo "$code" | grep -qE "$ACC" && continue
+            if [ -s "assets/catalog-originals/$code.webp" ]; then echo "assets/catalog-originals/$code.webp"; else echo "$f"; fi
+          done | sort | awk -v n=8 -v k=${{ matrix.shard }} 'NR % n == k' > /tmp/list.txt
+          wc -l /tmp/list.txt
+          node tools/media/process.mjs topng /tmp/list.txt /tmp/src
+          mkdir -p /tmp/ai out
+          "$RE_BIN" -i /tmp/src -o /tmp/ai -m "$RE_MODELS" -n realesr-animevideov3 -s 4 -f png -j 1:2:2 > /tmp/re.log 2>&1 || (tail -20 /tmp/re.log; exit 1)
+          node tools/media/process.mjs catalog /tmp/ai out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cat-${{ matrix.shard }}
+          path: out
+          include-hidden-files: true
+          retention-days: 3
+
+  accessories:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        part: ["V1 V2", "L1 L2", "S1 T1", "T2 G1"]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Blender 4.2 LTS
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libxxf86vm1 libxi6 libxkbcommon0 libsm6 libgl1 libxrender1 libxfixes3 libegl1 > /dev/null
+          curl -fsSL --retry 3 https://download.blender.org/release/Blender4.2/blender-4.2.3-linux-x64.tar.xz -o /tmp/bl.tar.xz
+          mkdir -p /tmp/bl && tar -xf /tmp/bl.tar.xz -C /tmp/bl --strip-components=1
+          /tmp/bl/blender --version | head -1
+      - name: Render ${{ matrix.part }}
+        run: /tmp/bl/blender -b -P tools/media/accessories.py -- /tmp/acc 2560 40 ${{ matrix.part }} | grep -E "RENDERED|Error|Traceback" || true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save --no-package-lock sharp@0.34.3
+      - run: node tools/media/process.mjs accessories /tmp/acc out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: acc-${{ strategy.job-index }}
+          path: out
+          include-hidden-files: true
+          retention-days: 3
+
+  commit:
+    needs: [upscale, accessories]
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/media
+          merge-multiple: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save --no-package-lock sharp@0.34.3
+      - name: Place images, write manifest, commit
+        run: |
+          set -euo pipefail
+          mkdir -p assets/catalog/md assets/catalog/sm
+          ls /tmp/media | head; ls /tmp/media/*.webp | wc -l
+          cp /tmp/media/*.webp assets/catalog/
+          cp /tmp/media/md/*.webp assets/catalog/md/
+          cp /tmp/media/sm/*.webp assets/catalog/sm/
+          node tools/media/process.mjs manifest assets/catalog
+          mkdir -p tools/media/log
+          { echo "run ${{ github.run_id }} $(date -u +%FT%TZ)"; echo "upscale: ${{ needs.upscale.result }}  accessories: ${{ needs.accessories.result }}";
+            echo "full: $(ls assets/catalog/*.webp | wc -l)  md: $(ls assets/catalog/md | wc -l)  sm: $(ls assets/catalog/sm | wc -l)";
+            du -sh assets/catalog assets/catalog/md assets/catalog/sm; } > tools/media/log/last-run.txt
+          cat tools/media/log/last-run.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/catalog tools/media/log
+          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          git commit -q -m "Catalog: AI 4K photos (+md/sm), accessories renders, variants.json"
+          for i in 1 2 3; do git pull -q --rebase origin "${{ github.ref_name }}" && git push -q origin "HEAD:${{ github.ref_name }}" && exit 0; sleep 5; done
+          exit 1
