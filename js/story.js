@@ -114,7 +114,14 @@
           if (Math.abs(i - disp) < 3) dirty = true;
           kick(); pump();
         };
-        (im.decode ? im.decode() : Promise.resolve()).then(done, function () { active--; imgs[i] = null; setTimeout(pump, 400); });
+        // без decode() (или если он отказал) ждём событие load — иначе в drawImage попадёт незагруженный кадр
+        var loadOf = function () {
+          return new Promise(function (res, rej) {
+            if (im.complete) return im.naturalWidth ? res() : rej();
+            im.onload = function () { res(); }; im.onerror = rej;
+          });
+        };
+        (im.decode ? im.decode().catch(loadOf) : loadOf()).then(done, function () { active--; imgs[i] = null; setTimeout(pump, 400); });
       })(i);
     }
   }
