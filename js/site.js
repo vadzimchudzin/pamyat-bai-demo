@@ -120,14 +120,7 @@
       el.classList.toggle('tone-l', mode === 'l'); el.classList.toggle('tone-d', mode !== 'l');
       el.classList.toggle('tsh', low && !el.classList.contains('glass'));
     });
-    // кнопки «ловят» свет лампады: чем ближе к источнику (низ-лево страницы), тем теплее отсвет
-    var W = innerWidth;
-    $$('main .msg, main .btn, main .cta2, footer .btn').forEach(function (el) {
-      var r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + scrollY + r.height / 2;
-      var d = Math.sqrt(Math.pow(x / (W * 1.1), 2) + Math.pow((H - y) / Math.min(H * 0.42, 1500), 2));
-      var lit = Math.max(0, Math.min(1, 1.15 - d));
-      el.classList.toggle('lit', lit > 0.02); el.style.setProperty('--lit', lit.toFixed(3));
-    });
+    if (window.pamyatLamp) window.pamyatLamp.refresh();
   }
   function onScroll() {
     var h = hero ? hero.offsetHeight : 600;
@@ -142,16 +135,8 @@
   addEventListener('resize', function () { themes(); onScroll(); });
   addEventListener('load', themes);
 
-  /* живое дрожание пламени (как в демо: свет не ездит, а дышит) */
-  if (!calm) (function flicker() {
-    var r = Math.random(), k = 0.82 + Math.random() * 0.19;
-    if (r > 0.78) k = 0.70 + Math.random() * 0.12;
-    if (r > 0.95) k = 1.02 + Math.random() * 0.10;
-    root.style.setProperty('--flicker', k.toFixed(3));
-    root.style.setProperty('--fx', ((Math.random() - 0.5) * 11).toFixed(2) + 'px');
-    root.style.setProperty('--fy', ((Math.random() - 0.5) * 9).toFixed(2) + 'px');
-    setTimeout(flicker, 65 + Math.random() * 145);
-  })();
+  /* пламя лампады «дышит» CSS-анимацией (css/polish.css), отсветы на элементах — js/lamp.js:
+     без записи переменных в :root каждые 65–210 мс (это пересчитывало стили всей страницы) */
 
   /* ---------- облака заслоняют солнце: яркость солнца и лучей гаснет под облаком ---------- */
   (function () {
@@ -318,95 +303,31 @@
   if (lbx) lbx.addEventListener('click', function () { lbx.classList.remove('on'); });
   addEventListener('keydown', function (e) { if (e.key === 'Escape' && lbx) lbx.classList.remove('on'); });
 
-  /* ---------- визуализация установки (компактная, по скроллу) ---------- */
-  var story = $('#story');
-  if (story) (function () {
-    var cv = $('canvas', story), ctx = cv.getContext('2d');
-    var items = $$('.sc-item', story), rail = $('.rail', story), fill = $('.rail-line i', story);
-    var chap = $('.sc-chapter', story), num = $('.sc-n', story);
-    var small = matchMedia('(max-width: 820px)').matches;
-    var list = window.STORY_FRAMES || null;                       // превью: кадры вшиты
-    var N = list ? list.length : +story.dataset.count;
-    var base = small ? story.dataset.framesM : story.dataset.frames;
-    var scale = list ? (N - 1) / 245 : 1;                          // кадры каталога 0..245
-    var imgs = new Array(N), cur = -1, want = 0;
-    function url(i) { return list ? list[i] : base + 'f' + String(i).padStart(4, '0') + '.webp'; }
-    function load(i) {
-      if (imgs[i]) return;
-      var im = new Image(); im.decoding = 'async'; im.src = url(i); imgs[i] = im;
-      im.onload = function () { if (Math.abs(i - want) < 3) draw(want, true); };
-    }
-    // прогрессивная загрузка: каждый 8-й, потом остальные
-    for (var s = 0; s < N; s += 8) load(s);
-    setTimeout(function () { for (var i = 0; i < N; i++) load(i); }, 1200);
-
-    function size() {
-      var r = cv.getBoundingClientRect(), d = Math.min(2, devicePixelRatio || 1);
-      cv.width = Math.round(r.width * d); cv.height = Math.round(r.height * d); cur = -1; draw(want, true);
-    }
-    function nearest(i) {
-      for (var k = 0; k < N; k++) {
-        var a = imgs[i - k], b = imgs[i + k];
-        if (a && a.complete && a.naturalWidth) return a;
-        if (b && b.complete && b.naturalWidth) return b;
-      }
-      return null;
-    }
-    function draw(i, force) {
-      if (i === cur && !force) return;
-      var im = nearest(i); if (!im) return;
-      cur = i;
-      var cw = cv.width, ch = cv.height, ir = im.naturalWidth / im.naturalHeight, cr = cw / ch, w, h;
-      if (cr > ir) { w = cw; h = cw / ir; } else { h = ch; w = ch * ir; }
-      ctx.drawImage(im, (cw - w) / 2, (ch - h) / 2, w, h);
-    }
-    // кнопки этапов
-    items.forEach(function (it, k) {
-      var b = document.createElement('button'); b.type = 'button'; b.textContent = it.dataset.chapter;
-      b.addEventListener('click', function () {
-        var p = (+it.dataset.f) / 245, r = story.getBoundingClientRect();
-        var span = story.offsetHeight - $('.story-sticky', story).offsetHeight;
-        smoothPageScroll(scrollY + r.top + p * span + 2, { duration: 0.82 });
-      });
-      rail.appendChild(b);
-    });
-    var btns = $$('button', rail);
-    function tick() {
-      var r = story.getBoundingClientRect();
-      var span = story.offsetHeight - $('.story-sticky', story).offsetHeight;
-      var p = Math.min(1, Math.max(0, -r.top / Math.max(1, span)));
-      var f = p * 245;                                  // кадр в шкале оригинала
-      want = Math.round(f * scale);
-      draw(want);
-      var k = 0; items.forEach(function (it, j) { if (f >= +it.dataset.f) k = j; });
-      items.forEach(function (it, j) { it.classList.toggle('on', j === k); });
-      btns.forEach(function (b, j) { b.classList.toggle('on', j === k); });
-      chap.textContent = items[k].dataset.chapter; num.textContent = String(k + 1).padStart(2, '0');
-      fill.style.width = (p * 100).toFixed(1) + '%';
-    }
-    var raf = 0;
-    addEventListener('scroll', function () { if (!raf) raf = requestAnimationFrame(function () { raf = 0; tick(); }); }, { passive: true });
-    addEventListener('resize', size);
-    size(); tick();
-  })();
+  /* ---------- визуализация установки: см. js/story.js ---------- */
 
   /* ---------- данные: каталог и калькулятор (из админки, иначе — по умолчанию) ---------- */
   var CAT = window.PAMYAT_CATALOG_DEFAULT || { categories: [], items: [] };
+  /* запасной калькулятор (пока не пришли данные из админки) — тарифы из смет: цена за 1 м² */
+  function perM2(rate) {
+    return { mode: 'curve', quantity: 'area', curve: { share: 1, piece: 0, min: 0, trim: { enabled: false, tileA: 60, tileB: 50 },
+      rates: { fixed: 0, unit: rate, waste: 0, cut: 0, min: 0 } } };
+  }
   var CALC = [
-    { id: 'foundation', name: 'Основание', type: 'radio', sub: 'Если основание уже есть — выберите только установку. Не нужно — пропустите шаг.', items: [
-      { id: 'concrete', name: 'Армированный бетонный фундамент', price: 1000 }, { id: 'ready', name: 'Установка на готовое основание', price: 300 }] },
+    { id: 'land', name: 'Благоустройство', type: 'radio', sub: 'Цена за 1 м² по нашим сметам: работа и материалы включены. Если основание уже есть — выберите установку на готовое.', items: [
+      { id: 'pkg-paving', name: 'Тротуарная плитка + стяжка 5 см + борта', note: 'Бетонная стяжка 5 см, борта по периметру, тротуарная плитка. Работа и материалы включены.', price: 1800, pricing: perM2(500) },
+      { id: 'pkg-tile30', name: 'Монолит 15 см + керамогранит 30×30', note: 'Армированный монолит 15 см, керамогранит 30×30 на клею. Работа и материалы включены.', price: 2376, pricing: perM2(660) },
+      { id: 'pkg-tile60', name: 'Монолит 15 см + керамогранит 60×60', note: 'Армированный монолит 15 см, крупный керамогранит 60×60. Работа и материалы включены.', price: 2376, pricing: perM2(660) },
+      { id: 'ready', name: 'Установка на готовое основание', price: 300, pricing: { mode: 'fixed' } }] },
     { id: 'engraving', name: 'Гравировка', type: 'radio', sub: 'Базовая гравировка (ФИО, даты) уже включена.', items: [
       { id: 'base', name: 'Базовая (ФИО, даты)', price: 0, note: 'включено' }, { id: 'art', name: 'Художественная (портрет, пейзаж)', price: 200 },
       { id: 'medal', name: 'Медальон', price: 250 }] },
-    { id: 'land', name: 'Благоустройство', type: 'multi', sub: 'Можно выбрать несколько.', items: [
-      { id: 'granite', name: 'Керамогранитная плитка', price: 1600 }, { id: 'curb', name: 'Бетонный бордюр', price: 300 },
-      { id: 'paving', name: 'Тротуарная плитка', price: 400 }] },
     { id: 'fence', name: 'Ограда', type: 'radio', sub: 'Ограда считается отдельно от благоустройства.', items: [
       { id: 'none', name: 'Без ограды', price: 0 }, { id: 'granite', name: 'Гранитная ограда', price: 1200 }] },
     { id: 'decor', name: 'Декор', type: 'multi', sub: 'Дополните композицию вазой, искусственной травой или белым щебнем.', items: [
       { id: 'vase', name: 'Гранитная ваза / лампада', price: 200 }, { id: 'grass', name: 'Искусственная трава / белый щебень', price: 80 }] }
   ];
-  var CALC_DIMENSIONS = { enabled: true, name: 'Размеры', sub: 'Укажите длину и ширину участка. Это необязательно — без размеров расчёт останется по базовым ценам.', unit: 'м', min: 0.1, max: 100, step: 0.1, allowSkip: true };
+  var CALC_DIMENSIONS = { enabled: true, name: 'Размеры', sub: 'Укажите длину и ширину участка. Это необязательно — без размеров расчёт останется по базовым ценам.', unit: 'м', min: 0.1, max: 100, step: 0.1, allowSkip: true,
+    presets: [[1.4, 2.0], [1.5, 2.1], [1.4, 2.3], [1.8, 2.0], [2.0, 2.0], [2.4, 1.8], [2.0, 2.2], [3.0, 2.2]] };
   var DIMS = { length: '', width: '' };
   var Q = new URLSearchParams(location.search);
   var STEPS = [], S = {}, step = 0, MODEL = Q.get('model') || '', MODEL_CAT = Q.get('cat') || '';
@@ -423,11 +344,14 @@
       min: Number.isFinite(min) && min > 0 ? min : 0.1,
       max: Number.isFinite(max) && max > 0 ? max : 100,
       step: Number.isFinite(stepSize) && stepSize > 0 ? stepSize : 0.1,
-      allowSkip: raw.allowSkip !== false
+      allowSkip: raw.allowSkip !== false,
+      presets: (Array.isArray(raw.presets) ? raw.presets : []).map(function (p) {
+        return Array.isArray(p) ? [Number(p[0]), Number(p[1])] : [Number(p && p.length), Number(p && p.width)];
+      }).filter(function (p) { return p[0] > 0 && p[1] > 0 && p[0] <= 100 && p[1] <= 100; }).slice(0, 12)
     };
   }
-  var PP = window.PamyatPricing;
-  var CALC_BASE = PP.normalizeBase(null);
+  var PP = window.PamyatPricing || null;
+  var CALC_BASE = PP ? PP.normalizeBase(null) : { length: 2, width: 1.8, round: 1 };
   function pricingConfig(it) { return PP.normalizePricing(it); }
   function parseMeasure(value) {
     if (value == null || String(value).trim() === '') return NaN;
@@ -460,19 +384,32 @@
     return 'BYN';
   }
   function item(s, id) { return (s.items || []).filter(function (x) { return x.id === id; })[0]; }
-  function priceLabel(it) {
-    if (it.note && (it.price == null || Number(it.price) === 0)) return it.note;
+  function rateOf(it) { return PP && PP.linearRate ? PP.linearRate(it) : null; }
+  function priceLabel(it, catalogStep) {
     if (it.price == null) return 'инд. расчёт';
-    var p = pricingConfig(it), d = getDimensions(), out = calcItemPrice(it, d);
+    if (it.note && Number(it.price) === 0) return it.note;
+    var p = pricingConfig(it), d = getDimensions(), out = calcItemPrice(it, d), lr = rateOf(it);
     if (p.mode === 'curve') {
-      return d.provided ? money(out.amount) : 'от ' + fmt(out.amount) + ' BYN';
+      if (d.provided) return money(out.amount);
+      return lr ? fmt(lr.rate) + ' BYN/' + lr.unit : 'от ' + fmt(out.amount) + ' BYN';
     }
     if (p.mode !== 'fixed') {
       if (d.provided) return money(out.amount);
       return 'от ' + fmt(it.price) + ' BYN/' + unitName(it);
     }
-    if (it.note) return it.note;
-    return 'от ' + fmt(it.price);
+    if (Number(it.price) === 0) return '0 BYN';
+    return (catalogStep ? 'от ' : '') + fmt(it.price) + ' BYN';
+  }
+  /* строка под названием: что входит + как посчитано (площадь × ставка) */
+  function itemNote(it) {
+    var parts = [], lr = rateOf(it);
+    if (lr && it.price != null) {
+      var d = getDimensions();
+      parts.push(d.provided ? fmt(PP.roundMoney(d.area)) + ' м² × ' + fmt(lr.rate) + ' BYN/' + lr.unit
+        : 'Цена за 1 м². Укажите размеры участка — посчитаем точно.');
+    }
+    if (it.note && !(Number(it.price) === 0)) parts.push(it.note);
+    return parts.join(' · ');
   }
   function individual() { return STEPS.some(function (s) { return s.type === 'radio' && item(s, S[s.id]) && item(s, S[s.id]).price == null; }); }
   function selectedIds(s) { return s.type === 'multi' ? (S[s.id] || []) : (S[s.id] ? [S[s.id]] : []); }
@@ -487,7 +424,8 @@
           stepId: s.id, itemId: id, step: s.name, name: it.name,
           price: p.amount, quantity: p.quantity, unit: p.unit, basePrice: p.base,
           coefficient: p.coefficient, mode: p.mode,
-          mainAmount: p.mainAmount, trimAmount: p.trimAmount, note: p.note || ''
+          mainAmount: p.mainAmount, trimAmount: p.trimAmount, note: p.note || '',
+          rate: (rateOf(it) || {}).rate || null
         });
       });
     });
@@ -507,7 +445,9 @@
     } else lines.push('Размеры участка: не указаны — использованы базовые цены');
     selectedBreakdown().forEach(function (row) {
       var line = row.step + ': ' + row.name + ' — ' + (row.price == null ? 'индивидуальный расчёт' : money(row.price));
-      if (row.mode === 'curve') {
+      if (row.mode === 'curve' && row.rate) {
+        line += ' (' + fmt(row.quantity) + ' м² × ' + fmt(row.rate) + ' BYN/м²' + (d.provided ? '' : ', базовый участок') + ')';
+      } else if (row.mode === 'curve') {
         if (row.trimAmount > 0) line += ' (в т.ч. подрезка плитки ' + money(row.trimAmount) + ')';
         if (row.note) line += ' [' + row.note + ']';
       } else if (row.mode !== 'fixed' && d.provided) {
@@ -545,7 +485,9 @@
       if (s.type === 'contact' || s.type === 'dimensions' || (individual() && i > 0)) return;
       var rows = byStep[s.id] || [];
       var rws = rows.length ? rows.map(function (row) {
-        var note = row.mode === 'curve'
+        var note = row.mode === 'curve' && row.rate
+          ? fmt(row.quantity) + ' м² × ' + fmt(row.rate) + ' BYN/м²' + (d.provided ? '' : ' · базовый участок ' + fmt(CALC_BASE.length) + ' × ' + fmt(CALC_BASE.width) + ' м')
+          : row.mode === 'curve'
           ? [row.trimAmount > 0 ? 'в т.ч. подрезка плитки ' + money(row.trimAmount) : '', row.note].filter(Boolean).join(' · ')
           : row.mode !== 'fixed'
           ? (d.provided
@@ -565,8 +507,26 @@
     box.innerHTML = html;
     drawTotal();
   }
+  function fmt1(n) { return Number(n).toLocaleString('ru-RU', { minimumFractionDigits: 1, maximumFractionDigits: 2 }); }
+  function presetsHtml() {
+    var ps = CALC_DIMENSIONS.presets || [];
+    if (!ps.length) return '';
+    return '<div class="dim-presets" role="group" aria-label="Типовые размеры участка"><span class="dim-presets-t">Типовые участки</span><div class="dim-presets-l">' +
+      ps.map(function (p) {
+        return '<button type="button" class="dim-preset" data-l="' + p[0] + '" data-w="' + p[1] + '" aria-pressed="false">' +
+          '<b>' + fmt1(p[0]) + ' × ' + fmt1(p[1]) + '</b><i>' + fmt(PP ? PP.roundMoney(p[0] * p[1]) : p[0] * p[1]) + ' м²</i></button>';
+      }).join('') + '</div></div>';
+  }
+  function markPreset() {
+    var d = getDimensions();
+    $$('.dim-preset').forEach(function (b) {
+      var on = d.provided && Math.abs(+b.dataset.l - d.length) < 1e-6 && Math.abs(+b.dataset.w - d.width) < 1e-6;
+      b.classList.toggle('on', on); b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  }
   function refreshDimensionsPreview() {
     var d = getDimensions(), area = $('#dimArea'), perimeter = $('#dimPerimeter'), error = $('#dimError');
+    markPreset();
     if (area) area.textContent = d.provided ? fmt(d.area) + ' м²' : '—';
     if (perimeter) perimeter.textContent = d.provided ? fmt(d.perimeter) + ' м' : '—';
     if (error) {
@@ -604,6 +564,7 @@
       $('#q').innerHTML = '<div class="qtitle">' + escHtml(CALC_DIMENSIONS.name) + (CALC_DIMENSIONS.allowSkip ? ' <span class="q-optional">(необязательно)</span>' : '') + '</div>' +
         '<div class="qsub">' + escHtml(CALC_DIMENSIONS.sub) + '</div>' +
         '<div class="dimensions-card">' +
+          presetsHtml() +
           '<div class="dimensions-fields">' +
             '<label>Длина (' + escHtml(unit) + ')<input id="dimLength" type="number" min="' + CALC_DIMENSIONS.min + '" max="' + CALC_DIMENSIONS.max + '" step="' + CALC_DIMENSIONS.step + '" inputmode="decimal" autocomplete="off" placeholder="Например, 2.2" value="' + escHtml(DIMS.length) + '"></label>' +
             '<span class="dimensions-multiply">×</span>' +
@@ -625,15 +586,25 @@
           refreshDimensionsPreview();
         });
       });
+      markPreset();
+      $$('.dim-preset', $('#q')).forEach(function (b) {
+        b.addEventListener('click', function () {
+          DIMS.length = b.dataset.l; DIMS.width = b.dataset.w;
+          if ($('#dimLength')) $('#dimLength').value = DIMS.length;
+          if ($('#dimWidth')) $('#dimWidth').value = DIMS.width;
+          refreshDimensionsPreview();
+        });
+      });
       if ($('#dimSkip')) $('#dimSkip').onclick = function () { DIMS.length = ''; DIMS.width = ''; go(step + 1); };
     } else {
       var pick = s.catalog && S.monument && S.monument !== 'individual'
         ? '<a class="pick" href="/catalog#' + S.monument + '">' + (MODEL ? 'Модель ' + MODEL + ' · выбрать другую' : 'Выбрать модель в каталоге') + ' →</a>' : '';
       $('#q').innerHTML = '<div class="qtitle">' + s.name + '</div><div class="qsub">' + (s.sub || '') + '</div>' + s.items.map(function (o) {
         var on = s.type === 'multi' ? S[s.id].indexOf(o.id) > -1 : S[s.id] === o.id;
+        var nt = itemNote(o), tt = '<span class="t">' + o.name + (nt ? '<small class="opt-note">' + escHtml(nt) + '</small>' : '') + '</span>';
         return s.type === 'multi'
-          ? '<div class="tog' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="switch" aria-checked="' + on + '" tabindex="0"><span class="sw"></span><span class="t">' + o.name + '</span><span class="p">' + priceLabel(o) + '</span></div>'
-          : '<div class="radio' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="radio" aria-checked="' + on + '" tabindex="0"><i></i><span class="t">' + o.name + '</span><span class="p">' + priceLabel(o) + '</span></div>';
+          ? '<div class="tog' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="switch" aria-checked="' + on + '" tabindex="0"><span class="sw"></span>' + tt + '<span class="p">' + priceLabel(o, s.catalog) + '</span></div>'
+          : '<div class="radio' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="radio" aria-checked="' + on + '" tabindex="0"><i></i>' + tt + '<span class="p">' + priceLabel(o, s.catalog) + '</span></div>';
       }).join('') + pick + (s.catalog && individual()
         ? '<div class="indcall"><p>Индивидуальный проект считаем лично: по эскизу или фото подберём гранит и размеры. Нажмите «Заказать звонок» — перезвоним и всё обсудим.</p></div>' : '');
       $$('[data-id]', $('#q')).forEach(function (el) {
@@ -656,7 +627,7 @@
   function build() {
     // Шаг 1 — памятник из каталога; шаг 2 — необязательные размеры; далее — редактируемые шаги калькулятора.
     var first = { id: 'monument', name: 'Памятник', type: 'radio', sub: 'Выберите форму — как в каталоге. Гранит и размеры согласуем лично.', catalog: true,
-      items: visibleCats().filter(function (c) { return c.calc !== false; }).map(function (c) { return { id: c.id, name: c.short || c.name, price: c.price == null ? null : +c.price }; }) };
+      items: visibleCats().filter(function (c) { return c.calc !== false; }).map(function (c) { return { id: c.id, name: c.short || c.name, price: c.price == null ? null : +c.price, pricing: { mode: 'fixed' } }; }) };
     var nextSteps = [first];
     if (CALC_DIMENSIONS.enabled !== false) nextSteps.push({ id: '__dimensions', name: CALC_DIMENSIONS.name || 'Размеры', type: 'dimensions' });
     STEPS = nextSteps.concat(CALC.filter(function (s) { return s.id !== 'monument' && s.items && s.items.length; }))
@@ -704,8 +675,22 @@
   function coverHtml(c) {
     var cv = c.cover || {};
     if (!cv.img) return '<div class="cover ind">✦<span>По вашему эскизу</span></div>';
-    return '<div class="cover"><img src="' + cv.img + '" alt="' + c.name + '" loading="lazy" style="--z:' + (cv.zoom || 1) + ';--pos:' + (cv.pos || '50% 50%') + '"></div>';
+    var z = Math.max(0.8, Math.min(2.2, +cv.zoom || 1)), sm = catSized(cv.img, 'sm'), md = catSized(cv.img, 'md');
+    var set = sm !== md ? ' srcset="' + workHtmlEscape(sm) + ' 640w, ' + workHtmlEscape(md) + ' 1600w" sizes="(max-width: 720px) ' + Math.round(88 * z) + 'vw, ' + Math.round(340 * z) + 'px" data-full="' + workHtmlEscape(cv.img) + '" onerror="catFallback(this)"' : '';
+    return '<div class="cover"><img src="' + workHtmlEscape(sm) + '"' + set + ' alt="' + workHtmlEscape(c.name) + '" loading="lazy" decoding="async" style="--z:' + (cv.zoom || 1) + ';--pos:' + (cv.pos || '50% 50%') + '"></div>';
   }
+  /* фото каталога: sm 640 / md 1600 (assets/catalog/sm|md), оригинал 4K — только в карточке */
+  function catSized(u, size) {
+    var m = /^\/assets\/catalog\/([A-Za-z0-9_.-]+\.webp)(?:[?#].*)?$/.exec(u || '');
+    if (m) return '/assets/catalog/' + size + '/' + m[1];
+    if (/^\/api\/img\?/.test(u || '') && !/[?&]w=/.test(u)) return u + '&w=' + (size === 'sm' ? 640 : 1600);
+    return u || '';
+  }
+  window.catFallback = function (im) {
+    var f = im.getAttribute('data-full'); if (!f || im.getAttribute('src') === f) return;
+    im.removeAttribute('srcset'); im.removeAttribute('sizes'); im.removeAttribute('data-full'); im.src = f;
+  };
+  function plural(n, a, b, c) { var m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? b : c; }
   function drawTeaser() {
     var box = $('#catTeaser'); if (!box) return;
     box.innerHTML = visibleCats().map(function (c) {
@@ -713,7 +698,7 @@
       return '<a class="cc glass rv in" href="/catalog#' + c.id + '">' + coverHtml(c) + '<h3>' + c.name + '</h3>' +
         '<div class="pr">' + (c.price == null ? 'Индивидуальный расчёт' : 'от ' + fmt(c.price) + ' BYN') + '</div>' +
         '<p class="inc">' + (c.inc ? 'Входит: ' + c.inc : (c.desc || '')) + '</p>' +
-        '<div class="go"><span>' + (n ? n + ' моделей' : 'Обсудить проект') + '</span><b>Открыть →</b></div></a>';
+        '<div class="go"><span>' + (n ? n + ' ' + (c.calc === false || c.id === 'accessories' ? plural(n, 'изделие', 'изделия', 'изделий') : plural(n, 'модель', 'модели', 'моделей')) : 'Обсудить проект') + '</span><b>Открыть →</b></div></a>';
     }).join('');
   }
 
@@ -755,6 +740,19 @@
     return byImage[String(work && work.img || '')] || { caption:'', description:'' };
   }
 
+  /* фото работ отдаются уменьшенными (api/img и api/work-img умеют ?w=): ~1 МБ → ~100–200 КБ */
+  function workSized(u, w) {
+    u = String(u || '');
+    if (/^\/api\/img\?id=\d+$/.test(u)) return u + '&w=' + w;
+    if (/^https:\/\/[^/]*neon\.tech\//i.test(u)) return '/api/work-img?u=' + encodeURIComponent(u) + '&w=' + w;
+    return '';
+  }
+  function workImgAttrs(u) {
+    var a = workSized(u, 720), b = workSized(u, 1200), c = workSized(u, 1800);
+    if (!a) return 'src="' + workHtmlEscape(u) + '"';
+    return 'src="' + workHtmlEscape(b) + '" srcset="' + workHtmlEscape(a) + ' 720w, ' + workHtmlEscape(b) + ' 1200w, ' + workHtmlEscape(c) + ' 1800w" ' +
+      'sizes="(max-width: 720px) 88vw, (max-width: 1100px) 46vw, 31vw" data-orig="' + workHtmlEscape(u) + '"';
+  }
   function applyContent(c) {
     if (!c) return;
     var T = c.texts || {};
@@ -782,7 +780,7 @@
         var cropX = workCrop(w.cropX), cropY = workCrop(w.cropY), zoom = workZoom(w.zoom);
         return '<figure class="work glass rv in" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%;--photo-zoom:' + zoom + '">' +
           '<div class="mat">' +
-            '<img class="work-photo-main" src="' + workHtmlEscape(w.img || '') + '" loading="lazy" alt="' + workHtmlEscape(caption || 'Пример работы') + '">' +
+            '<img class="work-photo-main" ' + workImgAttrs(w.img || '') + ' loading="lazy" decoding="async" alt="' + workHtmlEscape(caption || 'Пример работы') + '">' +
             (badge ? '<span class="work-badge" style="--badge-color:' + color + '"><i aria-hidden="true"></i>' + workHtmlEscape(badge) + '</span>' : '') +
             '<div class="work-info">' +
               '<div class="work-copy">' +
@@ -796,7 +794,7 @@
       refreshWorksCarousel();
     }
     if (c.catalog && Array.isArray(c.catalog.categories)) { CAT = c.catalog; window.PAMYAT_CATALOG = CAT; document.dispatchEvent(new CustomEvent('pamyat:catalog', { detail: CAT })); }
-    if (c.calc && Array.isArray(c.calc.steps)) { CALC = c.calc.steps; CALC_DIMENSIONS = normalizeDimensionsConfig(c.calc.dimensions); CALC_BASE = PP.normalizeBase(c.calc.base); }
+    if (c.calc && Array.isArray(c.calc.steps)) { CALC = c.calc.steps; CALC_DIMENSIONS = normalizeDimensionsConfig(c.calc.dimensions); if (PP) CALC_BASE = PP.normalizeBase(c.calc.base); }
     drawTeaser(); build(); render(); themes();
   }
   window.PAMYAT_CATALOG = CAT; window.pamyatThemes = themes;

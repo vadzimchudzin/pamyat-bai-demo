@@ -29,6 +29,8 @@
     img.dataset.retry = String(step + 1);
     var work = img.closest('.work');
     if (!orig) { if (work) work.classList.add('is-broken'); return; }
+    /* уменьшенная копия (srcset) не загрузилась — дальше работаем с оригиналом */
+    if (img.hasAttribute('srcset')) { img.removeAttribute('srcset'); img.removeAttribute('sizes'); }
     if (step === 0) { img.src = viaProxy(orig) || bust(orig); return; }
     if (step === 1) { setTimeout(function () { img.src = bust(orig); }, 1200); return; }
     if (work) work.classList.add('is-broken');

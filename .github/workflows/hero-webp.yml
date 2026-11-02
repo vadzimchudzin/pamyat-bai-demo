@@ -1,0 +1,44 @@
+name: Hero image WebP sizes
+
+# Главное фото (LCP): WebP 1920 и 2752 px вместо JPEG 367 КБ (197 КБ / 112 КБ).
+on:
+  push:
+    branches: [feat/calc-catalog-polish]
+    paths:
+      - ".github/workflows/hero-webp.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  hero:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save --no-package-lock sharp@0.34.3
+      - name: Encode
+        run: |
+          node -e "
+          const sharp = require('sharp');
+          (async () => {
+            for (const w of [1920, 2752]) {
+              const info = await sharp('assets/img/hero-plate.jpg').resize({ width: w, withoutEnlargement: true })
+                .webp({ quality: 80, effort: 6, smartSubsample: true }).toFile('assets/img/hero-plate-' + w + '.webp');
+              console.log(w, info.width + 'x' + info.height, Math.round(info.size / 1024) + 'KB');
+            }
+          })().catch(e => { console.error(e); process.exit(1); });"
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/img/hero-plate-*.webp
+          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          git commit -q -m "Hero image: WebP 1920/2752"
+          for i in 1 2 3 4 5; do git pull -q --rebase origin "${{ github.ref_name }}" && git push -q origin "HEAD:${{ github.ref_name }}" && exit 0; sleep 7; done
+          exit 1

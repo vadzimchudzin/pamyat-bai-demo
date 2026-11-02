@@ -1,0 +1,40 @@
+name: Catalog photos - remove top line artifact
+
+# У нескольких фото каталога над памятником осталась тонкая серая линия из исходников.
+# Убираем её в 4K и заново пишем md/sm (tools/fix/catalog-lines.mjs). Размеры кадра не меняются.
+on:
+  push:
+    branches: [feat/calc-catalog-polish]
+    paths:
+      - ".github/workflows/catalog-fixlines.yml"
+      - "tools/fix/catalog-lines.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save --no-package-lock sharp@0.34.3
+      - name: Remove line (A1 B1 B2 E9 F9)
+        run: node tools/fix/catalog-lines.mjs assets/catalog A1 B1 B2 E9 F9 | tee /tmp/fix.log
+      - name: Commit
+        run: |
+          set -euo pipefail
+          mkdir -p tools/fix/log && { echo "run ${{ github.run_id }} $(date -u +%FT%TZ)"; cat /tmp/fix.log; } > tools/fix/log/last-run.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/catalog tools/fix/log
+          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          git commit -q -m "Catalog: remove top line artifact (A1 B1 B2 E9 F9)"
+          for i in 1 2 3; do git pull -q --rebase origin "${{ github.ref_name }}" && git push -q origin "HEAD:${{ github.ref_name }}" && exit 0; sleep 5; done
+          exit 1

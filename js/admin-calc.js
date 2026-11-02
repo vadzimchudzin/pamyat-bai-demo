@@ -32,8 +32,9 @@
     return '<label>' + label + '<input name="' + name + '" type="number" step="' + step + '" min="' + min + '"' +
       (max == null ? '' : ' max="' + max + '"') + ' value="' + esc(value) + '"></label>';
   }
-  function nf(name, label, value, hint, attrs) {
-    return '<label class="nf"><span>' + label + '</span><input name="' + name + '" type="number" step="any" min="0" value="' + esc(plain(value)) + '"' + (attrs || '') + '>' +
+  function nf(name, label, value, hint, attrs, digits) {
+    var v = digits ? String(Math.round(Number(value) * Math.pow(10, digits)) / Math.pow(10, digits)) : plain(value);
+    return '<label class="nf"><span>' + label + '</span><input name="' + name + '" type="number" step="any" min="0" value="' + esc(v) + '"' + (attrs || '') + '>' +
       (hint ? '<small>' + hint + '</small>' : '') + '</label>';
   }
   function drawCalcDimensions() {
@@ -129,9 +130,10 @@
       nf('cres', 'Резерв, %', m.reserve, 'Запас на непредвиденное, прибавляется к затратам') +
       '</fieldset>' +
       '<fieldset><legend>3. Цена для клиента</legend>' +
-      nf('cmk', 'Наценка, ×', m.markup, 'Цена = затраты с резервом × наценка', ' min="0.01"') +
+      nf('cmk', 'Наценка, ×', m.markup, 'Цена = затраты с резервом × наценка', ' min="0.01"', 6) +
       nf('cmin', 'Минимальная сумма, BYN', m.min, '0 — без минимума') +
       '<div class="fit"><label class="nf"><span>Желаемая цена в базовой точке</span><input name="ctarget" type="number" step="any" min="0" placeholder="например, 2250"></label>' +
+      '<label class="nf"><span>…или цена за 1 ' + u + '</span><input name="ctargetu" type="number" step="any" min="0" placeholder="например, 500"></label>' +
       '<button type="button" class="btn line sm" data-act="k-fit">Подобрать наценку</button></div>' +
       '</fieldset>' +
       '<fieldset class="trim-set' + (area ? '' : ' off') + '"><legend>4. Подрезка плитки</legend>' +
@@ -186,7 +188,7 @@
       var p = g('iprice').trim();
       out.price = p === '' ? null : Math.max(0, Math.round(+p * 100) / 100);
       out.pricing = { mode: 'fixed' };
-      return out;
+      return keepExtra(out, row);
     }
     var bd = PP.dimsOf(base.length, base.width);
     if (!$('[name=cq]', row)) {            // позиция только что переключена с «фиксированной»: сохраняем её цену в базовой точке
@@ -204,6 +206,17 @@
     }
     var a = PP.analyzeAt(out, bd, { base: base });
     out.price = a ? PP.roundMoney(a.price) : 0;
+    return keepExtra(out, row);
+  }
+  /* поля позиции, которых нет в форме (таблица сметы и т.п.), сохраняем как были */
+  function origItem(row) {
+    var st = row.closest('.step'), sid = st && st.dataset.id, steps = (content().calc && content().calc.steps) || [];
+    var s = steps.filter(function (x) { return x.id === sid; })[0];
+    return s ? (s.items || []).filter(function (x) { return x.id === row.dataset.id; })[0] : null;
+  }
+  function keepExtra(out, row) {
+    var o = origItem(row);
+    if (o) Object.keys(o).forEach(function (k) { if (!(k in out)) out[k] = o[k]; });
     return out;
   }
 
@@ -259,6 +272,20 @@
     return '<table class="size-table"><thead><tr><th>Участок, м</th><th>м²</th><th>Цена, BYN</th><th>BYN/м²</th><th>Затраты, BYN</th><th>Маржа</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
+  /* таблица из сметы владельца: цена клиента по текущей настройке, мастер, материалы, прибыль */
+  function estimateTable(it, base) {
+    var e = it.estimate;
+    if (!e || !Array.isArray(e.rows) || !e.rows.length) return '';
+    var rows = e.rows.map(function (r) {
+      var d = PP.dimsOf(+r[0], +r[1]), a = PP.analyzeAt(it, d, { base: base });
+      var master = (+e.master || 0) * d.area, mat = +r[2] || 0, profit = a.price - master - mat;
+      return '<tr><td>' + f2(d.length) + ' × ' + f2(d.width) + '</td><td>' + f2(d.area) + '</td><td><b>' + f2(a.price) + '</b></td><td>' + f2(a.price / d.area) +
+        '</td><td>' + f2(master) + '</td><td>' + f2(mat) + '</td><td><b' + (profit < 0 ? ' class="neg"' : '') + '>' + f2(profit) + '</b></td><td>' + (a.price > 0 ? Math.round(profit / a.price * 100) : 0) + '%</td></tr>';
+    }).join('');
+    return '<h4>Смета по типовым размерам — мастер ' + f2(e.master) + ' BYN/м², материалы из вашей таблицы</h4><div class="tbl"><table class="size-table est-table">' +
+      '<thead><tr><th>Участок, м</th><th>м²</th><th>Цена клиента</th><th>BYN/м²</th><th>Мастер</th><th>Материалы</th><th>Прибыль</th><th>Маржа</th></tr></thead><tbody>' + rows + '</tbody></table></div>';
+  }
+
   function breakdownHTML(it, base, bd) {
     var a = PP.analyzeAt(it, bd, { base: base }), ev = a.eval, c = ev.cost, p = PP.normalizePricing(it), cv = p.curve, u = unitOf(p.quantity);
     if (!c) return '';
@@ -302,7 +329,7 @@
       '<span class="seg" role="group">' + [2, 4, 9].map(function (r) { return '<button type="button" data-range="' + r + '" class="' + (chartRange === r ? 'on' : '') + '" title="Правый край графика: площадь в ' + r + ' раза больше базовой">до ×' + r + ' пл.</button>'; }).join('') + '</span></div>' +
       '<div class="chart-box">' + ch.html + '</div>' +
       '<div class="chart-legend"><span class="lg price">цена для клиента</span>' + (ch.hasCost ? '<span class="lg cost">затраты с резервом</span>' : '') + '<span class="lg base">базовая точка</span><span class="readout" data-readout>Наведите курсор на график — покажу цену для любого размера.</span></div></div></div>' +
-      '<h4>Цены для разных размеров (форма как у базового участка)</h4><div class="tbl">' + sizeTable(it, base) + '</div>';
+      (it.estimate ? estimateTable(it, base) : '<h4>Цены для разных размеров (форма как у базового участка)</h4><div class="tbl">' + sizeTable(it, base) + '</div>');
     var svg = $('.curve-svg', out);
     if (svg && ch.pts.length) bindChart(svg, ch, it, base, $('[data-readout]', out));
   }
@@ -337,11 +364,17 @@
       allowSkip: $('[name=dimensionsAllowSkip]', d).checked
     };
     if (dims.max < dims.min) dims.max = dims.min;
-    var base = readBase();
-    return { dimensions: dims, base: base, steps: $$('#calcEd .step').map(function (st) {
-      return { id: st.dataset.id, name: $('[name=name]', st).value.trim() || 'Шаг', sub: $('[name=sub]', st).value.trim(), type: $('[name=type]', st).value,
-        items: $$('.it', st).map(function (it) { return readItem(it, base); }).filter(function (x) { return x.name; }) };
-    }) };
+    var base = readBase(), cur = content().calc || {}, oldSteps = cur.steps || [];
+    /* ключи, которых нет в форме (метка тарифов, типовые размеры, настройки шагов), не теряем */
+    var out = Object.assign({}, cur, { dimensions: Object.assign({}, cur.dimensions || {}, dims), base: base });
+    out.steps = $$('#calcEd .step').map(function (st) {
+      var old = oldSteps.filter(function (x) { return x.id === st.dataset.id; })[0] || {};
+      return Object.assign({}, old, { id: st.dataset.id, name: $('[name=name]', st).value.trim() || 'Шаг', sub: $('[name=sub]', st).value.trim(), type: $('[name=type]', st).value,
+        items: $$('.it', st).map(function (it) { return readItem(it, base); }).filter(function (x) { return x.name; }) });
+    });
+    var mon = oldSteps.filter(function (x) { return x.id === 'monument'; });
+    if (mon.length) out.steps = mon.concat(out.steps);
+    return out;
   }
 
   $('#calcEd').addEventListener('click', function (e) {
@@ -353,10 +386,11 @@
     var b = e.target.closest('[data-act]'); if (!b) return;
     var a = b.dataset.act;
     if (a === 'k-fit') {
-      var row = b.closest('.calc-it'), target = parseFloat($('[name=ctarget]', row).value);
-      if (!(target > 0)) { toast('Введите желаемую цену в базовой точке', true); return; }
+      var row = b.closest('.calc-it'), target = parseFloat($('[name=ctarget]', row).value), perUnit = parseFloat(($('[name=ctargetu]', row) || {}).value);
       var base = readBase(), it = readItem(row, base), p = PP.normalizePricing(it), cs = p.curve.costs;
       var bd = PP.dimsOf(base.length, base.width), ev = PP.analyzeAt(it, bd, { base: base }).eval;
+      if (perUnit > 0) target = perUnit * PP.measureValue(p.quantity, bd) * p.curve.share;   // «500 BYN за м²» → цена базового участка
+      if (!(target > 0)) { toast('Введите желаемую цену в базовой точке или цену за единицу', true); return; }
       if (!cs || !(ev.cost.total > 0)) { toast('Сначала укажите затраты — иначе наценку не подобрать', true); return; }
       $('[name=cmk]', row).value = plain(target / ev.cost.total);
       renderCurveOut(row); toast('Наценка подобрана: ×' + f2(target / ev.cost.total));

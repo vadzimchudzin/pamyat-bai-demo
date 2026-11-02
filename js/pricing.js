@@ -100,9 +100,13 @@
   }
 
   /* ---------- настройки позиции ---------- */
+  /* «за м²» / «за м.п.» в названии старых позиций. Единицы ищем только отдельным словом:
+     иначе «мп» внутри слов («Комплекс», «лампада») превращало цену в «BYN/м.п.» */
+  var RE_AREA = /(?:^|[^а-яёa-z])(?:м²|м2(?![0-9])|кв\.?\s*м(?![а-яё]))/i;
+  var RE_LINEAR = /(?:^|[^а-яёa-z])(?:м\.?\s?п(?:\.|(?![а-яё]))|пог(?:\.|онн(?:ый|ых|ого)?)\s*(?:м|метр))/i;
   function legacyInferMode(name) {
-    return /(?:м²|м2|кв\.?\s*м)/i.test(name) ? 'area'
-      : /(?:м\.?\s*п\.?|погонн(?:ый|ых)?\s+метр)/i.test(name) ? 'linear' : 'fixed';
+    name = String(name || '');
+    return RE_AREA.test(name) ? 'area' : RE_LINEAR.test(name) ? 'linear' : 'fixed';
   }
   function normalizeCurve(raw) {
     var c = raw || {}, hasCosts = c.costFixed != null || c.costUnit != null || c.markup != null || c.reserve != null;
@@ -264,6 +268,16 @@
     return parts.join('; ');
   }
 
+  /* Ставка за единицу, если цена строго пропорциональна размеру (нет постоянной части,
+     минимума, подрезки и округления до элементов) — тогда клиенту можно показать «500 BYN/м²». */
+  function linearRate(it) {
+    var p = normalizePricing(it);
+    if (p.mode !== 'curve') return null;
+    var c = p.curve, r = c.rates;
+    if (r.fixed > 0.005 || r.min > 0.005 || c.piece > 0 || (c.trim.enabled && p.quantity === 'area') || !(r.unit > 0)) return null;
+    return { rate: roundMoney(r.unit * c.share), unit: measureUnit(p.quantity), quantity: p.quantity };
+  }
+
   /* ---------- анализ для админки ---------- */
   function analyzeAt(it, d, opts) {
     var p = normalizePricing(it);
@@ -298,6 +312,7 @@
     var c = JSON.parse(JSON.stringify(calc));
     (c.steps || []).forEach(function (st) {
       (st.items || []).forEach(function (it) {
+        delete it.estimate;                 /* таблица сметы (мастер, материалы) — только для админки */
         if (!it.pricing || it.pricing.mode !== 'curve') return;
         var n = normalizeCurve(it.pricing.curve);
         it.pricing = {
@@ -318,7 +333,7 @@
     num: num, fmt: fmt, roundMoney: roundMoney, roundTo: roundTo,
     normalizeBase: normalizeBase, dimsOf: dimsOf, measureValue: measureValue, measureUnit: measureUnit,
     trimInfo: trimInfo, normalizeCurve: normalizeCurve, normalizePricing: normalizePricing,
-    calcItem: calcItem, analyzeAt: analyzeAt, curvePoints: curvePoints,
+    calcItem: calcItem, analyzeAt: analyzeAt, curvePoints: curvePoints, linearRate: linearRate, inferMode: legacyInferMode,
     legacyCoefficient: function (it, d) { return legacyCoefficient(normalizePricing(it), d); },
     sanitizeCalcForPublic: sanitizeCalcForPublic
   };
