@@ -273,9 +273,15 @@
     zs.classList.remove('zoomed'); zs.innerHTML = ''; zs.appendChild(el); zoomLoading(false);
   }
   function getHi(m, cb) {
-    if (HI && HI.u === m.img) { if (HI.im) return cb(HI.im); HI.cbs.push(cb); return; }
+    // HI.cbs !== null — загрузка ещё идёт; после ошибки запись сбрасывается, и следующий вызов грузит 4K заново
+    if (HI && HI.u === m.img && (HI.im || HI.cbs)) { if (HI.im) return cb(HI.im); HI.cbs.push(cb); return; }
     var h = HI = { u: m.img, im: null, cbs: [cb] };
-    loadImg(m.img, '', function (im) { h.im = im; if (HI === h) { var l = h.cbs; h.cbs = []; l.forEach(function (f) { f(im); }); } });
+    loadImg(m.img, '', function (im) {
+      var l = h.cbs; h.cbs = null; h.im = im || null;
+      if (HI !== h) return;
+      if (!im) HI = null;
+      l.forEach(function (f) { f(h.im); });
+    });
   }
   function zoomVariant(v) {
     var m = list[idx]; if (!m) return;
