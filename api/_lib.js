@@ -2,6 +2,8 @@
 const crypto = require('crypto');
 const DEFAULTS = require('./_defaults');
 const PP = require('../js/pricing.js');
+const TARIFFS = require('./_tariffs');
+const ACCESSORIES = require('./_accessories');
 
 /* ---------- база (Postgres: Neon / Vercel Postgres / любой) ---------- */
 let pool = null, ready = null;
@@ -68,7 +70,12 @@ function merge(base, over) {
 async function getContent() {
   await init();
   const r = await q(`select value from kv where key='content'`);
-  return merge(JSON.parse(JSON.stringify(DEFAULTS)), r.rows[0] ? r.rows[0].value : {});
+  const c = merge(JSON.parse(JSON.stringify(DEFAULTS)), r.rows[0] ? r.rows[0].value : {});
+  // калькулятор по тарифам из смет (цена за м²): однократный перенос старых шагов, дальше — как сохранено в админке
+  if (c.calc) c.calc = TARIFFS.migrateCalc(c.calc);
+  // раздел «Аксессуары» в каталоге — однократно (если его удалить в админке, он не вернётся)
+  if (c.catalog) c.catalog = ACCESSORIES.migrateCatalog(c.catalog);
+  return c;
 }
 async function saveContent(c) {
   await init();
@@ -265,8 +272,7 @@ function estimateMeasure(basis, dimensions) {
 function estimatePricing(item, basePrice, dimensions) {
   const name = String(item && item.name || '');
   const raw = item && item.pricing || {};
-  const inferred = /(?:м²|м2|кв\.?\s*м)/i.test(name) ? 'area'
-    : /(?:м\.?\s*п\.?|погонн(?:ый|ых)?\s+метр)/i.test(name) ? 'linear' : 'fixed';
+  const inferred = PP.inferMode(name);   // единицы «м²» / «м.п.» — только отдельным словом
   const mode = raw.mode || inferred;
   const unit = mode === 'area' || raw.quantity === 'area' ? 'м²' : mode === 'linear' ? 'м.п.' : (item.unit || 'шт.');
   const price = Math.max(0, Number(basePrice) || 0);

@@ -9,7 +9,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/css/dusk.css?v=e28">
+<link rel="stylesheet" href="/css/dusk.css?v=e30">
+<link rel="stylesheet" href="/css/polish.css?v=1">
 </head>
 <body class="catpage">
 <div class="ambience" aria-hidden="true"><div class="flame-light"></div><div class="light-breath"></div></div>
@@ -61,11 +62,11 @@
 
 <div class="clb" id="clb" role="dialog" aria-modal="true">
   <div class="box">
-    <button class="x" id="clbX" type="button" aria-label="Закрыть">✕</button>
-    <button class="nv p" id="clbP" type="button" aria-label="Предыдущая">‹</button>
-    <button class="nv n" id="clbN" type="button" aria-label="Следующая">›</button>
-    <div class="pic"><img id="clbImg" alt=""></div>
-    <div>
+    <button class="x" id="clbX" type="button" aria-label="Закрыть"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
+    <button class="nv p" id="clbP" type="button" aria-label="Предыдущая"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button class="nv n" id="clbN" type="button" aria-label="Следующая"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <div class="pic" id="clbPic"></div>
+    <div class="inf">
       <div class="k" id="clbK"></div>
       <h2 id="clbT"></h2>
       <div id="clbD"></div>
@@ -75,9 +76,10 @@
   </div>
 </div>
 
-<script src="/js/catalog-default.js?v=c2"></script>
+<script src="/js/catalog-default.js?v=c3"></script>
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.27/dist/lenis.min.js" integrity="sha384-R18XzqnxvVLEF+BYfhpmDx30v7eP83fAckyfoRzK7/Uf6nGqufcmsk0eAKo7S3RU" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="/js/site.js?v=e17"></script>
-<script src="/js/catalog.js?v=c7"></script>
+<script src="/js/site.js?v=e24"></script>
+<script src="/js/catalog.js?v=c8"></script>
+<script src="/js/lamp.js?v=1" defer></script>
 </body>
 </html>
