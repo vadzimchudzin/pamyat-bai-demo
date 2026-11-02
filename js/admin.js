@@ -214,6 +214,12 @@
 
   /* ---------- каталог: разделы, обложки, модели — всё редактируется ---------- */
   var openCats = {};
+  // миниатюра 640px (assets/catalog/sm), если её нет — оригинал
+  function modThumb(src) {
+    var m = /^\/assets\/catalog\/([A-Za-z0-9_.-]+\.webp)(?:[?#].*)?$/.exec(src || '');
+    if (!m) return '<img loading="lazy" decoding="async" src="' + esc(src) + '" alt="">';
+    return '<img loading="lazy" decoding="async" src="/assets/catalog/sm/' + m[1] + '" data-full="' + esc(src) + '" onerror="if(this.dataset.full){this.src=this.dataset.full;this.removeAttribute(\'data-full\')}" alt="">';
+  }
   function catImg(src, zoom) {
     var scale = Math.max(0.8, Math.min(2.2, Number(zoom) || 1));
     return src ? '<img src="' + esc(src) + '" alt="" style="transform:scale(' + scale + ')">' : '<span>✦</span>';
@@ -254,8 +260,12 @@
           '<div class="acts" style="margin-top:10px"><label class="btn line sm">+ Загрузить модели<input type="file" accept="image/*" multiple data-up="items" hidden></label></div>' +
           (openCats[c.id] ? '<div class="mods">' + its.map(function (m) {
             var gi = K.items.indexOf(m);
-            return '<div class="mod" data-gi="' + gi + '"><div class="ph"><img loading="lazy" src="' + esc(m.img) + '" alt=""></div>' +
-              '<input name="code" value="' + esc(m.code) + '" title="Артикул">' +
+            var addon = c.calc === false || c.id === 'accessories';
+            return '<div class="mod" data-gi="' + gi + '"><div class="ph">' + modThumb(m.img) + '</div>' +
+              '<input name="code" value="' + esc(m.code) + '" title="Артикул" placeholder="Артикул">' +
+              '<input name="mname" value="' + esc(m.name || '') + '" title="Название (необязательно)" placeholder="Название">' +
+              '<input name="msize" value="' + esc(m.size || '') + '" title="Размер (необязательно)" placeholder="Размер">' +
+              (addon || m.price != null ? '<input name="mprice" type="number" min="0" step="1" value="' + (m.price == null ? '' : esc(m.price)) + '" title="Цена «от», BYN — пусто = по запросу" placeholder="Цена, BYN">' : '') +
               '<div class="row"><select name="mcat" title="Раздел">' + K.categories.map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === c.id ? ' selected' : '') + '>' + esc(x.short || x.name) + '</option>'; }).join('') + '</select>' +
               '<button class="ic" data-c="as-cover" title="Сделать обложкой">★</button><button class="ic del" data-c="m-del" title="Удалить">✕</button></div></div>';
           }).join('') + '</div>' : '') + '</details></div>';
@@ -292,6 +302,14 @@
       $$('.mod', el).forEach(function (m) {
         var it = K.items[+m.dataset.gi]; if (!it) return;
         it.code = $('[name=code]', m).value.trim() || it.code; it.cat = $('[name=mcat]', m).value;
+        var nm = $('[name=mname]', m), sz = $('[name=msize]', m), pr = $('[name=mprice]', m);
+        if (nm) { if (nm.value.trim()) it.name = nm.value.trim(); else delete it.name; }
+        if (sz) { if (sz.value.trim()) it.size = sz.value.trim(); else delete it.size; }
+        if (pr) {
+          var pv = pr.value.trim();
+          if (pv === '') { if ('price' in it || c.calc === false || c.id === 'accessories') it.price = null; }
+          else if (isFinite(+pv)) it.price = Math.max(0, Math.round(+pv));
+        }
       });
     });
   }
