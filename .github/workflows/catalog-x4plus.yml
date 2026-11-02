@@ -4,11 +4,8 @@ name: Catalog x4plus (complexes & fences)
 # Повторный апскейл ×4 моделью Real-ESRGAN x4plus (реалистичный камень и металл вместо
 # «акварельной» animevideov3) из assets/catalog-originals. PyTorch CPU, 5 параллельных шардов.
 # На выходе 4K + md/ (1600) + sm/ (640) и обновлённый variants.json — коммит в ветку.
+# Фото уже пересчитаны (PR #25); повторный запуск — вручную: Actions → Run workflow.
 on:
-  push:
-    branches: [feat/works-lamp-buttons]
-    paths:
-      - ".github/workflows/catalog-x4plus.yml"
   workflow_dispatch:
 
 permissions:
@@ -62,8 +59,9 @@ jobs:
           retention-days: 3
 
   commit:
+    # только если все шарды успешны — без частичного обновления
     needs: upscale
-    if: ${{ !cancelled() }}
+    if: ${{ needs.upscale.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
