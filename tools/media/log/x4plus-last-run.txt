@@ -1,0 +1,4 @@
+run 41537087450 2026-11-02T23:09:43Z  model: RealESRGAN_x4plus (torch cpu)
+upscale: success  images: 45
+K1.webp K2.webp K3.webp K4.webp K5.webp K6.webp K7.webp K8.webp K9.webp K10.webp K11.webp K12.webp K13.webp K14.webp K15.webp K16.webp K17.webp K18.webp K19.webp K20.webp K21.webp K22.webp K23.webp K24.webp K25.webp K26.webp K27.webp K28.webp K29.webp K30.webp K31.webp K32.webp K33.webp O1.webp O2.webp O3.webp O4.webp O5.webp O6.webp O7.webp O8.webp O9.webp O10.webp O11.webp O12.webp 
+38M	assets/catalog
