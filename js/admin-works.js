@@ -30,6 +30,13 @@
     item.description = workText(item, 'description');
     item.presentationEdited = true;
   }
+  /* строка «камень | размер» на карточке сайта; если заполнена — описание на карточке не показывается */
+  function metaText(x) { return [String(x && x.stone || '').trim(), String(x && x.size || '').trim()].filter(Boolean).join('  |  '); }
+  function paintInfo(card, item) {
+    var m = card.querySelector('[data-work-meta]'), d = card.querySelector('[data-work-description]'), t = metaText(item);
+    if (m) { m.textContent = t; m.hidden = !t; }
+    if (d) d.hidden = !!t || !String(d.textContent || '').trim();
+  }
   var WK = { showAll: true, drag: null };
   function r1(n) { return Math.round(n * 10) / 10; }
   function isExternalImg(x) { return /^https?:\/\//i.test(String(x && x.img || '')); }
@@ -49,14 +56,16 @@
       x = x || {};
       var caption = workText(x, 'caption'), description = workText(x, 'description');
       var cropX = cropValue(x.cropX), cropY = cropValue(x.cropY), zoom = workZoom(x.zoom), color = badgeColor(x.badgeColor);
-      var badge = String(x.badgeText || '').trim();
+      var badge = String(x.badgeText || '').trim(), meta = metaText(x);
       return '<div class="w wk" data-i="' + i + '">' +
         '<div class="wk-stage">' +
           '<div class="wk-frame" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%;--photo-zoom:' + zoom + '">' +
             '<img class="wk-img" src="' + esc(x.img || '') + '" alt="" draggable="false">' +
             '<span class="wk-broken">Фото не загружается.<br>Нажмите «Заменить фото»</span>' +
             '<span class="wk-badge" style="--badge-color:' + color + '"' + (badge ? '' : ' hidden') + '><i aria-hidden="true"></i><em>' + esc(badge) + '</em></span>' +
-            '<div class="wk-info"><strong data-work-title' + (caption ? '' : ' hidden') + '>' + esc(caption) + '</strong><span data-work-description' + (description ? '' : ' hidden') + '>' + esc(description) + '</span></div>' +
+            '<div class="wk-info"><i class="wk-line" aria-hidden="true"></i><strong data-work-title' + (caption ? '' : ' hidden') + '>' + esc(caption) + '</strong>' +
+              '<span data-work-description' + (description && !meta ? '' : ' hidden') + '>' + esc(description) + '</span>' +
+              '<span class="wk-meta" data-work-meta' + (meta ? '' : ' hidden') + '>' + esc(meta) + '</span></div>' +
           '</div>' +
         '</div>' +
         '<div class="wk-zoom">' +
@@ -68,6 +77,9 @@
         '<div class="wk-visible"><span data-visible>В кадре 100% × 100% фото</span><button class="link" data-w="reset" type="button">Сбросить кадр</button></div>' +
         '<label>Заголовок карточки<input name="cap" value="' + esc(caption) + '" placeholder="Например: Памятник с портретом"></label>' +
         '<label>Описание карточки<textarea name="description" rows="2" placeholder="Кратко опишите работу">' + esc(description) + '</textarea></label>' +
+        '<div class="wk-meta-row"><label>Камень<input name="stone" value="' + esc(x.stone || '') + '" placeholder="Например: Гранит Габбро-диабаз"></label>' +
+        '<label>Размер<input name="size" value="' + esc(x.size || '') + '" placeholder="Например: 3.0 × 2.5 м"></label></div>' +
+        '<p class="wk-note">Камень и размер показываются под заголовком строкой со значками (вместо описания).</p>' +
         '<div class="wk-badge-row"><label>Текст плашки<input name="badgeText" value="' + esc(badge) + '" placeholder="Например: Новое"></label>' +
         '<label class="w-color-label">Цвет<input type="color" name="badgeColor" value="' + color + '"></label></div>' +
         '<div class="tools"><span><button class="ic" data-w="up" type="button" aria-label="Переместить выше">↑</button> <button class="ic" data-w="down" type="button" aria-label="Переместить ниже">↓</button></span>' +
@@ -170,6 +182,8 @@
       var description = card.querySelector('[data-work-description]');
       if (description) { description.textContent = e.target.value; description.hidden = !String(e.target.value || '').trim(); }
     }
+    if (name === 'stone' || name === 'size') item[name] = e.target.value;
+    if (name === 'cap' || name === 'description' || name === 'stone' || name === 'size') paintInfo(card, item);
     if (name === 'badgeText') {
       item.badgeText = e.target.value;
       var preview = card.querySelector('.wk-badge');
