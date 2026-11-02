@@ -68,3 +68,7 @@
 .calc-colh,.it-main{grid-template-columns:minmax(170px,1.5fr) 120px minmax(130px,1fr) 185px 112px}
 @media(max-width:1100px){.calc-colh,.it-main{grid-template-columns:minmax(150px,1.5fr) 100px minmax(115px,1fr) 170px 106px}}
 @media(max-width:860px){.it-main{grid-template-columns:1fr 1fr}.calc-colh{display:none}}
+/* смета владельца */
+.est-table{min-width:680px}
+.est-table .neg{color:#b3402e}
+.tbl+h4,.size-table+h4{margin-top:16px}
