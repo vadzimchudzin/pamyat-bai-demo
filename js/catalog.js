@@ -17,20 +17,25 @@
     return m.price == null || m.price === '' ? 'Цена по запросу' : 'от ' + fmt(m.price) + ' BYN';
   }
   function isAddon(c) { return !!c && (c.id === 'accessories' || c.calc === false); }
+  // комплексы и ограды показываем одним фото (без трёх вариантов камня); в админке можно задать stones: true/false
+  function multiStone(c) { return !!c && (c.stones === true || (c.stones !== false && c.id !== 'complex' && c.id !== 'fence')); }
   function itemTitle(m, c) { return m.name ? m.name : ((c.short || '') + ' ' + m.code).trim(); }
 
   /* ---------- размеры фото: sm 640 (сетка), md 1600 (карточка), оригинал 4K (увеличение) ---------- */
+  // комплексы и ограды пересчитаны заново (x4plus) — новый адрес, чтобы браузер не взял старую копию из кэша
+  var FRESH = /^\/assets\/catalog\/(?:md\/|sm\/)?[KO]\d+\.webp$/;
+  function fresh(u) { return u && FRESH.test(u) ? u + '?v=x4' : (u || ''); }
   function assetFile(u) { var m = /^\/assets\/catalog\/([A-Za-z0-9_.-]+\.webp)(?:[?#].*)?$/.exec(u || ''); return m ? m[1] : ''; }
   function sized(u, size) {
-    if (!u || !size) return u || '';
+    if (!u || !size) return fresh(u);
     var f = assetFile(u);
-    if (f) return '/assets/catalog/' + size + '/' + f;
+    if (f) return fresh('/assets/catalog/' + size + '/' + f);
     if (/^\/api\/img\?/.test(u) && !/[?&]w=/.test(u)) return u + '&w=' + (size === 'sm' ? 640 : 1600);
     return u;
   }
   function imgTag(u, alt, sizes, extra) {
     var sm = sized(u, 'sm'), md = sized(u, 'md'), set = sm !== md ? ' srcset="' + esc(sm) + ' 640w, ' + esc(md) + ' 1600w" sizes="' + sizes + '"' : '';
-    return '<img loading="lazy" decoding="async" src="' + esc(sm) + '"' + set + ' data-full="' + esc(u) + '" alt="' + esc(alt) + '"' + (extra || '') + '>';
+    return '<img loading="lazy" decoding="async" src="' + esc(sm) + '"' + set + ' data-full="' + esc(fresh(u)) + '" alt="' + esc(alt) + '"' + (extra || '') + '>';
   }
   // нет уменьшенной копии — показываем оригинал
   document.addEventListener('error', function (e) {
@@ -199,7 +204,7 @@
     PIC.className = 'pic stones';
     PIC.innerHTML = STONES.map(function (s, v) {
       return '<button type="button" class="sv' + (v ? ' wait' : '') + '" data-v="' + v + '" aria-label="' + esc(s.name + ': увеличить фото') + '">' +
-        '<span class="im"><img decoding="async" src="' + esc(md) + '" data-full="' + esc(m.img) + '" alt="' + esc(alt + ' — ' + s.name) + '"' + (s.css ? ' style="filter:' + s.css + '"' : '') + '></span>' +
+        '<span class="im"><img decoding="async" src="' + esc(md) + '" data-full="' + esc(fresh(m.img)) + '" alt="' + esc(alt + ' — ' + s.name) + '"' + (s.css ? ' style="filter:' + s.css + '"' : '') + '></span>' +
         '<span class="lb"><i style="background:' + s.sw + '"></i>' + s.name + '</span></button>';
     }).join('') + '<p class="sv-note">Цвет камня показан для сравнения; рисунок гранита у каждой плиты свой. Нажмите на фото, чтобы рассмотреть в 4K.</p>';
     var wh = MAN && MAN[codeOf(m)]; if (wh) setAr(wh[0], wh[1]);
@@ -226,6 +231,27 @@
         renderTint(im, s.p, max, function (cv) { if (cv) cachePut(key, cv); done(cv); });
       });
     });
+  }
+
+  // одно фото на студийном фоне: рамка повторяет пропорции снимка, белый фон фото растворяется в подложке
+  function drawSingle(m, alt) {
+    if (!PIC) return;
+    ++TOK;
+    var md = sized(m.img, 'md'), wh = MAN && MAN[codeOf(m)], set = '';
+    if (wh && md !== m.img) {
+      var mw = Math.round(wh[0] * 1600 / Math.max(wh[0], wh[1]));
+      set = ' srcset="' + esc(md) + ' ' + mw + 'w, ' + esc(fresh(m.img)) + ' ' + wh[0] + 'w" sizes="(max-width:720px) 100vw, 1080px"';
+    }
+    PIC.className = 'pic single';
+    PIC.innerHTML = '<button type="button" class="sv one" data-v="0" aria-label="' + esc(alt + ': увеличить фото') + '">' +
+      '<span class="im"><img decoding="async" src="' + esc(md) + '"' + set + ' data-full="' + esc(fresh(m.img)) + '" alt="' + esc(alt) + '"></span>' +
+      '<span class="zh" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" focusable="false"><circle cx="10.5" cy="10.5" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.2 15.2 4.6 4.6M10.5 7.8v5.4M7.8 10.5h5.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>4K</span></button>' +
+      '<p class="sv-note">Нажмите на фото, чтобы рассмотреть его крупно в 4K.</p>';
+    if (wh) setAr(wh[0], wh[1]);
+    var im = PIC.querySelector('.sv .im img');
+    var fit = function () { if (im.naturalWidth) setAr(im.naturalWidth, im.naturalHeight); requestAnimationFrame(placeNav); };
+    if (im.complete) fit(); else im.addEventListener('load', fit, { once: true });
+    requestAnimationFrame(placeNav);
   }
 
   /* ---------- крупный просмотр (4K) ---------- */
@@ -276,7 +302,7 @@
     // HI.cbs !== null — загрузка ещё идёт; после ошибки запись сбрасывается, и следующий вызов грузит 4K заново
     if (HI && HI.u === m.img && (HI.im || HI.cbs)) { if (HI.im) return cb(HI.im); HI.cbs.push(cb); return; }
     var h = HI = { u: m.img, im: null, cbs: [cb] };
-    loadImg(m.img, '', function (im) {
+    loadImg(fresh(m.img), '', function (im) {
       var l = h.cbs; h.cbs = null; h.im = im || null;
       if (HI !== h) return;
       if (!im) HI = null;
@@ -285,9 +311,11 @@
   }
   function zoomVariant(v) {
     var m = list[idx]; if (!m) return;
-    var tok = ++ZTOK, s = STONES[v]; ZV = v;
+    var one = !multiStone(cur); if (one) v = 0;
+    var tok = ++ZTOK, s = STONES[v], cap = itemTitle(m, cur) + (one ? '' : ' — ' + s.name); ZV = v;
+    Z.classList.toggle('single', one);
     [].forEach.call(Z.querySelectorAll('[data-zv]'), function (b) { b.setAttribute('aria-pressed', +b.dataset.zv === v ? 'true' : 'false'); });
-    $('.zt', Z).textContent = itemTitle(m, cur) + ' · ' + s.name;
+    $('.zt', Z).textContent = itemTitle(m, cur) + (one ? '' : ' · ' + s.name);
     var pane = PIC && PIC.querySelector('.sv[data-v="' + v + '"] .im > *'), ph;
     if (pane && pane.tagName === 'CANVAS') { ph = document.createElement('canvas'); ph.width = pane.width; ph.height = pane.height; ph.getContext('2d').drawImage(pane, 0, 0); }
     else { ph = new Image(); ph.src = sized(m.img, 'md'); ph.alt = ''; if (s.css) ph.style.filter = s.css; }
@@ -296,11 +324,11 @@
     getHi(m, function (im) {
       if (tok !== ZTOK) return;
       if (!im) return zoomLoading(false);
-      if (!v) { var o = im.cloneNode(); o.alt = itemTitle(m, cur) + ' — ' + s.name; return zoomSwap(o); }
+      if (!v) { var o = im.cloneNode(); o.alt = cap; return zoomSwap(o); }
       for (var i = 0; i < ZC.length; i++) if (ZC[i][0] === key) return zoomSwap(ZC[i][1]);
       renderTint(im, s.p, HI_MAX, function (cv) {
         if (!cv) { if (tok === ZTOK) zoomLoading(false); return; }
-        cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', itemTitle(m, cur) + ' — ' + s.name);
+        cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', cap);
         ZC.unshift([key, cv]); if (ZC.length > 2) ZC.length = 2;
         if (tok === ZTOK) zoomSwap(cv);
       });
@@ -335,7 +363,7 @@
       a.href = calcHref(m); a.innerHTML = 'Рассчитать стоимость <span class="arr">→</span>';
       if (sec) { sec.href = '/#contact'; sec.textContent = 'Консультация'; }
     }
-    drawStones(m, t);
+    if (multiStone(cur)) drawStones(m, t); else drawSingle(m, t);
     var nx = list[(idx + 1) % list.length]; if (nx && nx !== m) { var pre = new Image(); pre.decoding = 'async'; pre.src = sized(nx.img, 'md'); }
   }
   $('#clbCalc').addEventListener('click', function (e) {
@@ -357,6 +385,7 @@
   document.addEventListener('keydown', function (e) {
     if (zoomOn()) {
       if (e.key === 'Escape') { e.preventDefault(); closeZoom(); }
+      if (!multiStone(cur)) return;
       if (e.key === 'ArrowLeft') zoomVariant((ZV + STONES.length - 1) % STONES.length);
       if (e.key === 'ArrowRight') zoomVariant((ZV + 1) % STONES.length);
       return;
