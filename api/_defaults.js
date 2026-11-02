@@ -28,19 +28,12 @@ module.exports = {
   calc: {
     /* шаг 1 «Памятник» берётся из каталога автоматически */
     steps: [
-      { id: 'foundation', name: 'Основание', type: 'radio', sub: 'Если основание уже есть — выберите только установку. Не нужно — пропустите шаг.', items: [
-        { id: 'concrete', name: 'Армированный бетонный фундамент', price: 1000 },
-        { id: 'ready', name: 'Установка на готовое основание', price: 300 }
-      ] },
+      /* шаг «Благоустройство» — пакеты по тарифам из смет (цена за м²), см. api/_tariffs.js */
+      require('./_tariffs').landStep(null),
       { id: 'engraving', name: 'Гравировка', type: 'radio', sub: 'Базовая гравировка (ФИО, даты) уже включена.', items: [
         { id: 'base', name: 'Базовая (ФИО, даты)', price: 0, note: 'включено' },
         { id: 'art', name: 'Художественная (портрет, пейзаж)', price: 200 },
         { id: 'medal', name: 'Медальон', price: 250 }
-      ] },
-      { id: 'land', name: 'Благоустройство', type: 'multi', sub: 'Можно выбрать несколько.', items: [
-        { id: 'granite', name: 'Керамогранитная плитка', price: 1600 },
-        { id: 'curb', name: 'Бетонный бордюр', price: 300 },
-        { id: 'paving', name: 'Тротуарная плитка', price: 400 }
       ] },
       { id: 'fence', name: 'Ограда', type: 'radio', sub: 'Ограда считается отдельно от благоустройства.', items: [
         { id: 'none', name: 'Без ограды', price: 0 },
