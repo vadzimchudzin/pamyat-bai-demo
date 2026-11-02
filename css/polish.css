@@ -1,0 +1,152 @@
+/* ПАМЯТЬ.БАЙ — финальная полировка (подключается последней):
+   кнопки без «AI»-эффектов, затемнение фото работ, свет лампады, калькулятор, карточка каталога. */
+
+/* ================= кнопки: спокойные, плоские, читаемые ================= */
+:root{--b-r:4px;--b-bg:#86632c;--b-bg-h:#6f5022;--b-bg-a:#5f441c;--b-fg:#fffaf1}
+.tone-d,.dk{--b-bg:#c9a467;--b-bg-h:#d8b67e;--b-bg-a:#b9925a;--b-fg:#1b140c}
+.btn,.cta2{border-radius:var(--b-r)!important;box-shadow:none!important;filter:none!important;overflow:visible;
+  font:500 15px/1.2 var(--sans);letter-spacing:.01em;transition:background-color .2s ease,border-color .2s ease,color .2s ease!important}
+.btn{padding:14px 26px}
+.btn:hover,.btn:active,.cta2:hover,.cta2:active{transform:none!important}
+.btn-gold:after,.btn-gold:hover:after,.cta2:after,.cta2:hover:after{content:none!important;display:none!important}
+.btn .arr,.btn:hover .arr{transform:none;transition:none}
+.btn-gold,.cta2{background:var(--b-bg)!important;border:1px solid var(--b-bg)!important;color:var(--b-fg)!important}
+.btn-gold:hover,.cta2:hover{background:var(--b-bg-h)!important;border-color:var(--b-bg-h)!important}
+.btn-gold:active,.cta2:active{background:var(--b-bg-a)!important;border-color:var(--b-bg-a)!important}
+.btn-gold:disabled,.btn-gold[disabled]{opacity:.55;cursor:default}
+.btn-line{background:transparent!important;border:1px solid color-mix(in oklab,var(--ink) 34%,transparent)!important;color:var(--ink)!important}
+.btn-line:hover{background:color-mix(in oklab,var(--ink) 7%,transparent)!important;border-color:color-mix(in oklab,var(--ink) 70%,transparent)!important;box-shadow:none!important}
+.hero-copy .btn-line{color:#2a241c!important;border-color:rgba(42,36,28,.42)!important;background:rgba(255,253,249,.42)!important}
+.hero-copy .btn-line:hover{background:rgba(255,253,249,.7)!important;border-color:rgba(42,36,28,.7)!important}
+.clb .btn-line{color:#2a241c!important;border-color:rgba(42,36,28,.34)!important}
+.clb .btn-gold{--b-bg:#86632c;--b-bg-h:#6f5022;--b-bg-a:#5f441c;--b-fg:#fffaf1}
+.cta2{gap:12px;padding:14px 24px}
+.cta2 i{width:auto;height:auto;background:none!important;color:inherit!important;border-radius:0;font-size:16px;transition:none!important;transform:none!important}
+.btn-sm{padding:10px 18px;font-size:14px}
+/* мессенджеры, «назад», шаги калькулятора, пропуск размеров */
+.msg{border-radius:var(--b-r);padding:11px 16px;background:transparent;border:1px solid color-mix(in oklab,var(--ink) 26%,transparent);box-shadow:none!important;transition:background-color .2s,border-color .2s}
+.msg:hover{transform:none;background:color-mix(in oklab,var(--ink) 7%,transparent);border-color:color-mix(in oklab,var(--ink) 55%,transparent)}
+.back{border-radius:var(--b-r)}
+.back:hover{transform:none;border-color:color-mix(in oklab,var(--ink) 55%,transparent)}
+.stepnav button{border-radius:3px;letter-spacing:.1em}
+.stepnav button.on{border-color:var(--gold);color:var(--ink);background:color-mix(in oklab,var(--gold) 18%,transparent)}
+.dimensions-skip{border-radius:var(--b-r);border-color:color-mix(in oklab,var(--ink) 30%,transparent);color:var(--ink)}
+.dimensions-skip:hover{background:color-mix(in oklab,var(--ink) 7%,transparent);border-color:color-mix(in oklab,var(--ink) 60%,transparent)}
+.soc:hover{transform:none;background:color-mix(in oklab,currentColor 10%,transparent)}
+.cc:hover,.mc:hover{transform:none}
+/* стрелки работ — без стекла, свечения и «прыжков» */
+#worksCarousel .works-arrow{border-radius:var(--b-r)!important;background:rgba(24,18,12,.62)!important;border:1px solid rgba(255,255,255,.32)!important;
+  box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;scale:none!important}
+#worksCarousel .works-arrow:hover{background:rgba(24,18,12,.84)!important;border-color:rgba(255,255,255,.6)!important;scale:none!important}
+/* шаги «От разметки до сдачи»: прямоугольные чипы, как остальные кнопки */
+.rail button{border-radius:var(--b-r)!important}
+.rail button:hover{border-color:color-mix(in oklab,var(--gold) 60%,transparent)}
+/* фокус с клавиатуры — заметный, но аккуратный */
+.btn:focus-visible,.cta2:focus-visible,.msg:focus-visible,.back:focus-visible,.soc:focus-visible,.stepnav button:focus-visible,
+.dimensions-skip:focus-visible,.dim-preset:focus-visible,.rail button:focus-visible,.clb .sv:focus-visible,.czoom button:focus-visible,.mc:focus-visible,.cc:focus-visible{
+  outline:2px solid #b8873a!important;outline-offset:2px}
+
+/* ================= примеры работ: затемнение от 40% высоты фото вниз, 0 → 50% ================= */
+/* размытая подложка секции (inset:0 -14% на телефонах) раздвигала страницу до 445px — шапка и меню уезжали за край */
+#works{overflow-x:clip}
+#worksCarousel{--shade-h:60%}
+#worksCarousel .work .mat:after{
+  background:linear-gradient(to top,rgba(10,7,4,.5) 0%,rgba(10,7,4,.47) 12%,rgba(10,7,4,.41) 24%,rgba(10,7,4,.33) 36%,rgba(10,7,4,.245) 48%,
+    rgba(10,7,4,.165) 60%,rgba(10,7,4,.095) 72%,rgba(10,7,4,.042) 84%,rgba(10,7,4,.011) 94%,rgba(10,7,4,0) 100%)!important}
+
+/* ================= калькулятор ================= */
+.opt-note{display:block;margin-top:3px;font:400 12.5px/1.45 var(--sans);color:var(--dim);letter-spacing:0;text-transform:none}
+.dim-presets{margin:0 0 18px;max-width:620px}
+.dim-presets-t{display:block;margin-bottom:8px;font:500 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.dim-presets-l{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.dim-preset{display:grid;gap:2px;justify-items:start;padding:9px 11px;border:1px solid var(--line);border-radius:var(--b-r);background:transparent;color:var(--ink);cursor:pointer;text-align:left;transition:border-color .2s,background-color .2s}
+.dim-preset b{font:600 14px var(--sans);font-variant-numeric:tabular-nums}
+.dim-preset i{font:400 12px var(--sans);color:var(--dim);font-style:normal}
+.dim-preset:hover{border-color:color-mix(in oklab,var(--ink) 45%,transparent)}
+.dim-preset.on{border-color:var(--gold);background:color-mix(in oklab,var(--gold) 16%,transparent)}
+@media(max-width:720px){.dim-presets-l{grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}.dim-preset{padding:8px 7px}.dim-preset b{font-size:13px}.dim-preset i{font-size:11px}}
+@media(max-width:400px){.dim-presets-l{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* ================= каталог: сетка и карточка с тремя камнями ================= */
+.mgrid.addons .mc .t{flex-direction:column;align-items:flex-start;gap:2px}
+.mgrid.addons .mc .t span{display:block!important;color:var(--gold);font-weight:600;font-size:13px}
+.mgrid.addons .mc .t b{font:600 14px var(--sans);letter-spacing:0}
+.clb .box{width:min(1120px,100%);grid-template-columns:minmax(0,1fr);gap:18px;padding:22px 22px 24px}
+.clb .x{position:fixed;top:14px;right:14px;z-index:5;width:42px;height:42px;border-radius:var(--b-r);background:rgba(255,255,255,.14);color:#fff;border:1px solid rgba(255,255,255,.3)}
+.clb .x:hover{transform:none;background:rgba(255,255,255,.26)}
+.clb .x,.clb .nv,.czoom .zx{display:grid;place-items:center;padding:0;line-height:0}
+.clb .x svg,.clb .nv svg,.czoom .zx svg{display:block}
+.clb .nv{position:fixed;top:50%;translate:0 -50%;width:44px;height:44px;border-radius:var(--b-r);border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.14);color:#fff;font-size:22px;z-index:5}
+.clb .nv:hover{transform:none;background:rgba(255,255,255,.26)}
+.clb .nv.p{left:max(10px,calc(50% - 560px - 58px))}
+.clb .nv.n{left:auto;right:max(10px,calc(50% - 560px - 58px))}
+.clb .pic.stones{--pane-h:clamp(240px,52vh,500px);display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;min-height:0;padding:0;background:none;border-radius:0;overflow:visible;place-items:stretch}
+.clb .sv{position:relative;display:flex;flex-direction:column;min-width:0;padding:10px 10px 0;border:1px solid rgba(70,52,32,.14);border-radius:10px;
+  background:radial-gradient(ellipse at 50% 35%,#fff,#f1e9dd);color:#2a241c;cursor:zoom-in;text-align:left;font:inherit;transition:border-color .2s}
+.clb .sv:hover{border-color:rgba(134,99,44,.6)}
+.clb .sv .im{position:relative;display:block;width:100%;aspect-ratio:calc(var(--ar,.66) * .94);max-height:var(--pane-h);min-height:120px}
+.clb .sv .im img,.clb .sv .im canvas{position:absolute;inset:0;margin:auto;width:auto;height:auto;max-width:100%;max-height:100%;object-fit:contain;mix-blend-mode:multiply}
+.clb .sv .im canvas{width:100%;height:100%}
+.clb .sv.wait .im:after{content:"";position:absolute;left:50%;top:50%;width:22px;height:22px;margin:-11px 0 0 -11px;border-radius:50%;border:2px solid rgba(134,99,44,.25);border-top-color:#86632c;animation:svspin .8s linear infinite}
+@keyframes svspin{to{transform:rotate(360deg)}}
+.clb .sv .lb{display:flex;align-items:center;gap:8px;padding:10px 2px 11px;font:500 13.5px/1.25 var(--sans);color:#2a241c}
+.clb .sv .lb i{flex:0 0 auto;width:14px;height:14px;border-radius:2px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
+.clb .sv-note{grid-column:1/-1;margin:2px 0 0;font-size:12.5px;line-height:1.5;color:#6b5e50}
+.clb .inf{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"k k" "t a" "d g";gap:4px 32px;align-items:start}
+.clb .inf .k{grid-area:k;margin:0 0 2px}
+.clb .inf h2{grid-area:t;margin:0 0 10px}
+.clb .inf #clbD{grid-area:d}
+.clb .inf .gr{grid-area:g;margin:4px 0 0}
+.clb .inf .acts{grid-area:a;justify-content:flex-end;align-self:start}
+@media(max-width:860px){
+  .clb .inf{grid-template-columns:minmax(0,1fr);grid-template-areas:"k" "t" "d" "g" "a";gap:4px}
+  .clb .inf .acts{justify-content:flex-start;margin-top:12px}
+}
+@media(max-width:720px){
+  .clb .box{padding:14px 12px 18px;gap:12px}
+  .clb .pic.stones{--pane-h:clamp(170px,34svh,300px);gap:6px}
+  .clb .sv{padding:6px 6px 0;border-radius:8px}
+  .clb .sv .lb{gap:6px;padding:7px 1px 8px;font-size:11.5px}
+  .clb .sv .lb i{width:10px;height:10px}
+  .clb .sv-note{font-size:11.5px}
+  .clb .x{top:10px;right:10px;width:40px;height:40px}
+  .clb .nv{position:absolute;top:var(--nv-y,150px);width:34px;height:34px;font-size:18px;background:rgba(36,30,23,.55);border-color:rgba(255,255,255,.4)}
+  .clb .nv.p{left:4px}.clb .nv.n{right:4px}
+}
+/* крупный просмотр 4K */
+.czoom{position:fixed;inset:0;z-index:130;display:none;background:#f3ede4;color:#2a241c}
+.czoom.on{display:block;animation:fade .25s var(--ez)}
+.czoom .zs{position:absolute;left:0;right:0;top:0;bottom:64px;display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:zoom-in;touch-action:manipulation;overscroll-behavior:contain}
+.czoom .zs .zm{width:calc(100% - 32px);height:calc(100% - 32px);max-width:none;object-fit:contain;mix-blend-mode:multiply;user-select:none;-webkit-user-select:none;-webkit-user-drag:none}
+.czoom .zs.zoomed{display:block;overflow:auto;cursor:grab}
+.czoom .zs.zoomed .zm{display:block;margin:0 auto;max-width:none;max-height:none;object-fit:fill}
+.czoom .zbar{position:absolute;left:0;right:0;bottom:0;min-height:64px;display:flex;align-items:center;gap:14px;padding:10px 16px;background:#fbf8f3;border-top:1px solid rgba(70,52,32,.14)}
+.czoom .zt{flex:1 1 auto;min-width:0;font:600 15px var(--serif);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.czoom .zvs{display:flex;gap:6px}
+.czoom .zvs button{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 12px;border:1px solid rgba(70,52,32,.22);border-radius:var(--b-r);background:#fff;color:#2a241c;font:500 13px var(--sans);cursor:pointer}
+.czoom .zvs button[aria-pressed=true]{border-color:#86632c;box-shadow:inset 0 0 0 1px #86632c}
+.czoom .zvs i{width:13px;height:13px;border-radius:2px;display:block;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
+.czoom .zx{flex:0 0 auto;width:42px;height:42px;border:1px solid rgba(70,52,32,.22);border-radius:var(--b-r);background:#fff;color:#2a241c;font-size:16px;cursor:pointer}
+.czoom .zl{position:absolute;top:14px;left:50%;transform:translateX(-50%);padding:7px 12px;border-radius:var(--b-r);background:rgba(36,30,23,.8);color:#fff;font:500 12px var(--sans);opacity:0;transition:opacity .2s;pointer-events:none}
+.czoom .zl.on{opacity:1}
+@media(max-width:720px){
+  .czoom .zs{bottom:112px}
+  .czoom .zbar{flex-wrap:wrap;gap:8px;padding:10px 12px}
+  .czoom .zt{flex:1 1 calc(100% - 56px);font-size:14px}
+  .czoom .zvs{order:3;width:100%}
+  .czoom .zvs button{flex:1 1 0;padding:9px 4px;font-size:12px;gap:6px}
+}
+
+/* ================= свет лампады: блики и тени на элементах у пламени (js/lamp.js) ================= */
+.lamp-lit{isolation:isolate}
+.lamp-lit.lamp-rel{position:relative}
+.lamp-g,.lamp-s{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1}
+.lamp-g{mix-blend-mode:screen;
+  box-shadow:inset calc(var(--lx) * -1.5px) calc(var(--ly) * -1.5px) 0 rgba(255,196,128,calc(var(--li) * .55)),
+    inset calc(var(--lx) * -16px) calc(var(--ly) * -16px) 24px -12px rgba(255,156,74,calc(var(--li) * .6));
+  background:radial-gradient(farthest-corner at var(--gx,0%) var(--gy,100%),rgba(255,168,88,calc(var(--li) * .26)) 0%,rgba(255,168,88,0) 62%)}
+.lamp-s{box-shadow:calc(var(--lx) * var(--li) * -16px) calc(var(--ly) * var(--li) * -16px) 26px -8px rgba(10,5,2,calc(var(--li) * .45))}
+.lamp-in{box-shadow:inset calc(var(--lx) * -1px) calc(var(--ly) * -1px) 0 rgba(255,190,120,calc(var(--li) * .42)),inset calc(var(--lx) * -12px) calc(var(--ly) * -12px) 22px -14px rgba(255,150,70,calc(var(--li) * .35))}
+.lamp-tx{text-shadow:calc(var(--lx) * -1px) calc(var(--ly) * -1px) 0 rgba(255,184,112,calc(var(--li) * .3)),0 0 26px rgba(255,140,60,calc(var(--li) * .16))}
+@media (prefers-reduced-motion:reduce){.clb .sv.wait .im:after{animation:none}}
+@media print{.lamp-g,.lamp-s{display:none}}

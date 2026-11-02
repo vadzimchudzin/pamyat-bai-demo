@@ -76,24 +76,32 @@
     return H0 + q * (1 - H0 - H1);
   }
 
-  /* ---------- загрузка: сначала грубо по всей шкале, потом плотно вокруг текущего ---------- */
+  /* ---------- загрузка по частям ----------
+     • пока секция далеко — ничего не грузим;
+     • на подходе (~1,5 экрана): кадры вокруг начала + грубая сетка (каждый 8-й) — сцена уже «живая» при быстром скролле;
+     • когда секция на экране: плотнее вокруг текущего кадра и постепенно все кадры;
+     • Save-Data / медленная сеть: только каждый 4-й кадр и узкое окно (кросс-фейд скрывает пропуски). */
   var imgs = new Array(N), ok = new Uint8Array(N), bmp = new Array(N), loaded = 0, active = 0, started = false;
-  var MAXQ = small ? 4 : 6, WIN = small ? 14 : 9;
-  var coarse = [];
-  [32, 16, 8, 4, 2, 1].forEach(function (st) { for (var i = 0; i < N; i += st) if (coarse.indexOf(i) < 0) coarse.push(i); });
-  if (coarse.indexOf(N - 1) < 0) coarse.splice(1, 0, N - 1);
+  var conn = navigator.connection || {}, lite = !!conn.saveData || /(^|-)2g$|^3g$/.test(conn.effectiveType || '');
+  var MAXQ = lite ? 3 : small ? 4 : 6, WIN = small ? 14 : 9, near = false, seen = false;
+  var coarse = [], coarseStep = [];
+  [32, 16, 8, 4, 2, 1].forEach(function (st) { for (var i = 0; i < N; i += st) if (coarse.indexOf(i) < 0) { coarse.push(i); coarseStep.push(st); } });
+  if (coarse.indexOf(N - 1) < 0) { coarse.splice(1, 0, N - 1); coarseStep.splice(1, 0, 32); }
   function pickNext() {
-    var c = Math.round(disp);
-    for (var k = 0; k <= 24; k++) {
+    var c = Math.round(disp), win = lite ? 8 : (visible && seen ? 24 : 12), minStep = lite ? 4 : (seen ? 1 : 8);
+    for (var k = 0; k <= win; k++) {
       var a = c + k, b = c - k;
       if (a < N && !imgs[a]) return a;
       if (b >= 0 && !imgs[b]) return b;
     }
-    for (var j = 0; j < coarse.length; j++) if (!imgs[coarse[j]]) return coarse[j];
+    for (var j = 0; j < coarse.length; j++) {
+      if (coarseStep[j] < minStep) break;
+      if (!imgs[coarse[j]]) return coarse[j];
+    }
     return -1;
   }
   function pump() {
-    while (started && active < MAXQ) {
+    while (started && near && active < MAXQ) {
       var i = pickNext(); if (i < 0) return;
       (function (i) {
         var im = new Image(); im.decoding = 'async'; imgs[i] = im; active++;
@@ -249,16 +257,19 @@
   });
   if (fine) screen.addEventListener('pointerleave', function () { mx = my = 0; kick(); });
 
-  // грузим, когда до секции осталось ~2 экрана; крутим цикл только когда секция видна
+  // грузим, только когда до секции осталось ~1,5 экрана (и ставим загрузку на паузу, если ушли далеко);
+  // крутим цикл только когда секция видна
   if ('IntersectionObserver' in window) {
     new IntersectionObserver(function (es) {
-      es.forEach(function (en) { if (en.isIntersecting && !started) { started = true; pump(); } });
-    }, { rootMargin: '200% 0px' }).observe(story);
+      es.forEach(function (en) { near = en.isIntersecting; if (near) { started = true; pump(); } });
+    }, { rootMargin: '150% 0px' }).observe(story);
     new IntersectionObserver(function (es) {
-      es.forEach(function (en) { visible = en.isIntersecting; if (visible) { last = 0; kick(); } });
+      es.forEach(function (en) {
+        visible = en.isIntersecting;
+        if (visible) { seen = true; last = 0; kick(); pump(); }
+      });
     }, { rootMargin: '10% 0px' }).observe(story);
-  } else { started = true; pump(); }
-  setTimeout(function () { if (!started) { started = true; pump(); } }, 2500);
+  } else { started = near = seen = true; pump(); }
 
   measure(); disp = shown = target; size(); setChapter(0); kick();
 })();
