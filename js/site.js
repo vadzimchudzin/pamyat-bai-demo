@@ -222,52 +222,99 @@
 
   /* ---------- лайтбокс работ ---------- */
   var lbx = $('#lbx');
-  function bindWorks() {
-    $$('.work').forEach(function (w) {
-      w.addEventListener('click', function (e) {
-        if (e.target.closest('a')) return;
-        var img = w.querySelector('.mat .work-photo-main');
-        if (img && lbx && $('#lbimg')) { $('#lbimg').src = img.src; lbx.classList.add('on'); }
-      });
-    });
+  function openWork(w) {
+    var img = w && w.querySelector('.mat .work-photo-main, .mat img');
+    if (img && lbx && $('#lbimg')) { $('#lbimg').src = img.src; lbx.classList.add('on'); }
   }
-  bindWorks();
 
-  /* ---------- карусель примеров работ ---------- */
+  /* ---------- карусель примеров работ ----------
+     Бесконечная лента: по краям — копии работ (.is-clone), после остановки прокрутки позиция незаметно
+     переносится на тот же кадр среди настоящих карточек. В полях слева и справа видны соседние кадры,
+     точки — по одной на каждую работу. */
   var worksCarousel = $('#worksCarousel'), worksTrack = $('#worksGrid');
   var worksPrev = worksCarousel && $('.works-prev', worksCarousel);
   var worksNext = worksCarousel && $('.works-next', worksCarousel);
   var worksPagination = worksCarousel && $('#worksPagination');
-  function worksMetrics() {
-    var card = worksTrack && $('.work', worksTrack), gap = 18;
-    if (worksTrack) {
-      var style = getComputedStyle(worksTrack);
-      gap = parseFloat(style.columnGap || style.gap || '18') || 18;
+  var WL = { n: 0, k: 0, v: 0, idx: 0, target: null, touch: false, t: 0, rt: 0 };
+  function worksPad(side) { return worksTrack ? parseFloat(getComputedStyle(worksTrack)['padding' + side]) || 0 : 0; }
+  function worksGap() {
+    if (!worksTrack) return 0;
+    var st = getComputedStyle(worksTrack);
+    return parseFloat(st.columnGap || st.gap) || 0;
+  }
+  function worksStep() {
+    var card = worksTrack && $('.work', worksTrack);
+    return card ? card.getBoundingClientRect().width + worksGap() : 0;
+  }
+  function worksVisible(step) {
+    var view = worksTrack.clientWidth - worksPad('Left') - worksPad('Right');
+    return step > 0 ? Math.max(1, Math.round((view + worksGap()) / step)) : 1;
+  }
+  /* поля ленты: на компьютере — до края контента (там видны соседние кадры), на телефоне — 11% ширины */
+  function worksLayout() {
+    if (!worksCarousel) return;
+    var vw = document.documentElement.clientWidth || innerWidth, wrap = worksCarousel.parentElement;
+    var cs = wrap ? getComputedStyle(wrap) : null;
+    var inner = wrap ? wrap.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0) : vw;
+    var pad = vw <= 640 ? Math.round(Math.max(24, vw * 0.11)) : Math.max(16, Math.round((vw - inner) / 2));
+    worksCarousel.style.setProperty('--vw', vw + 'px');
+    worksCarousel.style.setProperty('--wk-pad', pad + 'px');
+  }
+  function worksInstant(left) {
+    var sb = worksTrack.style.scrollBehavior;
+    worksTrack.style.scrollBehavior = 'auto';
+    worksTrack.scrollLeft = left;
+    worksTrack.style.scrollBehavior = sb;
+  }
+  function worksIndex() {
+    var step = worksStep(); if (!step || !WL.n) return 0;
+    var i = Math.round(worksTrack.scrollLeft / step) - WL.k;
+    return WL.k ? ((i % WL.n) + WL.n) % WL.n : Math.max(0, Math.min(WL.n - 1, i));
+  }
+  function worksClone(el) {
+    var c = el.cloneNode(true);
+    c.classList.add('is-clone'); c.setAttribute('aria-hidden', 'true');
+    $$('[id]', c).forEach(function (x) { x.removeAttribute('id'); });
+    $$('img', c).forEach(function (im) { im.loading = 'eager'; });
+    return c;
+  }
+  function setupWorks(keepIdx) {
+    if (!worksTrack) return;
+    worksLayout();
+    $$('.work.is-clone', worksTrack).forEach(function (c) { c.parentNode.removeChild(c); });
+    var real = $$('.work', worksTrack), n = real.length, step = worksStep(), v = worksVisible(step);
+    WL.n = n; WL.v = v; WL.k = 0; WL.target = null;
+    if (n > v) {
+      var k = Math.min(n, v + 2), pre = document.createDocumentFragment(), post = document.createDocumentFragment();
+      real.slice(n - k).forEach(function (el) { pre.appendChild(worksClone(el)); });
+      real.slice(0, k).forEach(function (el) { post.appendChild(worksClone(el)); });
+      worksTrack.insertBefore(pre, worksTrack.firstChild);
+      worksTrack.appendChild(post);
+      WL.k = k;
     }
-    return { max: worksTrack ? Math.max(0, worksTrack.scrollWidth - worksTrack.clientWidth) : 0,
-      step: (card ? card.getBoundingClientRect().width : (worksTrack ? worksTrack.clientWidth * .8 : 0)) + gap };
+    WL.idx = Math.max(0, Math.min(Math.max(0, n - 1), keepIdx == null ? WL.idx : keepIdx));
+    worksInstant((WL.idx + WL.k) * step);
+    refreshWorksCarousel();
   }
   function refreshWorksCarousel() {
     if (!worksCarousel || !worksTrack) return;
-    var metrics = worksMetrics(), max = metrics.max, step = metrics.step;
-    var left = worksTrack.scrollLeft > 3;
-    var right = worksTrack.scrollLeft < max - 3;
-    worksCarousel.classList.toggle('is-scrollable', max > 3);
-    worksCarousel.classList.toggle('can-left', max > 3 && left);
-    worksCarousel.classList.toggle('can-right', max > 3 && right);
-    if (worksPrev) { worksPrev.hidden = max <= 3; worksPrev.disabled = !left; worksPrev.setAttribute('aria-disabled', String(!left)); }
-    if (worksNext) { worksNext.hidden = max <= 3; worksNext.disabled = !right; worksNext.setAttribute('aria-disabled', String(!right)); }
+    var loop = WL.k > 0, active = worksIndex();
+    worksCarousel.classList.toggle('is-scrollable', loop);
+    worksCarousel.classList.toggle('can-left', loop);
+    worksCarousel.classList.toggle('can-right', loop);
+    [worksPrev, worksNext].forEach(function (b) {
+      if (!b) return;
+      b.hidden = !loop; b.disabled = !loop; b.setAttribute('aria-disabled', String(!loop));
+    });
     if (worksPagination) {
-      var pages = max > 3 && step > 0 ? Math.max(1, worksTrack.children.length) : 1;
+      var pages = loop ? WL.n : 1;
       if (Number(worksPagination.dataset.pageCount) !== pages) {
         worksPagination.dataset.pageCount = String(pages);
         worksPagination.innerHTML = Array.from({ length: pages }, function (_, i) {
-          return '<button type="button" class="works-dot' + (i === 0 ? ' active' : '') + '" data-page="' + i +
-            '" aria-label="Показать страницу ' + (i + 1) + '"' + (i === 0 ? ' aria-current="true"' : '') + '></button>';
+          return '<button type="button" class="works-dot" data-page="' + i + '" aria-label="Показать работу ' + (i + 1) + '"></button>';
         }).join('');
         worksPagination.hidden = pages < 2;
       }
-      var active = max > 3 && pages > 1 ? Math.max(0, Math.min(pages - 1, Math.round(worksTrack.scrollLeft / max * (pages - 1)))) : 0;
       $$('.works-dot', worksPagination).forEach(function (dot, i) {
         var on = i === active;
         dot.classList.toggle('active', on);
@@ -275,30 +322,87 @@
       });
     }
   }
+  function worksGo(t, step) {
+    WL.target = t;
+    worksTrack.scrollTo({ left: t * step, behavior: calm ? 'auto' : 'smooth' });
+    worksSettleLater();
+  }
   function moveWorks(direction) {
     if (!worksTrack) return;
-    var metrics = worksMetrics();
-    worksTrack.scrollBy({ left: direction * metrics.step, behavior: calm ? 'auto' : 'smooth' });
+    var step = worksStep(); if (!step) return;
+    var t = (WL.target != null ? WL.target : Math.round(worksTrack.scrollLeft / step)) + direction;
+    if (WL.k) {
+      var i = t - WL.k;
+      if (i < -1 || i > WL.n) { // запас копий кончился — переносимся на круг назад/вперёд, не прерывая движения
+        var shift = i < -1 ? WL.n : -WL.n;
+        worksInstant(worksTrack.scrollLeft + shift * step); t += shift;
+      }
+    } else t = Math.max(0, Math.min(Math.max(0, WL.n - WL.v), t));
+    worksGo(t, step);
+  }
+  function worksSettle() {
+    clearTimeout(WL.t); WL.t = 0;
+    if (!worksTrack) return;
+    if (WL.touch) return worksSettleLater();
+    WL.target = null;
+    var step = worksStep();
+    if (WL.k && WL.n && step) {
+      var i = Math.round(worksTrack.scrollLeft / step) - WL.k;
+      if (i < 0 || i >= WL.n) worksInstant(worksTrack.scrollLeft + ((((i % WL.n) + WL.n) % WL.n) - i) * step);
+    }
+    WL.idx = worksIndex();
+    refreshWorksCarousel();
+  }
+  function worksSettleLater() { clearTimeout(WL.t); WL.t = setTimeout(worksSettle, 160); }
+  function worksResize() {
+    clearTimeout(WL.rt);
+    WL.rt = setTimeout(function () {
+      if (!worksTrack) return;
+      worksLayout();
+      var step = worksStep(), real = $$('.work:not(.is-clone)', worksTrack).length;
+      if (worksVisible(step) !== WL.v || real !== WL.n) setupWorks(WL.idx);
+      else if (step) { worksInstant((WL.idx + WL.k) * step); refreshWorksCarousel(); }
+    }, 120);
   }
   if (worksPrev) worksPrev.addEventListener('click', function () { moveWorks(-1); });
   if (worksNext) worksNext.addEventListener('click', function () { moveWorks(1); });
   if (worksPagination) worksPagination.addEventListener('click', function (e) {
     var dot = e.target.closest('[data-page]');
     if (!dot || !worksTrack) return;
-    var metrics = worksMetrics(), pages = Number(worksPagination.dataset.pageCount) || 1;
-    var page = Math.max(0, Math.min(pages - 1, Number(dot.dataset.page) || 0));
-    worksTrack.scrollTo({ left: pages > 1 ? metrics.max * page / (pages - 1) : 0, behavior: calm ? 'auto' : 'smooth' });
+    var step = worksStep(); if (!step) return;
+    worksSettle(); // стоим на настоящей карточке — дальше считаем кратчайший путь по кругу
+    var i = WL.idx, j = Math.max(0, Math.min(WL.n - 1, Number(dot.dataset.page) || 0)), d = j - i;
+    if (WL.k) {
+      if (d > WL.n / 2) d -= WL.n; else if (d < -WL.n / 2) d += WL.n;
+      if (i + d < 1 - WL.k || i + d > WL.k + WL.n - 1 - WL.v) d = j - i;
+    }
+    worksGo(i + d + WL.k, step);
   });
   if (worksTrack) {
-    worksTrack.addEventListener('scroll', refreshWorksCarousel, { passive:true });
+    /* клик по кадру — крупное фото; по соседнему кадру в поле — шаг в его сторону */
+    worksTrack.addEventListener('click', function (e) {
+      var w = e.target.closest('.work'); if (!w || e.target.closest('a')) return;
+      if (WL.k) {
+        var r = w.getBoundingClientRect(), t = worksTrack.getBoundingClientRect(), c = (r.left + r.right) / 2;
+        if (c < t.left + worksPad('Left')) return moveWorks(-1);
+        if (c > t.right - worksPad('Right')) return moveWorks(1);
+      }
+      openWork(w);
+    });
+    worksTrack.addEventListener('scroll', function () { refreshWorksCarousel(); worksSettleLater(); }, { passive: true });
+    if ('onscrollend' in window) worksTrack.addEventListener('scrollend', function () { if (!WL.touch) worksSettle(); });
+    worksTrack.addEventListener('touchstart', function () { WL.touch = true; }, { passive: true });
+    ['touchend', 'touchcancel'].forEach(function (ev) {
+      worksTrack.addEventListener(ev, function () { WL.touch = false; worksSettleLater(); }, { passive: true });
+    });
     worksTrack.addEventListener('keydown', function (e) {
       if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         e.preventDefault(); moveWorks(e.key === 'ArrowLeft' ? -1 : 1);
       }
     });
-    if ('ResizeObserver' in window) new ResizeObserver(refreshWorksCarousel).observe(worksTrack);
-    else addEventListener('resize', refreshWorksCarousel);
-    refreshWorksCarousel();
+    addEventListener('resize', worksResize, { passive: true });
+    if ('ResizeObserver' in window) new ResizeObserver(worksResize).observe(worksTrack);
+    setupWorks(0);
   }
   if (lbx) lbx.addEventListener('click', function () { lbx.classList.remove('on'); });
   addEventListener('keydown', function (e) { if (e.key === 'Escape' && lbx) lbx.classList.remove('on'); });
@@ -682,7 +786,7 @@
   /* фото каталога: sm 640 / md 1600 (assets/catalog/sm|md), оригинал 4K — только в карточке */
   function catSized(u, size) {
     var m = /^\/assets\/catalog\/([A-Za-z0-9_.-]+\.webp)(?:[?#].*)?$/.exec(u || '');
-    if (m) return '/assets/catalog/' + size + '/' + m[1];
+    if (m) return '/assets/catalog/' + size + '/' + m[1] + (/^[KO]\d+\.webp$/.test(m[1]) ? '?v=x4' : ''); // x4plus: новый адрес
     if (/^\/api\/img\?/.test(u || '') && !/[?&]w=/.test(u)) return u + '&w=' + (size === 'sm' ? 640 : 1600);
     return u || '';
   }
@@ -747,6 +851,19 @@
     if (/^https:\/\/[^/]*neon\.tech\//i.test(u)) return '/api/work-img?u=' + encodeURIComponent(u) + '&w=' + w;
     return '';
   }
+  /* строка «камень | размер» под заголовком карточки (поля «Камень» и «Размер» в админке) */
+  var WORK_ICON = {
+    stone: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.6 3.2 8.1 12 12.6l8.8-4.5L12 3.6Z"/><path d="m3.2 12 8.8 4.5 8.8-4.5"/><path d="m3.2 15.9 8.8 4.5 8.8-4.5"/></svg>',
+    size: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3.2" y="6.4" width="17.6" height="11.2" rx="2.6"/><path d="M7.2 6.4v3.1M11 6.4v4.5M14.8 6.4v3.1M18.2 6.4v2"/></svg>'
+  };
+  function workMeta(w) {
+    var stone = String(w.stone || '').trim(), size = String(w.size || '').trim();
+    if (!stone && !size) return '';
+    return '<div class="work-meta">' +
+      (stone ? '<span class="wm">' + WORK_ICON.stone + workHtmlEscape(stone) + '</span>' : '') +
+      (stone && size ? '<i class="wm-sep" aria-hidden="true"></i>' : '') +
+      (size ? '<span class="wm">' + WORK_ICON.size + workHtmlEscape(size) + '</span>' : '') + '</div>';
+  }
   function workImgAttrs(u) {
     var a = workSized(u, 720), b = workSized(u, 1200), c = workSized(u, 1800);
     if (!a) return 'src="' + workHtmlEscape(u) + '"';
@@ -778,20 +895,20 @@
         var badge = String(w.badgeText || '').trim();
         var color = workBadgeColor(w.badgeColor);
         var cropX = workCrop(w.cropX), cropY = workCrop(w.cropY), zoom = workZoom(w.zoom);
-        return '<figure class="work glass rv in" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%;--photo-zoom:' + zoom + '">' +
+        var meta = workMeta(w), info = !!(caption || description || meta);
+        return '<figure class="work glass rv in' + (info ? ' has-info' : '') + '" style="--crop-x:' + cropX + '%;--crop-y:' + cropY + '%;--photo-zoom:' + zoom + '">' +
           '<div class="mat">' +
             '<img class="work-photo-main" ' + workImgAttrs(w.img || '') + ' loading="lazy" decoding="async" alt="' + workHtmlEscape(caption || 'Пример работы') + '">' +
             (badge ? '<span class="work-badge" style="--badge-color:' + color + '"><i aria-hidden="true"></i>' + workHtmlEscape(badge) + '</span>' : '') +
             '<div class="work-info">' +
               '<div class="work-copy">' +
                 (caption ? '<h3>' + workHtmlEscape(caption) + '</h3>' : '') +
-                (description ? '<p>' + workHtmlEscape(description) + '</p>' : '') +
+                (meta || (description ? '<p>' + workHtmlEscape(description) + '</p>' : '')) +
               '</div>' +
             '</div>' +
           '</div></figure>';
       }).join('');
-      bindWorks();
-      refreshWorksCarousel();
+      setupWorks(0);
     }
     if (c.catalog && Array.isArray(c.catalog.categories)) { CAT = c.catalog; window.PAMYAT_CATALOG = CAT; document.dispatchEvent(new CustomEvent('pamyat:catalog', { detail: CAT })); }
     if (c.calc && Array.isArray(c.calc.steps)) { CALC = c.calc.steps; CALC_DIMENSIONS = normalizeDimensionsConfig(c.calc.dimensions); if (PP) CALC_BASE = PP.normalizeBase(c.calc.base); }
