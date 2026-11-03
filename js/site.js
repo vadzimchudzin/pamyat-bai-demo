@@ -534,7 +534,8 @@
     if (it.note && !(Number(it.price) === 0)) parts.push(it.note);
     return parts.join(' · ');
   }
-  function individual() { return STEPS.some(function (s) { return s.type === 'radio' && item(s, S[s.id]) && item(s, S[s.id]).price == null; }); }
+  function indStep(s) { var it = s.type === 'radio' && item(s, S[s.id]); return !!it && it.price == null; }
+  function individual() { return STEPS.some(indStep); }
   function selectedIds(s) { return s.type === 'multi' ? (S[s.id] || []) : (S[s.id] ? [S[s.id]] : []); }
   function selectedBreakdown() {
     var result = [];
@@ -605,8 +606,9 @@
       if (!byStep[row.stepId]) byStep[row.stepId] = [];
       byStep[row.stepId].push(row);
     });
-    STEPS.forEach(function (s, i) {
-      if (s.type === 'contact' || s.type === 'dimensions' || (individual() && i > 0)) return;
+    var ind = individual();
+    STEPS.forEach(function (s) {
+      if (s.type === 'contact' || s.type === 'dimensions' || (ind && !s.catalog && !indStep(s))) return;
       var rows = byStep[s.id] || [];
       var rws = rows.length ? rows.map(function (row) {
         var note = row.mode === 'curve' && row.rate
@@ -756,7 +758,8 @@
     var dimsStep = { id: '__dimensions', name: CALC_DIMENSIONS.name || 'Размеры', type: 'dimensions' };
     var custom = CALC.filter(function (s) { return s.id !== 'monument' && s.items && s.items.length; }), byId = {};
     custom.forEach(function (s) { byId[s.id] = s; });
-    var ids = custom.map(function (s) { return s.id; }), useMon = M.enabled !== false, useDims = CALC_DIMENSIONS.enabled !== false;
+    var mc = MODEL_CAT || (MODEL && catOf(MODEL)), fromCat = !!(mc && item(first, mc));   // пришли из каталога с моделью — шаг с ней виден, даже если выключен
+    var ids = custom.map(function (s) { return s.id; }), useMon = M.enabled !== false || fromCat, useDims = CALC_DIMENSIONS.enabled !== false;
     var keys = CF ? CF.sequence(ids, { order: CALC_UI.order, monument: useMon, dimensions: useDims })
       : (useMon ? ['@monument'] : []).concat(useDims ? ['@dimensions'] : [], ids);
     STEPS = keys.map(function (k) { return k === '@monument' ? first : k === '@dimensions' ? dimsStep : byId[k]; }).filter(Boolean)
@@ -767,8 +770,7 @@
       var keep = old[s.id], ok = s.type === 'multi' ? (keep || []).filter(function (id) { return item(s, id); }) : (item(s, keep) ? keep : '');
       S[s.id] = ok;
     });
-    var mc = MODEL_CAT || (MODEL && catOf(MODEL));
-    if (useMon && mc && item(first, mc)) S.monument = mc;
+    if (fromCat) S.monument = mc;
     if (step >= STEPS.length) step = 0;
     calcChrome();
   }
