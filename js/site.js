@@ -5,6 +5,15 @@
   var $$ = function (s, r) { return [].slice.call((r || document).querySelectorAll(s)); };
   var root = document.documentElement;
   var calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  /* предпросмотр из админки (iframe /?preview=works,…): данные приходят из админки, заявки не отправляются */
+  var PREVIEW = (function () { try { return window.parent !== window ? /[?&]preview=([a-z,]+)/.exec(location.search) : null; } catch (e) { return null; } })();
+  if (PREVIEW) {
+    window.PAMYAT_DEMO = true;
+    root.classList.add('is-preview');
+    PREVIEW[1].split(',').forEach(function (k) { root.classList.add('pv-' + k); });
+  }
+  var LOOK = window.PamyatLook || null;
+  function look(group, key, def) { var L = LOOK ? LOOK.get() : null, v = L && L[group] ? L[group][key] : undefined; return v === undefined ? def : v; }
 
   /* Lenis: restrained wheel inertia, with native touch scrolling and reduced-motion support. */
   var scrollEngine = null;
@@ -250,14 +259,19 @@
     var view = worksTrack.clientWidth - worksPad('Left') - worksPad('Right');
     return step > 0 ? Math.max(1, Math.round((view + worksGap()) / step)) : 1;
   }
-  /* поля ленты: на компьютере — до края контента (там видны соседние кадры), на телефоне — 11% ширины */
+  /* Поля ленты: на компьютере — до края контента, но не шире «видно соседних карточек» из админки
+     (на широких экранах лента не тянется во всю ширину), на телефоне — 11% ширины. */
   function worksLayout() {
     if (!worksCarousel) return;
     var vw = document.documentElement.clientWidth || innerWidth, wrap = worksCarousel.parentElement;
     var cs = wrap ? getComputedStyle(wrap) : null;
     var inner = wrap ? wrap.clientWidth - (parseFloat(cs.paddingLeft) || 0) - (parseFloat(cs.paddingRight) || 0) : vw;
-    var pad = vw <= 640 ? Math.round(Math.max(24, vw * 0.11)) : Math.max(16, Math.round((vw - inner) / 2));
+    var peek = Math.max(0, Number(look('works', 'peek', 150)) || 0);
+    var full = vw <= 640 ? Math.round(Math.max(24, vw * 0.11)) : Math.max(16, Math.round((vw - inner) / 2));
+    var pad = vw <= 640 ? Math.max(16, Math.min(full, Math.max(peek, 16))) : Math.max(16, Math.min(full, peek));
+    var w = vw <= 640 ? vw : Math.min(vw, Math.round(inner + 2 * pad));
     worksCarousel.style.setProperty('--vw', vw + 'px');
+    worksCarousel.style.setProperty('--wk-w', w + 'px');
     worksCarousel.style.setProperty('--wk-pad', pad + 'px');
   }
   function worksInstant(left) {
@@ -364,6 +378,23 @@
       else if (step) { worksInstant((WL.idx + WL.k) * step); refreshWorksCarousel(); }
     }, 120);
   }
+  /* автопрокрутка (админка → «Оформление»): пауза при наведении, фокусе, касании и вне экрана */
+  var WA = { t: 0, hold: false, seen: true };
+  function worksAutoplay() {
+    clearInterval(WA.t); WA.t = 0;
+    var sec = Number(look('works', 'autoplay', 0)) || 0;
+    if (!sec || calm || !worksTrack) return;
+    WA.t = setInterval(function () {
+      if (WA.hold || WL.touch || document.hidden || !WA.seen || !WL.k) return;
+      moveWorks(1);
+    }, Math.max(2, sec) * 1000);
+  }
+  if (worksCarousel) {
+    ['pointerenter', 'focusin'].forEach(function (ev) { worksCarousel.addEventListener(ev, function () { WA.hold = true; }); });
+    ['pointerleave', 'focusout'].forEach(function (ev) { worksCarousel.addEventListener(ev, function () { WA.hold = false; }); });
+    if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { WA.seen = es[0] ? es[0].isIntersecting : true; }, { threshold: 0.35 }).observe(worksCarousel);
+    document.addEventListener('pamyat:look', function () { worksResize(); worksAutoplay(); });
+  }
   if (worksPrev) worksPrev.addEventListener('click', function () { moveWorks(-1); });
   if (worksNext) worksNext.addEventListener('click', function () { moveWorks(1); });
   if (worksPagination) worksPagination.addEventListener('click', function (e) {
@@ -411,27 +442,15 @@
 
   /* ---------- данные: каталог и калькулятор (из админки, иначе — по умолчанию) ---------- */
   var CAT = window.PAMYAT_CATALOG_DEFAULT || { categories: [], items: [] };
-  /* запасной калькулятор (пока не пришли данные из админки) — тарифы из смет: цена за 1 м² */
-  function perM2(rate) {
-    return { mode: 'curve', quantity: 'area', curve: { share: 1, piece: 0, min: 0, trim: { enabled: false, tileA: 60, tileB: 50 },
-      rates: { fixed: 0, unit: rate, waste: 0, cut: 0, min: 0 } } };
-  }
-  var CALC = [
-    { id: 'land', name: 'Благоустройство', type: 'radio', sub: 'Цена за 1 м² по нашим сметам: работа и материалы включены. Если основание уже есть — выберите установку на готовое.', items: [
-      { id: 'pkg-paving', name: 'Тротуарная плитка + стяжка 5 см + борта', note: 'Бетонная стяжка 5 см, борта по периметру, тротуарная плитка. Работа и материалы включены.', price: 1800, pricing: perM2(500) },
-      { id: 'pkg-tile30', name: 'Монолит 15 см + керамогранит 30×30', note: 'Армированный монолит 15 см, керамогранит 30×30 на клею. Работа и материалы включены.', price: 2376, pricing: perM2(660) },
-      { id: 'pkg-tile60', name: 'Монолит 15 см + керамогранит 60×60', note: 'Армированный монолит 15 см, крупный керамогранит 60×60. Работа и материалы включены.', price: 2376, pricing: perM2(660) },
-      { id: 'ready', name: 'Установка на готовое основание', price: 300, pricing: { mode: 'fixed' } }] },
-    { id: 'engraving', name: 'Гравировка', type: 'radio', sub: 'Базовая гравировка (ФИО, даты) уже включена.', items: [
-      { id: 'base', name: 'Базовая (ФИО, даты)', price: 0, note: 'включено' }, { id: 'art', name: 'Художественная (портрет, пейзаж)', price: 200 },
-      { id: 'medal', name: 'Медальон', price: 250 }] },
-    { id: 'fence', name: 'Ограда', type: 'radio', sub: 'Ограда считается отдельно от благоустройства.', items: [
-      { id: 'none', name: 'Без ограды', price: 0 }, { id: 'granite', name: 'Гранитная ограда', price: 1200 }] },
-    { id: 'decor', name: 'Декор', type: 'multi', sub: 'Дополните композицию вазой, искусственной травой или белым щебнем.', items: [
-      { id: 'vase', name: 'Гранитная ваза / лампада', price: 200 }, { id: 'grass', name: 'Искусственная трава / белый щебень', price: 80 }] }
-  ];
-  var CALC_DIMENSIONS = { enabled: true, name: 'Размеры', sub: 'Укажите длину и ширину участка. Это необязательно — без размеров расчёт останется по базовым ценам.', unit: 'м', min: 0.1, max: 100, step: 0.1, allowSkip: true,
-    presets: [[1.4, 2.0], [1.5, 2.1], [1.4, 2.3], [1.8, 2.0], [2.0, 2.0], [2.4, 1.8], [2.0, 2.2], [3.0, 2.2]] };
+  /* запасной калькулятор (пока не пришли данные из админки) — js/calc-default.js */
+  var CALC_DEF = window.PAMYAT_CALC_DEFAULT || {};
+  var CALC = CALC_DEF.steps || [];
+  var CALC_DIMENSIONS = normalizeDimensionsConfig(CALC_DEF.dimensions);
+  /* порядок шагов и тексты калькулятора (js/calc-flow.js; правятся в админке) */
+  var CF = window.PamyatCalcFlow || null;
+  var CALC_UI = CF ? CF.normalizeUi(null) : { monument: { enabled: true, name: 'Памятник', indButton: 'Заказать звонок' }, dimensions: {},
+    contact: { name: 'Контакты', title: 'Куда прислать расчёт?', button: 'Отправить заявку', comment: true }, summary: { title: 'Ваш комплекс', total: 'Итого' }, order: [] };
+
   var DIMS = { length: '', width: '' };
   var Q = new URLSearchParams(location.search);
   var STEPS = [], S = {}, step = 0, MODEL = Q.get('model') || '', MODEL_CAT = Q.get('cat') || '';
@@ -509,13 +528,14 @@
     var parts = [], lr = rateOf(it);
     if (lr && it.price != null) {
       var d = getDimensions();
-      parts.push(d.provided ? fmt(PP.roundMoney(d.area)) + ' м² × ' + fmt(lr.rate) + ' BYN/' + lr.unit
-        : 'Цена за 1 м². Укажите размеры участка — посчитаем точно.');
+      parts.push(d.provided ? fmt(PP.roundMoney(PP.measureValue(lr.quantity, d))) + ' ' + lr.unit + ' × ' + fmt(lr.rate) + ' BYN/' + lr.unit
+        : 'Цена за 1 ' + lr.unit + '. Укажите размеры участка — посчитаем точно.');
     }
     if (it.note && !(Number(it.price) === 0)) parts.push(it.note);
     return parts.join(' · ');
   }
-  function individual() { return STEPS.some(function (s) { return s.type === 'radio' && item(s, S[s.id]) && item(s, S[s.id]).price == null; }); }
+  function indStep(s) { var it = s.type === 'radio' && item(s, S[s.id]); return !!it && it.price == null; }
+  function individual() { return STEPS.some(indStep); }
   function selectedIds(s) { return s.type === 'multi' ? (S[s.id] || []) : (S[s.id] ? [S[s.id]] : []); }
   function selectedBreakdown() {
     var result = [];
@@ -523,13 +543,14 @@
       if (s.type === 'contact' || s.type === 'dimensions') return;
       selectedIds(s).forEach(function (id) {
         var it = item(s, id); if (!it) return;
-        var p = calcItemPrice(it, getDimensions());
+        var dd = getDimensions(), p = calcItemPrice(it, dd), lr = rateOf(it);
+        var full = lr ? PP.roundMoney(PP.measureValue(lr.quantity, dd.provided ? dd : PP.dimsOf(CALC_BASE.length, CALC_BASE.width))) : null;
         result.push({
           stepId: s.id, itemId: id, step: s.name, name: it.name,
           price: p.amount, quantity: p.quantity, unit: p.unit, basePrice: p.base,
           coefficient: p.coefficient, mode: p.mode,
           mainAmount: p.mainAmount, trimAmount: p.trimAmount, note: p.note || '',
-          rate: (rateOf(it) || {}).rate || null
+          rate: (lr || {}).rate || null, full: full
         });
       });
     });
@@ -550,7 +571,7 @@
     selectedBreakdown().forEach(function (row) {
       var line = row.step + ': ' + row.name + ' — ' + (row.price == null ? 'индивидуальный расчёт' : money(row.price));
       if (row.mode === 'curve' && row.rate) {
-        line += ' (' + fmt(row.quantity) + ' м² × ' + fmt(row.rate) + ' BYN/м²' + (d.provided ? '' : ', базовый участок') + ')';
+        line += ' (' + fmt(row.full) + ' ' + row.unit + ' × ' + fmt(row.rate) + ' BYN/' + row.unit + (d.provided ? '' : ', базовый участок') + ')';
       } else if (row.mode === 'curve') {
         if (row.trimAmount > 0) line += ' (в т.ч. подрезка плитки ' + money(row.trimAmount) + ')';
         if (row.note) line += ' [' + row.note + ']';
@@ -566,7 +587,7 @@
   function drawTotal() {
     var tv = $('#tv'); if (!tv) return;
     var any = selectedBreakdown().length > 0;
-    var txt = individual() ? 'Индивидуально' : any ? (getDimensions().provided ? fmt(total()) + ' BYN' : 'от ' + fmt(total()) + ' BYN') : '0 BYN';
+    var txt = individual() ? CALC_UI.summary.individual : any ? (getDimensions().provided ? fmt(total()) + ' BYN' : 'от ' + fmt(total()) + ' BYN') : '0 BYN';
     if ($('#mtv')) $('#mtv').textContent = txt;
     if (txt !== lastTotal) { tv.textContent = txt; tv.classList.remove('bump'); void tv.offsetWidth; tv.classList.add('bump'); lastTotal = txt; }
   }
@@ -585,12 +606,13 @@
       if (!byStep[row.stepId]) byStep[row.stepId] = [];
       byStep[row.stepId].push(row);
     });
-    STEPS.forEach(function (s, i) {
-      if (s.type === 'contact' || s.type === 'dimensions' || (individual() && i > 0)) return;
+    var ind = individual();
+    STEPS.forEach(function (s) {
+      if (s.type === 'contact' || s.type === 'dimensions' || (ind && !s.catalog && !indStep(s))) return;
       var rows = byStep[s.id] || [];
       var rws = rows.length ? rows.map(function (row) {
         var note = row.mode === 'curve' && row.rate
-          ? fmt(row.quantity) + ' м² × ' + fmt(row.rate) + ' BYN/м²' + (d.provided ? '' : ' · базовый участок ' + fmt(CALC_BASE.length) + ' × ' + fmt(CALC_BASE.width) + ' м')
+          ? fmt(row.full) + ' ' + row.unit + ' × ' + fmt(row.rate) + ' BYN/' + row.unit + (d.provided ? '' : ' · базовый участок ' + fmt(CALC_BASE.length) + ' × ' + fmt(CALC_BASE.width) + ' м')
           : row.mode === 'curve'
           ? [row.trimAmount > 0 ? 'в т.ч. подрезка плитки ' + money(row.trimAmount) : '', row.note].filter(Boolean).join(' · ')
           : row.mode !== 'fixed'
@@ -603,10 +625,10 @@
           : row.mode !== 'fixed' && row.mode !== 'curve' && !d.provided
           ? 'от ' + fmt(row.price) + ' BYN/' + row.unit
           : money(row.price));
-        return '<div class="rw"><span>' + row.name + '</span><i>' + amount + '</i></div>' +
+        return '<div class="rw"><span>' + escHtml(row.name) + '</span><i>' + amount + '</i></div>' +
           (note ? '<div class="rw-note">' + note + '</div>' : '');
-      }).join('') : '<div class="rw no"><span>не выбрано</span></div>';
-      html += '<li><span class="lb">' + s.name + '</span>' + rws + '</li>';
+      }).join('') : '<div class="rw no"><span>' + escHtml(CALC_UI.summary.empty) + '</span></div>';
+      html += '<li><span class="lb">' + escHtml(s.name) + '</span>' + rws + '</li>';
     });
     box.innerHTML = html;
     drawTotal();
@@ -615,7 +637,7 @@
   function presetsHtml() {
     var ps = CALC_DIMENSIONS.presets || [];
     if (!ps.length) return '';
-    return '<div class="dim-presets" role="group" aria-label="Типовые размеры участка"><span class="dim-presets-t">Типовые участки</span><div class="dim-presets-l">' +
+    return '<div class="dim-presets" role="group" aria-label="Типовые размеры участка"><span class="dim-presets-t">' + escHtml(CALC_UI.dimensions.presetsTitle) + '</span><div class="dim-presets-l">' +
       ps.map(function (p) {
         return '<button type="button" class="dim-preset" data-l="' + p[0] + '" data-w="' + p[1] + '" aria-pressed="false">' +
           '<b>' + fmt1(p[0]) + ' × ' + fmt1(p[1]) + '</b><i>' + fmt(PP ? PP.roundMoney(p[0] * p[1]) : p[0] * p[1]) + ' м²</i></button>';
@@ -649,18 +671,17 @@
     if (!$('#q') || !STEPS.length) return;
     var s = STEPS[step];
     $('#snav').innerHTML = STEPS.map(function (x, i) {
-      return '<button type="button" data-step="' + i + '" class="' + (i === step ? 'on' : i < step ? 'done' : '') + '">' + (i + 1) + '. ' + x.name + '</button>';
+      return '<button type="button" data-step="' + i + '" class="' + (i === step ? 'on' : i < step ? 'done' : '') + '">' + (i + 1) + '. ' + escHtml(x.name) + '</button>';
     }).join('');
     $$('#snav button').forEach(function (b) { b.addEventListener('click', function () { go(+b.dataset.step); }); });
     var on = $('#snav .on'); if (on) $('#snav').scrollLeft = Math.max(0, on.offsetLeft - 16);
     if (s.type === 'contact') {
-      var ind = individual();
-      $('#q').innerHTML = (ind ? '<div class="qtitle">Обсудим ваш проект</div><div class="qsub">Индивидуальный проект считаем лично. Оставьте имя и телефон — перезвоним, обсудим эскиз, гранит и размеры.</div>'
-        : '<div class="qtitle">Куда прислать расчёт?</div><div class="qsub">Оставьте имя и телефон — перезвоним, уточним детали и зафиксируем смету.</div>') +
+      var ind = individual(), K = CALC_UI.contact;
+      $('#q').innerHTML = '<div class="qtitle">' + escHtml(ind ? K.titleInd : K.title) + '</div><div class="qsub">' + escHtml(ind ? K.subInd : K.sub) + '</div>' +
         '<form class="form qcontact" id="cform"><input required name="name" placeholder="Имя" autocomplete="name"><input required name="phone" type="tel" placeholder="+375 (XX) XXX-XX-XX" autocomplete="tel">' +
-        '<textarea name="c" rows="2" placeholder="Комментарий (необязательно)"></textarea>' +
-        '<div class="row2"><button class="btn btn-gold" type="submit">' + (ind ? 'Заказать звонок' : 'Отправить заявку') + ' <span class="arr">→</span></button><button class="btn btn-line" type="button" id="qback">← Назад</button></div>' +
-        '<p class="muted">Нажимая кнопку, вы соглашаетесь с политикой обработки персональных данных.</p></form><div class="ok" id="cok">Спасибо! Перезвоним в рабочее время и уточним детали.</div>';
+        (K.comment ? '<textarea name="c" rows="2" placeholder="' + escHtml(K.commentPh) + '"></textarea>' : '') +
+        '<div class="row2"><button class="btn btn-gold" type="submit">' + escHtml(ind ? K.buttonInd : K.button) + ' <span class="arr">→</span></button><button class="btn btn-line" type="button" id="qback">← Назад</button></div>' +
+        (K.consent ? '<p class="muted">' + escHtml(K.consent) + '</p>' : '') + '</form><div class="ok" id="cok">' + escHtml(K.ok) + '</div>';
       bindForm('#cform', '#cok', 'calc');
       $('#qback').onclick = function () { go(individual() ? 0 : step - 1); };
     } else if (s.type === 'dimensions') {
@@ -679,8 +700,8 @@
             '<div><span>Периметр</span><b id="dimPerimeter">' + (d.provided ? fmt(d.perimeter) + ' м' : '—') + '</b></div>' +
           '</div>' +
           '<p class="dimensions-error" id="dimError"></p>' +
-          '<p class="dimensions-hint">' + (CALC_DIMENSIONS.allowSkip ? 'Размеры не обязательны. Если пропустить этот шаг, калькулятор покажет базовые цены без пересчёта по площади и периметру.' : 'Укажите оба размера, чтобы рассчитать стоимость по площади и периметру.') + '</p>' +
-          (CALC_DIMENSIONS.allowSkip ? '<button type="button" class="dimensions-skip" id="dimSkip">Не указывать размеры — пропустить</button>' : '') +
+          '<p class="dimensions-hint">' + escHtml(CALC_DIMENSIONS.allowSkip ? CALC_UI.dimensions.hint : CALC_UI.dimensions.hintRequired) + '</p>' +
+          (CALC_DIMENSIONS.allowSkip ? '<button type="button" class="dimensions-skip" id="dimSkip">' + escHtml(CALC_UI.dimensions.skip) + '</button>' : '') +
         '</div>';
       ['dimLength','dimWidth'].forEach(function (id) {
         var input = $('#' + id);
@@ -701,16 +722,17 @@
       });
       if ($('#dimSkip')) $('#dimSkip').onclick = function () { DIMS.length = ''; DIMS.width = ''; go(step + 1); };
     } else {
+      var M = CALC_UI.monument;
       var pick = s.catalog && S.monument && S.monument !== 'individual'
-        ? '<a class="pick" href="/catalog#' + S.monument + '">' + (MODEL ? 'Модель ' + MODEL + ' · выбрать другую' : 'Выбрать модель в каталоге') + ' →</a>' : '';
-      $('#q').innerHTML = '<div class="qtitle">' + s.name + '</div><div class="qsub">' + (s.sub || '') + '</div>' + s.items.map(function (o) {
+        ? '<a class="pick" href="/catalog#' + encodeURIComponent(S.monument) + '">' + escHtml(MODEL ? 'Модель ' + MODEL + ' · ' + M.pickOther : M.pick) + ' →</a>' : '';
+      $('#q').innerHTML = '<div class="qtitle">' + escHtml(s.name) + '</div><div class="qsub">' + escHtml(s.sub || '') + '</div>' + s.items.map(function (o) {
         var on = s.type === 'multi' ? S[s.id].indexOf(o.id) > -1 : S[s.id] === o.id;
-        var nt = itemNote(o), tt = '<span class="t">' + o.name + (nt ? '<small class="opt-note">' + escHtml(nt) + '</small>' : '') + '</span>';
+        var nt = itemNote(o), tt = '<span class="t">' + escHtml(o.name) + (nt ? '<small class="opt-note">' + escHtml(nt) + '</small>' : '') + '</span>';
         return s.type === 'multi'
           ? '<div class="tog' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="switch" aria-checked="' + on + '" tabindex="0"><span class="sw"></span>' + tt + '<span class="p">' + priceLabel(o, s.catalog) + '</span></div>'
           : '<div class="radio' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="radio" aria-checked="' + on + '" tabindex="0"><i></i>' + tt + '<span class="p">' + priceLabel(o, s.catalog) + '</span></div>';
-      }).join('') + pick + (s.catalog && individual()
-        ? '<div class="indcall"><p>Индивидуальный проект считаем лично: по эскизу или фото подберём гранит и размеры. Нажмите «Заказать звонок» — перезвоним и всё обсудим.</p></div>' : '');
+      }).join('') + pick + (s.catalog && individual() && M.ind
+        ? '<div class="indcall"><p>' + escHtml(M.ind) + '</p></div>' : '');
       $$('[data-id]', $('#q')).forEach(function (el) {
         var act = function () {
           var id = el.dataset.id;
@@ -724,27 +746,43 @@
     var navbar = $('#prev').parentNode;
     navbar.style.display = s.type === 'contact' ? 'none' : '';
     $('#prev').style.display = step ? '' : 'none';
-    $('#next').innerHTML = (s.catalog && individual() ? 'Заказать звонок' : 'Далее') + ' <span class="arr">→</span>';
+    $('#next').innerHTML = escHtml(s.catalog && individual() ? CALC_UI.monument.indButton : 'Далее') + ' <span class="arr">→</span>';
     if ($('#mnext')) { $('#mnext').innerHTML = $('#next').innerHTML; $('#mnext').style.display = s.type === 'contact' ? 'none' : ''; }
     renderSummary();
   }
   function build() {
-    // Шаг 1 — памятник из каталога; шаг 2 — необязательные размеры; далее — редактируемые шаги калькулятора.
-    var first = { id: 'monument', name: 'Памятник', type: 'radio', sub: 'Выберите форму — как в каталоге. Гранит и размеры согласуем лично.', catalog: true,
+    // Памятник из каталога, необязательные размеры и шаги из админки — в порядке из админки; «Контакты» всегда последним.
+    var M = CALC_UI.monument;
+    var first = { id: 'monument', name: M.name, type: 'radio', sub: M.sub, catalog: true,
       items: visibleCats().filter(function (c) { return c.calc !== false; }).map(function (c) { return { id: c.id, name: c.short || c.name, price: c.price == null ? null : +c.price, pricing: { mode: 'fixed' } }; }) };
-    var nextSteps = [first];
-    if (CALC_DIMENSIONS.enabled !== false) nextSteps.push({ id: '__dimensions', name: CALC_DIMENSIONS.name || 'Размеры', type: 'dimensions' });
-    STEPS = nextSteps.concat(CALC.filter(function (s) { return s.id !== 'monument' && s.items && s.items.length; }))
-      .concat([{ id: '__contact', name: 'Контакты', type: 'contact' }]);
+    var dimsStep = { id: '__dimensions', name: CALC_DIMENSIONS.name || 'Размеры', type: 'dimensions' };
+    var custom = CALC.filter(function (s) { return s.id !== 'monument' && s.items && s.items.length; }), byId = {};
+    custom.forEach(function (s) { byId[s.id] = s; });
+    var mc = MODEL_CAT || (MODEL && catOf(MODEL)), fromCat = !!(mc && item(first, mc));   // пришли из каталога с моделью — шаг с ней виден, даже если выключен
+    var ids = custom.map(function (s) { return s.id; }), useMon = M.enabled !== false || fromCat, useDims = CALC_DIMENSIONS.enabled !== false;
+    var keys = CF ? CF.sequence(ids, { order: CALC_UI.order, monument: useMon, dimensions: useDims })
+      : (useMon ? ['@monument'] : []).concat(useDims ? ['@dimensions'] : [], ids);
+    STEPS = keys.map(function (k) { return k === '@monument' ? first : k === '@dimensions' ? dimsStep : byId[k]; }).filter(Boolean)
+      .concat([{ id: '__contact', name: CALC_UI.contact.name || 'Контакты', type: 'contact' }]);
     var old = S; S = {};
     STEPS.forEach(function (s) {
       if (s.type === 'contact' || s.type === 'dimensions') return;
       var keep = old[s.id], ok = s.type === 'multi' ? (keep || []).filter(function (id) { return item(s, id); }) : (item(s, keep) ? keep : '');
       S[s.id] = ok;
     });
-    var mc = MODEL_CAT || (MODEL && catOf(MODEL));
-    if (mc && item(first, mc)) S.monument = mc;
+    if (fromCat) S.monument = mc;
     if (step >= STEPS.length) step = 0;
+    calcChrome();
+  }
+  /* подписи панели «Ваш комплекс» и нижней полосы на телефоне */
+  function calcChrome() {
+    var U = CALC_UI.summary, box = $('#calc .summary');
+    if (box) {
+      var h = $('h3', box), lb = $('.live span', box), note = $(':scope > .muted', box);
+      if (h) h.textContent = U.title; if (lb) lb.textContent = U.total;
+      if (note) { note.textContent = U.note; note.hidden = !U.note; }
+    }
+    var ml = $('#mbar .mt span'); if (ml) ml.textContent = U.total;
   }
   function escHtml(value) {
     return String(value == null ? '' : value).replace(/[&<>"']/g, function (ch) {
@@ -872,11 +910,13 @@
   }
   function applyContent(c) {
     if (!c) return;
+    if (LOOK) LOOK.apply(c.look);
     var T = c.texts || {};
     $$('[data-t]').forEach(function (el) { var v = T[el.dataset.t]; if (v) el.textContent = v; });
     var C = c.contacts || {};
     var tel = (C.phone || '').replace(/[^\d+]/g, '');
     if ($('#cPhone') && C.phone) { $('#cPhone').textContent = C.phone; $('#cPhone').href = tel.replace(/\D/g, '').length >= 7 ? 'tel:' + tel : '#contact'; }
+    if ($('#faqCall')) { var okTel = tel.replace(/\D/g, '').length >= 7; $('#faqCall').href = okTel ? 'tel:' + tel : '#contact'; $('#faqCall').hidden = !okTel && !!c.__live; }
     [['#cTg', 'telegram'], ['#cViber', 'viber'], ['#cWa', 'whatsapp'], ['#cIg', 'instagram']].forEach(function (p) {
       var a = $(p[0]), url = socialUrl(p[1], C[p[1]]); if (!a) return;
       if (url) { a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.hidden = false; } else a.hidden = !!c.__live;
@@ -911,7 +951,10 @@
       setupWorks(0);
     }
     if (c.catalog && Array.isArray(c.catalog.categories)) { CAT = c.catalog; window.PAMYAT_CATALOG = CAT; document.dispatchEvent(new CustomEvent('pamyat:catalog', { detail: CAT })); }
-    if (c.calc && Array.isArray(c.calc.steps)) { CALC = c.calc.steps; CALC_DIMENSIONS = normalizeDimensionsConfig(c.calc.dimensions); if (PP) CALC_BASE = PP.normalizeBase(c.calc.base); }
+    if (c.calc && Array.isArray(c.calc.steps)) {
+      CALC = c.calc.steps; CALC_DIMENSIONS = normalizeDimensionsConfig(c.calc.dimensions); if (PP) CALC_BASE = PP.normalizeBase(c.calc.base);
+      if (CF) CALC_UI = CF.normalizeUi(c.calc);
+    }
     drawTeaser(); build(); render(); themes();
   }
   window.PAMYAT_CATALOG = CAT; window.pamyatThemes = themes;
@@ -920,6 +963,26 @@
     fetch('/api/content', { headers: { accept: 'application/json' } }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) { if (d && d.ok) { d.content.__live = true; applyContent(d.content); } }).catch(function () { });
   }
+
+  /* предпросмотр в админке: черновик содержимого и оформления без сохранения */
+  if (PREVIEW) {
+    window.pamyatPreview = {
+      content: function (c) { if (c) { c = JSON.parse(JSON.stringify(c)); c.__live = true; applyContent(c); } },
+      look: function (l) { if (LOOK) LOOK.apply(l); },
+      dove: function () { if (window.pamyatDove) window.pamyatDove.fly(true); }
+    };
+    try { window.parent.postMessage({ t: 'pamyat-preview-ready' }, location.origin); } catch (e) { }
+  }
+
+  /* FAQ: «Задать вопрос» — к форме обратной связи и сразу в поле имени */
+  $$('[data-ask]').forEach(function (a) {
+    a.addEventListener('click', function (e) {
+      var f = $('#lform'); if (!f) return;
+      e.preventDefault();
+      smoothPageScroll($('#contact'), { offset: -24, duration: 0.9 });
+      setTimeout(function () { var n = f.querySelector('[name=name]'); if (n && f.offsetParent) try { n.focus({ preventScroll: true }); } catch (x) { n.focus(); } }, calm ? 60 : 950);
+    });
+  });
 
   /* ---------- FAQ ---------- */
   var QA = [

@@ -2,7 +2,9 @@
    Самой лампады не видно: виден только её живой свет — тёплое свечение от левого края у подвала,
    отсвет на «полу» и на линии подвала. Свет отражается на поверхностях (тёплая кромка со стороны огня
    у кнопок, карточек, полей, текста), а элементы отбрасывают лёгкие тени от огня — тени лежат на фоне
-   и чуть «дышат» вместе с пламенем. Анимации — только opacity/transform (WAAPI, общий такт). */
+   и чуть «дышат» вместе с пламенем. Тени чёткие и ложатся вправо-вниз от элементов (ближняя + мягкая дальняя).
+   Яркость, дальность, сила/чёткость теней и отражений — из админки («Оформление» → «Лампада», js/look.js).
+   Анимации — только opacity/transform (WAAPI, общий такт). */
 (function () {
   'use strict';
   var calm = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -13,6 +15,12 @@
   var INP = 'input:not([type=hidden]):not([type=checkbox]):not([type=radio]), textarea';
   var TXT = 'main h2, .phone, .lead, main .eyebrow, footer .wrap > span, footer .legal a';
   var DUR = 7800, T0 = null, anims = [], lit = [], timer = 0, L = null;
+  var DX = .86, DY = .5; // направление теней: вправо-вниз
+  function opts() {
+    var d = { enabled: true, power: 130, reach: 140, shadow: 100, crisp: 70, reflect: 100 };
+    try { var g = window.PamyatLook && PamyatLook.get().lamp; if (g) d = g; } catch (e) { }
+    return d;
+  }
   // живое пламя: медленное дыхание × быстрое неровное мерцание (3 такта за цикл) → 0..1, 1 — ярче
   var SLOW = [1, .8, .93, .7, .88, 1, .74, .9, .66, .86, 1, .76, .95, .7, .86, 1, .74, .9, .68, 1];
   var FAST = [1, .9, .97, .8, .94, 1, .86, .95, .76, .97, 1];
@@ -53,7 +61,7 @@
   play(breath, frames(.5, 1, function (v) { return { transform: 'scale(' + (.95 + v * .07).toFixed(3) + ')' }; }));
   if (window.KeyframeEffect && 'pseudoElement' in KeyframeEffect.prototype) play(amb, frames(.76, 1), { pseudoElement: '::after' });
   // тени: огонь тускнеет — тени бледнеют; пламя качается — тени чуть смещаются
-  play(shades, frames(.55, 1, function (v, i) { return { transform: 'translate3d(' + (sway(i) * -1.6).toFixed(2) + 'px,' + (sway(i) * .8).toFixed(2) + 'px,0) scale(' + (1 + (1 - v) * .004).toFixed(4) + ')' }; }));
+  play(shades, frames(.7, 1, function (v, i) { return { transform: 'translate3d(' + (sway(i) * -1.6).toFixed(2) + 'px,' + (sway(i) * .8).toFixed(2) + 'px,0) scale(' + (1 + (1 - v) * .004).toFixed(4) + ')' }; }));
 
   function px(v) { return Math.round(v) + 'px'; }
   // положение по раскладке (без transform: появление .rv и подъём кнопок при наведении не сдвигают тени)
@@ -90,14 +98,18 @@
     clearTimeout(timer); timer = 0;
     anims = anims.filter(function (a) { if (a.effect && a.effect.target && !a.effect.target.isConnected) { a.cancel(); return false; } return true; });
     lit.forEach(clear); lit = []; shades.textContent = '';
+    var O = opts();
+    amb.classList.toggle('has-lamp', !!O.enabled);
+    if (!O.enabled) { L = null; return; }
     L = place(); if (!L) return;
-    var R = Math.max(860, innerHeight * 1.3), cast = [];
+    var W = document.documentElement.clientWidth, sh = O.shadow / 100, cr = O.crisp / 100;
+    var R = Math.max(860, innerHeight * 1.3, W * .5) * O.reach / 100, cast = [];
     function measure(el) {
       if (!el.offsetParent && getComputedStyle(el).position !== 'fixed') return null;
       var r = box(el); if (!r.w || !r.h) return null;
       var x0 = r.x0, y0 = r.y0, x1 = x0 + r.w, y1 = y0 + r.h;
       var nx = Math.max(x0, Math.min(L.x, x1)), ny = Math.max(y0, Math.min(L.y, y1));
-      var d = Math.hypot(L.x - nx, L.y - ny), I = Math.pow(Math.max(0, 1 - d / R), 1.6) * L.k;
+      var d = Math.hypot(L.x - nx, L.y - ny), I = Math.pow(Math.max(0, 1 - d / R), 1.3) * L.k;
       if (I < .05) return null;
       var cx = (x0 + x1) / 2, cy = (y0 + y1) / 2, dx = L.x - cx, dy = L.y - cy, len = Math.hypot(dx, dy) || 1;
       return { r: r, x0: x0, y0: y0, I: I, lx: dx / len, ly: dy / len, gx: (nx - x0) / r.w * 100, gy: (ny - y0) / r.h * 100 };
@@ -126,16 +138,21 @@
         if (lit.indexOf(el) < 0) { vars(el, m); el.classList.add('lamp-lit'); if (getComputedStyle(el).position === 'static') el.classList.add('lamp-rel'); }
         return layer(el, 'lamp-s', .62);
       }
-      var cs = getComputedStyle(el), s = document.createElement('i'), I = m.I;
-      var off = 6 + 20 * I, blur = 12 + 16 * I, a = (.18 + .32 * I) * (el.matches('.glass, .panel') ? 1.1 : 1);
+      var cs = getComputedStyle(el), s = document.createElement('i'), I = m.I, k = el.matches('.glass, .panel') ? 1.1 : 1;
+      // ближняя тень — чёткий контур у края, дальняя — мягкая и длиннее; обе вправо-вниз
+      var o1 = 2 + 5 * I, b1 = (1 + 3 * I) * (1.7 - cr), a1 = Math.min(.6, (.16 + .26 * I) * sh * k);
+      var o2 = 7 + 16 * I, b2 = (9 + 12 * I) * (1.45 - .55 * cr), a2 = Math.min(.5, (.1 + .18 * I) * sh * k);
+      if (a1 < .01 && a2 < .01) return;
       s.style.cssText = 'left:' + px(m.x0 - L.ax) + ';bottom:' + px(L.ab - (m.y0 + m.r.h)) + ';width:' + px(m.r.w) + ';height:' + px(m.r.h) + ';border-radius:' + cs.borderRadius +
-        ';box-shadow:' + px(-m.lx * off) + ' ' + px(-m.ly * off) + ' ' + px(blur) + ' ' + px(-2 + 2 * I) + ' rgba(14,7,3,' + Math.min(.55, a).toFixed(3) + ')';
+        ';box-shadow:' + (DX * o1).toFixed(1) + 'px ' + (DY * o1).toFixed(1) + 'px ' + b1.toFixed(1) + 'px rgba(8,4,2,' + a1.toFixed(3) + '),' +
+        (DX * o2).toFixed(1) + 'px ' + (DY * o2).toFixed(1) + 'px ' + b2.toFixed(1) + 'px -2px rgba(10,5,2,' + a2.toFixed(3) + ')';
       cast.push(s);
     });
     cast.forEach(function (s) { shades.appendChild(s); });
   }
   function later() { clearTimeout(timer); timer = setTimeout(refresh, 220); }
   window.pamyatLamp = { refresh: later, source: function () { return L; } };
+  document.addEventListener('pamyat:look', later);
   addEventListener('resize', later);
   addEventListener('load', later);
   if ('ResizeObserver' in window) {

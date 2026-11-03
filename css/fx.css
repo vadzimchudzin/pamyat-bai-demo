@@ -1,0 +1,79 @@
+/* ПАМЯТЬ.БАЙ — живые детали (js/fx.js): бегущий ободок кнопок, еле заметный огонь внутри,
+   голубь в небе первого экрана, режим предпросмотра для админки.
+   Всё настраивается в админке («Оформление»): переменные --rim-speed, --fire и классы fx-* ставит js/look.js. */
+
+/* ================= кнопки: бегущий ободок при наведении ================= */
+@property --rim-a{syntax:'<angle>';inherits:false;initial-value:0deg}
+.msg{position:relative;isolation:isolate}
+.btn::before,.cta2::before,.msg::before{content:"";position:absolute;inset:-1px;z-index:1;border-radius:inherit;padding:1.5px;pointer-events:none;box-sizing:border-box;
+  background:conic-gradient(from var(--rim-a),transparent 0deg,transparent 150deg,rgba(255,196,118,.0) 178deg,rgba(255,200,124,.55) 232deg,rgba(255,236,196,1) 262deg,rgba(255,176,92,.6) 276deg,transparent 300deg,transparent 360deg);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;
+  mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);mask-composite:exclude;
+  opacity:0;transition:opacity .45s ease;animation:rim-run var(--rim-speed,3.2s) linear infinite;animation-play-state:paused}
+.btn:hover::before,.cta2:hover::before,.msg:hover::before,.btn:focus-visible::before,.cta2:focus-visible::before,.msg:focus-visible::before{opacity:1;animation-play-state:running}
+/* на светлом фоне (первый экран, светлые разделы) ободок — бронзовый, чтобы не терялся */
+.hero .btn-line::before,.tone-l .btn-line::before,.clb .btn-line::before{
+  background:conic-gradient(from var(--rim-a),transparent 0deg,transparent 150deg,rgba(176,126,52,0) 178deg,rgba(176,126,52,.55) 232deg,rgba(214,160,78,1) 262deg,rgba(150,104,40,.6) 276deg,transparent 300deg,transparent 360deg)}
+@keyframes rim-run{to{--rim-a:360deg}}
+/* кнопки «с ободком» (FAQ, форма): тихий медленный круг всегда, при наведении — в полную силу */
+.btn-gold::before,.cta2::before{padding:2px}
+.btn-rim::before{opacity:.42;animation-duration:calc(var(--rim-speed,3.2s) * 2.4)}
+.btn-rim.fx-on::before{animation-play-state:running}
+.btn-rim:hover::before,.btn-rim:focus-visible::before{opacity:1;animation-duration:var(--rim-speed,3.2s)}
+.fx-norim .btn::before,.fx-norim .cta2::before,.fx-norim .msg::before{display:none}
+
+/* ================= кнопки: еле заметный живой огонь внутри ================= */
+.bf{position:absolute;inset:0;z-index:-1;border-radius:inherit;overflow:hidden;pointer-events:none;mix-blend-mode:screen;
+  opacity:calc(var(--fire,.3) * var(--bf-k,1));transition:opacity .5s ease}
+.bf::before,.bf::after{content:"";position:absolute;border-radius:50%;transform-origin:50% 100%;will-change:transform,opacity;
+  animation:bf-a 2.9s ease-in-out infinite alternate;animation-play-state:paused}
+.bf::before{left:4%;right:22%;bottom:-62%;height:118%;background:radial-gradient(closest-side,rgba(255,214,146,.95),rgba(255,150,62,.55) 44%,rgba(226,92,26,.16) 72%,transparent)}
+.bf::after{left:38%;right:-6%;bottom:-74%;height:126%;background:radial-gradient(closest-side,rgba(255,198,120,.85),rgba(255,128,44,.42) 48%,transparent);
+  animation-name:bf-b;animation-duration:2.1s;animation-delay:-.8s}
+.fx-on>.bf::before,.fx-on>.bf::after{animation-play-state:running}
+@keyframes bf-a{0%{transform:translate3d(-5%,6%,0) scale(1,.84);opacity:.72}30%{transform:translate3d(3%,0,0) scale(1.05,1.08);opacity:1}
+  62%{transform:translate3d(-2%,5%,0) scale(.95,.9);opacity:.8}100%{transform:translate3d(5%,1%,0) scale(1.06,1.14);opacity:.96}}
+@keyframes bf-b{0%{transform:translate3d(4%,3%,0) scale(.94,1);opacity:.9}40%{transform:translate3d(-4%,8%,0) scale(1.04,.82);opacity:.66}
+  75%{transform:translate3d(2%,0,0) scale(1,1.12);opacity:1}100%{transform:translate3d(-3%,4%,0) scale(1.08,.94);opacity:.78}}
+.btn-gold,.cta2{--bf-k:.75}
+.hero .btn,.tone-l .btn,.clb .btn{--bf-k:.55}
+.btn:hover>.bf,.cta2:hover>.bf,.msg:hover>.bf{opacity:min(1,calc(var(--fire,.3) * var(--bf-k,1) * 1.7 + .08))}
+.fx-fire-hover .bf{opacity:0}
+.fx-fire-hover .btn:hover>.bf,.fx-fire-hover .cta2:hover>.bf,.fx-fire-hover .msg:hover>.bf{opacity:min(1,calc(var(--fire,.3) * var(--bf-k,1) * 1.7 + .08))}
+.fx-nofire .bf{display:none}
+
+/* ================= FAQ: тихие кнопки под вводным текстом ================= */
+.faq-cta{display:flex;flex-wrap:wrap;gap:10px;margin-top:24px}
+.faq-cta .btn{gap:9px}
+.faq-cta .btn svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
+.faq-cta .btn[hidden]{display:none}
+
+/* ================= голубь: одинокий, маленький, далеко в небе ================= */
+.dove-fly{position:absolute;left:0;top:0;pointer-events:none;opacity:0;will-change:transform,opacity}
+.dove-bob{display:block;animation:dove-bob 2.2s ease-in-out infinite}
+.dove{display:block;width:var(--dove-w,26px);height:auto;overflow:visible;filter:drop-shadow(0 0 .5px rgba(78,60,42,.55)) drop-shadow(0 1px 1px rgba(78,60,42,.22))}
+.dove-fly.rtl .dove{transform:scaleX(-1)}
+.dove .w1,.dove .w2{transform-box:fill-box;transform-origin:50% 100%;animation:dove-flap 2.2s ease-in-out infinite}
+.dove .w1{animation-name:dove-flap-far;opacity:.78}
+/* три-четыре взмаха и плавное парение; цикл начинается и заканчивается парением — без рывков */
+@keyframes dove-flap{0%,100%{transform:scaleY(.46)}6%,20%,34%,48%{transform:scaleY(1)}13%,27%,41%{transform:scaleY(-.6)}57%{transform:scaleY(.46)}}
+@keyframes dove-flap-far{0%,100%{transform:scaleY(.4)}6%,20%,34%,48%{transform:scaleY(.86)}13%,27%,41%{transform:scaleY(-.48)}57%{transform:scaleY(.4)}}
+@keyframes dove-bob{0%,100%{transform:translateY(0)}6%,20%,34%,48%{transform:translateY(.5px)}13%,27%,41%{transform:translateY(-1.2px)}78%{transform:translateY(1.2px)}}
+
+/* ================= предпросмотр в админке (iframe /?preview=…) ================= */
+html.is-preview .grain{display:none}
+html.is-preview main>section{display:none!important}
+html.pv-hero main>#hero,html.pv-works main>#works,html.pv-calc main>#calc,html.pv-contact main>#faq,html.pv-contact main>#contact{display:block!important}
+html.is-preview:not(.pv-hero) .top{display:none!important}
+html.is-preview:not(.pv-contact) body>footer{display:none}
+html.is-preview:not(.pv-calc) .mbar{display:none!important}
+html.pv-works #works{padding-top:56px}
+html.pv-calc #calc,html.pv-contact #faq{padding-top:56px!important}
+
+@media (prefers-reduced-motion:reduce){
+  .btn::before,.cta2::before,.msg::before{animation:none!important}
+  .bf::before,.bf::after{animation:none!important}
+  .dove-fly{display:none!important}
+}
+@media (hover:none){.btn:hover>.bf,.cta2:hover>.bf,.msg:hover>.bf{opacity:calc(var(--fire,.3) * var(--bf-k,1))}}
+@media print{.bf,.dove-fly{display:none}.btn::before,.cta2::before,.msg::before{display:none}}

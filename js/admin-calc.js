@@ -2,7 +2,7 @@
    Формулы — в общем модуле js/pricing.js; здесь только редактор. Подключается после admin.js. */
 (function () {
   'use strict';
-  var K = window.AdminKit, PP = window.PamyatPricing;
+  var K = window.AdminKit, PP = window.PamyatPricing, CF = window.PamyatCalcFlow;
   var $ = K.$, $$ = K.$$, esc = K.esc, toast = K.toast, slug = K.slug, field = K.field;
   function content() { return K.content(); }
   function setCalc(v) { content().calc = v; }
@@ -37,20 +37,67 @@
     return '<label class="nf"><span>' + label + '</span><input name="' + name + '" type="number" step="any" min="0" value="' + esc(v) + '"' + (attrs || '') + '>' +
       (hint ? '<small>' + hint + '</small>' : '') + '</label>';
   }
-  function drawCalcDimensions() {
-    var d = calcDimensionsConfig();
-    $('#calcDimensionsEd').innerHTML =
-      '<div class="calc-admin-head"><div><b>Шаг 2 — размеры участка</b><p class="hint">Шаг автоматически добавляется сразу после выбора памятника. Клиент может его пропустить; без размеров считается цена базового участка.</p></div>' +
-      '<label class="chk"><input type="checkbox" name="dimensionsEnabled"' + (d.enabled ? ' checked' : '') + '> Показывать шаг размеров</label></div>' +
+  /* ----- сценарий калькулятора: блоки «Памятник», «Размеры», шаги, «Контакты», панель итога ----- */
+  function ui() {
+    return CF ? CF.normalizeUi(content().calc) : { monument: {}, dimensions: {}, contact: {}, summary: {}, order: [] };
+  }
+  function presetsOf() {
+    var d = content().calc && content().calc.dimensions || {};
+    return (Array.isArray(d.presets) ? d.presets : []).map(function (p) { return Array.isArray(p) ? [+p[0], +p[1]] : [+(p && p.length), +(p && p.width)]; })
+      .filter(function (p) { return p[0] > 0 && p[1] > 0; }).slice(0, 12);
+  }
+  function blockHead(num, title, opt) {
+    opt = opt || {};
+    return '<div class="blk-head"><span class="blk-n">' + num + '</span><b>' + esc(title) + '</b>' + (opt.tag ? '<span class="blk-tag">' + esc(opt.tag) + '</span>' : '') +
+      '<div class="tools">' + (opt.toggle ? '<label class="chk blk-on"><input type="checkbox" name="' + opt.toggle + '"' + (opt.on ? ' checked' : '') + '> Показывать</label>' : '') +
+      (opt.move === false ? '' : '<button class="ic" data-act="b-up" title="Выше">↑</button><button class="ic" data-act="b-down" title="Ниже">↓</button>') +
+      (opt.del ? '<button class="ic del" data-act="s-del" title="Удалить шаг">✕</button>' : '') + '</div></div>';
+  }
+  function monumentCard(U, num) {
+    var M = U.monument;
+    return '<div class="card blk blk-mon' + (M.enabled ? '' : ' off') + '" data-key="@monument">' +
+      blockHead(num, 'Памятник — выбор модели', { toggle: 'monEnabled', on: M.enabled, tag: 'варианты из «Каталога сайта»' }) +
+      '<p class="hint">Варианты — разделы каталога с отметкой «в калькуляторе», цена «от» — из каталога. Посетитель может выбрать конкретную модель в каталоге; индивидуальный проект сразу ведёт к контактам.</p>' +
+      '<div class="calc-dim-grid">' + field('monName', 'Название вкладки', M.name) + field('monPick', 'Ссылка «выбрать модель»', M.pick) + field('monPickOther', 'Ссылка, когда модель выбрана', M.pickOther) +
+      field('monSub', 'Подсказка под заголовком', M.sub, { wide: true }) +
+      field('monInd', 'Текст для индивидуального проекта', M.ind, { area: true, rows: 2, wide: true }) + field('monIndButton', 'Кнопка для индивидуального проекта', M.indButton) + '</div></div>';
+  }
+  function fmtM(v) { return String(Math.round(+v * 100) / 100).replace('.', ','); }
+  function dimensionsCard(U, num) {
+    var d = calcDimensionsConfig(), T = U.dimensions, P = presetsOf();
+    return '<div class="card blk blk-dim' + (d.enabled ? '' : ' off') + '" data-key="@dimensions">' +
+      blockHead(num, 'Размеры участка', { toggle: 'dimensionsEnabled', on: d.enabled, tag: 'необязательный шаг' }) +
+      '<p class="hint">Длина и ширина участка. По ним пересчитываются позиции «за м² / м.п.» и «по размеру». Если клиент пропустит шаг, цены считаются для базового участка.</p>' +
       '<div class="calc-dim-grid">' +
-      '<label>Название шага<input name="dimensionsName" value="' + esc(d.name) + '"></label>' +
-      '<label>Единица измерения<input value="м — метры" disabled></label>' +
-      '<label class="wide">Подсказка пользователю<input name="dimensionsSub" value="' + esc(d.sub) + '"></label>' +
-      numField('dimensionsMin', 'Минимальный размер', d.min, '0.01', '0.01') +
-      numField('dimensionsMax', 'Максимальный размер', d.max, '0.1', '0.1') +
-      numField('dimensionsStep', 'Шаг ввода', d.step, '0.01', '0.01') +
-      '<label class="chk"><input type="checkbox" name="dimensionsAllowSkip"' + (d.allowSkip ? ' checked' : '') + '> Разрешить пропуск шага</label>' +
-      '</div>';
+      '<label>Название вкладки<input name="dimensionsName" value="' + esc(d.name) + '"></label>' +
+      field('dimSkip', 'Кнопка «пропустить»', T.skip) + field('dimPresetsTitle', 'Заголовок типовых размеров', T.presetsTitle) +
+      '<label class="wide">Подсказка под заголовком<input name="dimensionsSub" value="' + esc(d.sub) + '"></label>' +
+      numField('dimensionsMin', 'Минимальный размер, м', d.min, '0.01', '0.01') +
+      numField('dimensionsMax', 'Максимальный размер, м', d.max, '0.1', '0.1') +
+      numField('dimensionsStep', 'Шаг ввода, м', d.step, '0.01', '0.01') +
+      '<label class="chk wide"><input type="checkbox" name="dimensionsAllowSkip"' + (d.allowSkip ? ' checked' : '') + '> Разрешить пропуск шага</label>' +
+      field('dimHint', 'Пояснение, когда шаг можно пропустить', T.hint, { wide: true }) +
+      field('dimHintRequired', 'Пояснение, когда размеры обязательны', T.hintRequired, { wide: true }) +
+      '</div><div class="dim-presets-ed"><span class="lbl">Типовые участки — кнопки быстрого выбора (до 12)</span><div class="chips" data-presets>' +
+      (P.map(function (p) { return '<span class="chip" data-l="' + p[0] + '" data-w="' + p[1] + '">' + fmtM(p[0]) + ' × ' + fmtM(p[1]) + ' м<button type="button" data-act="p-del" title="Убрать" aria-label="Убрать">×</button></span>'; }).join('') || '<span class="hint">Нет — посетитель вводит размеры сам.</span>') +
+      '</div><div class="preset-add"><input name="pL" type="number" step="0.01" min="0.1" max="100" placeholder="Длина, м"><span>×</span><input name="pW" type="number" step="0.01" min="0.1" max="100" placeholder="Ширина, м">' +
+      '<button type="button" class="btn line sm" data-act="p-add">+ Добавить</button></div></div></div>';
+  }
+  function contactCard(U, num) {
+    var C2 = U.contact;
+    return '<div class="card blk blk-contact" data-key="@contact">' + blockHead(num, 'Контакты — заявка', { move: false, tag: 'всегда последний шаг' }) +
+      '<div class="calc-dim-grid">' + field('ctName', 'Название вкладки', C2.name) + field('ctTitle', 'Заголовок', C2.title) + field('ctButton', 'Кнопка отправки', C2.button) +
+      field('ctSub', 'Пояснение', C2.sub, { wide: true }) +
+      field('ctTitleInd', 'Заголовок — индивидуальный проект', C2.titleInd) + field('ctButtonInd', 'Кнопка — индивидуальный проект', C2.buttonInd) + '<span></span>' +
+      field('ctSubInd', 'Пояснение — индивидуальный проект', C2.subInd, { wide: true }) +
+      '<label class="chk"><input type="checkbox" name="ctComment"' + (C2.comment ? ' checked' : '') + '> Поле «Комментарий»</label>' + field('ctCommentPh', 'Подсказка в поле комментария', C2.commentPh) + '<span></span>' +
+      field('ctOk', 'Сообщение после отправки', C2.ok, { wide: true }) + field('ctConsent', 'Текст о согласии на обработку данных', C2.consent, { wide: true }) + '</div></div>';
+  }
+  function summaryCard(U) {
+    var S2 = U.summary;
+    return '<div class="card blk blk-sum" data-key="@summary"><div class="blk-head"><b>Панель «Ваш комплекс» — итог рядом с шагами</b></div>' +
+      '<div class="calc-dim-grid">' + field('smTitle', 'Заголовок', S2.title) + field('smTotal', 'Подпись итога', S2.total) + field('smIndividual', 'Вместо цены, если расчёт индивидуальный', S2.individual) +
+      field('smEmpty', 'Если ничего не выбрано', S2.empty) + field('smNote', 'Примечание под итогом', S2.note, { area: true, rows: 2, wide: true }) + '</div></div>';
   }
 
   /* ----- базовый участок ----- */
@@ -99,6 +146,10 @@
     var p = PP.normalizePricing(it);
     if (p.mode === 'fixed') return { mode: 'fixed' };
     var tr = { enabled: false, tileA: 60, tileB: 50, material: 0, cut: 0 };
+    if (p.mode === 'curve' && it.pricing && it.pricing.simple) {
+      var sn = PP.normalizeCurve(it.pricing.curve);
+      return { mode: 'simple', quantity: p.quantity, share: sn.share * 100, piece: sn.piece, rate: sn.rates.unit, min: sn.min, trim: sn.trim };
+    }
     if (p.mode === 'curve') {
       var n = PP.normalizeCurve(it.pricing && it.pricing.curve), cs = n.costs || { fixed: 0, unit: 0, reserve: 0, markup: 1 };
       return { mode: 'curve', quantity: p.quantity, share: n.share * 100, piece: n.piece, costFixed: cs.fixed, costUnit: cs.unit,
@@ -148,50 +199,90 @@
       '<div class="curve-out"></div></div>';
   }
 
+  /* простая ставка: цена = ставка × измерение (не ниже минимума) — без затрат и наценки */
+  function simplePanel(m) {
+    var u = unitOf(m.quantity);
+    return '<div class="curve-panel simple-panel"><div class="simple-grid">' +
+      '<label class="nf"><span>Что измеряем</span><select name="cq">' + MEASURES.map(function (x) {
+        return '<option value="' + x[0] + '"' + (m.quantity === x[0] ? ' selected' : '') + '>' + x[1] + '</option>';
+      }).join('') + '</select></label>' +
+      nf('srate', 'Ставка, BYN за 1 ' + u, m.rate, 'Цена = ставка × ' + (m.quantity === 'area' ? 'площадь' : 'метры')) +
+      nf('cmin', 'Минимальная сумма, BYN', m.min, '0 — без минимума') +
+      nf('cshare', 'Доля от измерения, %', m.share, 'Например, 50% — только две стороны', ' max="100" min="1"') +
+      nf('cpiece', 'Продаётся кратно, м', m.piece, '0 — не округлять') +
+      '</div><div class="curve-out"></div></div>';
+  }
   function itemHTML(it, ii) {
-    var m = formModel(it), curve = m.mode === 'curve';
-    return '<div class="it calc-it' + (curve ? ' is-curve' : '') + '" data-ii="' + ii + '" data-id="' + esc(it.id) + '">' +
+    var m = formModel(it), curve = m.mode === 'curve' || m.mode === 'simple', simple = m.mode === 'simple';
+    return '<div class="it calc-it' + (curve ? ' is-curve' : '') + (simple ? ' is-simple' : '') + '" data-ii="' + ii + '" data-id="' + esc(it.id) + '">' +
       '<div class="it-main">' +
       '<input name="iname" value="' + esc(it.name) + '" placeholder="Название">' +
       (curve ? '<input name="iprice" class="calc-price-ro" readonly tabindex="-1" title="Цена в базовой точке — считается автоматически" value="">'
         : '<input name="iprice" type="number" min="0" step="0.01" value="' + (it.price == null ? '' : it.price) + '" placeholder="инд. расчёт">') +
       '<input name="inote" value="' + esc(it.note || '') + '" placeholder="Подпись / примечание">' +
-      '<select name="pmode" aria-label="Тип тарификации"><option value="fixed"' + (!curve ? ' selected' : '') + '>Фиксированная</option><option value="curve"' + (curve ? ' selected' : '') + '>По размеру (кривая)</option></select>' +
+      '<select name="pmode" aria-label="Тип тарификации"><option value="fixed"' + (!curve ? ' selected' : '') + '>Фиксированная</option><option value="simple"' + (simple ? ' selected' : '') + '>За м² / м.п. (ставка)</option><option value="curve"' + (curve && !simple ? ' selected' : '') + '>По размеру (кривая)</option></select>' +
       '<div class="tools"><button class="ic" data-act="i-up" title="Выше">↑</button><button class="ic" data-act="i-down" title="Ниже">↓</button><button class="ic del" data-act="i-del" title="Удалить">✕</button></div>' +
-      '</div>' + (curve ? curvePanel(m) : '') + '</div>';
+      '</div>' + (simple ? simplePanel(m) : curve ? curvePanel(m) : '') + '</div>';
   }
 
+  function stepCard(s, num) {
+    return '<div class="card step blk" data-key="' + esc(s.id) + '" data-id="' + esc(s.id) + '">' +
+      '<div class="step-head"><span class="blk-n">' + num + '</span>' + field('name', 'Название вкладки', s.name) + field('sub', 'Подсказка под заголовком', s.sub) +
+      '<label>Выбор<select name="type"><option value="radio"' + (s.type !== 'multi' ? ' selected' : '') + '>Один вариант</option><option value="multi"' + (s.type === 'multi' ? ' selected' : '') + '>Несколько</option></select></label>' +
+      '<div class="tools"><button class="ic" data-act="b-up" title="Выше">↑</button><button class="ic" data-act="b-down" title="Ниже">↓</button><button class="ic del" data-act="s-del" title="Удалить шаг">✕</button></div></div>' +
+      '<div class="colh calc-colh"><span>Позиция</span><span>Цена в базовой точке, BYN</span><span>Подпись</span><span>Тарификация</span><span></span></div>' +
+      '<div class="items">' + (s.items || []).map(itemHTML).join('') + '</div>' +
+      '<button class="btn line sm" data-act="i-add" style="margin-top:12px">+ Позиция</button></div>';
+  }
   function drawCalc() {
-    var steps = ((content().calc && content().calc.steps) || []).filter(function (s) { return s.id !== 'monument'; });
+    var steps = ((content().calc && content().calc.steps) || []).filter(function (s) { return s.id !== 'monument'; }), byId = {};
+    steps.forEach(function (s) { byId[s.id] = s; });
+    var U = ui(), ids = steps.map(function (s) { return s.id; });
+    var keys = CF ? CF.sequence(ids, { order: U.order }) : ['@monument', '@dimensions'].concat(ids), n = 0;
     drawCalcBase();
-    drawCalcDimensions();
-    $('#calcEd').innerHTML = steps.map(function (s, si) {
-      return '<div class="card step" data-si="' + si + '" data-id="' + esc(s.id) + '">' +
-        '<div class="step-head">' + field('name', 'Шаг ' + (si + 1) + ' — название вкладки', s.name) + field('sub', 'Подсказка под заголовком', s.sub) +
-        '<label>Выбор<select name="type"><option value="radio"' + (s.type !== 'multi' ? ' selected' : '') + '>Один вариант</option><option value="multi"' + (s.type === 'multi' ? ' selected' : '') + '>Несколько</option></select></label>' +
-        '<div class="tools"><button class="ic" data-act="s-up" title="Выше">↑</button><button class="ic" data-act="s-down" title="Ниже">↓</button><button class="ic del" data-act="s-del" title="Удалить шаг">✕</button></div></div>' +
-        '<div class="colh calc-colh"><span>Позиция</span><span>Цена в базовой точке, BYN</span><span>Подпись</span><span>Тарификация</span><span></span></div>' +
-        '<div class="items">' + (s.items || []).map(itemHTML).join('') + '</div>' +
-        '<button class="btn line sm" data-act="i-add" style="margin-top:12px">+ Позиция</button></div>';
-    }).join('') || '<p class="empty">Шагов нет — добавьте первый.</p>';
+    var dimsOld = $('#calcDimensionsEd'); if (dimsOld) dimsOld.remove();
+    $('#calcEd').innerHTML = '<p class="hint calc-flow-hint">Шаги идут в этом порядке. Стрелками ↑↓ меняйте порядок любых шагов, «Показывать» — скрывает шаг на сайте. «Контакты» всегда последние.</p>' +
+      keys.map(function (k) {
+        n++;
+        if (k === '@monument') return monumentCard(U, n);
+        if (k === '@dimensions') return dimensionsCard(U, n);
+        return byId[k] ? stepCard(byId[k], n) : (n--, '');
+      }).join('') + contactCard(U, n + 1) + summaryCard(U);
     refreshAllCurves();
   }
 
   /* ----- чтение позиции из формы ----- */
-  function readItem(row, base) {
+  function readItem(row, base, force) {
     base = base || readBase();
     var g = function (n) { var e = $('[name=' + n + ']', row); return e ? e.value : ''; };
     var n = function (x, d) { var v = parseFloat(String(g(x)).replace(',', '.')); return isFinite(v) ? v : d; };
-    var mode = g('pmode') === 'curve' ? 'curve' : 'fixed';
+    var pm = force || g('pmode'), mode = pm === 'curve' || pm === 'simple' ? pm : 'fixed';
     var out = { id: row.dataset.id, name: g('iname').trim() || 'Позиция', note: g('inote').trim() || undefined };
-    if (mode !== 'curve') {
+    if (mode === 'fixed') {
       var p = g('iprice').trim();
       out.price = p === '' ? null : Math.max(0, Math.round(+p * 100) / 100);
       out.pricing = { mode: 'fixed' };
       return keepExtra(out, row);
     }
-    var bd = PP.dimsOf(base.length, base.width);
-    if (!$('[name=cq]', row)) {            // позиция только что переключена с «фиксированной»: сохраняем её цену в базовой точке
+    var bd = PP.dimsOf(base.length, base.width), hasSimple = !!$('[name=srate]', row), hasCurve = !!$('[name=cfix]', row);
+    var noTrim = { enabled: false, tileA: 60, tileB: 50, material: 0, cut: 0 };
+    if (mode === 'simple') {
+      var q = g('cq') || 'area', share = Math.min(100, Math.max(1, n('cshare', 100))) / 100, rate;
+      if (hasSimple) rate = Math.max(0, n('srate', 0));
+      else {                               // переключили на ставку: цена в базовой точке остаётся прежней
+        var prev = hasCurve ? readItem(row, base, 'curve') : null, P0 = prev ? prev.price : (parseFloat(g('iprice')) || 0);
+        var mv = PP.measureValue(q, bd) * share; rate = mv > 0 ? Math.round(P0 / mv * 100) / 100 : 0;
+      }
+      out.pricing = { mode: 'curve', simple: true, quantity: q, curve: { share: share, piece: Math.max(0, n('cpiece', 0)), costFixed: 0, costUnit: rate, reserve: 0, markup: 1,
+        min: Math.max(0, n('cmin', 0)), trim: noTrim } };
+      var sa = PP.analyzeAt(out, bd, { base: base });
+      out.price = sa ? PP.roundMoney(sa.price) : 0;
+      return keepExtra(out, row);
+    }
+    if (hasSimple && !hasCurve) {          // со ставки на кривую: та же цена, дальше можно добавить затраты и наценку
+      out.pricing = { mode: 'curve', quantity: g('cq') || 'area', curve: { share: Math.min(100, Math.max(1, n('cshare', 100))) / 100, piece: Math.max(0, n('cpiece', 0)),
+        costFixed: 0, costUnit: Math.max(0, n('srate', 0)), reserve: 0, markup: 1, min: Math.max(0, n('cmin', 0)), trim: noTrim } };
+    } else if (!$('[name=cq]', row)) {            // позиция только что переключена с «фиксированной»: сохраняем её цену в базовой точке
       var P = parseFloat(g('iprice')) || 0;
       out.pricing = { mode: 'curve', quantity: 'area', curve: { share: 1, piece: 0, costFixed: 0, costUnit: P / bd.area, reserve: 0, markup: 1, min: 0,
         trim: { enabled: false, tileA: 60, tileB: 50, material: 0, cut: 0 } } };
@@ -218,6 +309,15 @@
     var o = origItem(row);
     if (o) Object.keys(o).forEach(function (k) { if (!(k in out)) out[k] = o[k]; });
     return out;
+  }
+  /* простая ставка: цены для типовых размеров (форма как у базового участка) */
+  function simpleTable(it, base) {
+    var p = PP.normalizePricing(it), u = unitOf(p.quantity);
+    var rows = [0.6, 0.8, 1, 1.3, 1.7, 2.2].map(function (s) {
+      var d = PP.dimsOf(base.length * s, base.width * s), a = PP.analyzeAt(it, d, { base: base });
+      return '<tr' + (s === 1 ? ' class="base"' : '') + '><td>' + f2(d.length) + ' × ' + f2(d.width) + (s === 1 ? ' <i>база</i>' : '') + '</td><td>' + f2(PP.measureValue(p.quantity, d)) + ' ' + u + '</td><td><b>' + f2(a.price) + '</b></td></tr>';
+    }).join('');
+    return '<table class="size-table"><thead><tr><th>Участок, м</th><th>Количество</th><th>Цена, BYN</th></tr></thead><tbody>' + rows + '</tbody></table>';
   }
 
   /* ----- график ----- */
@@ -320,6 +420,10 @@
     var base = readBase(), bd = PP.dimsOf(base.length, base.width), it = readItem(row, base);
     if (it.pricing.mode !== 'curve') return;
     var priceBox = $('[name=iprice]', row); if (priceBox && priceBox.readOnly) priceBox.value = plain(it.price);
+    if (row.classList.contains('is-simple')) {
+      out.innerHTML = '<h4>Цены для разных размеров</h4><div class="tbl">' + simpleTable(it, base) + '</div>';
+      return;
+    }
     var ch = chartHTML(it, base, bd);
     out.innerHTML =
       '<div class="curve-cols"><div class="curve-left"><h4>Расчёт для базового участка</h4>' + breakdownHTML(it, base, bd) + '</div>' +
@@ -353,20 +457,31 @@
   function refreshAllCurves() { $$('#calcEd .calc-it.is-curve').forEach(renderCurveOut); }
 
   function readCalc() {
-    var d = $('#calcDimensionsEd'), dims = {
-      enabled: $('[name=dimensionsEnabled]', d).checked,
-      name: $('[name=dimensionsName]', d).value.trim() || 'Размеры',
-      sub: $('[name=dimensionsSub]', d).value.trim(),
-      unit: 'м',
-      min: Math.max(0.01, +$('[name=dimensionsMin]', d).value || 0.1),
-      max: Math.max(0.01, +$('[name=dimensionsMax]', d).value || 100),
-      step: Math.max(0.01, +$('[name=dimensionsStep]', d).value || 0.1),
-      allowSkip: $('[name=dimensionsAllowSkip]', d).checked
+    var cur = content().calc || {}, oldSteps = cur.steps || [], ed = $('#calcEd');
+    var blk = function (k) { return $('[data-key="' + k + '"]', ed); };
+    var val = function (box, n, d) { var e = box && $('[name=' + n + ']', box); return e ? (e.type === 'checkbox' ? e.checked : e.value.trim()) : d; };
+    var U = ui(), d = blk('@dimensions'), m = blk('@monument'), c = blk('@contact'), sm = blk('@summary'), dc = calcDimensionsConfig();
+    var dims = {
+      enabled: val(d, 'dimensionsEnabled', dc.enabled), name: val(d, 'dimensionsName', dc.name) || 'Размеры', sub: val(d, 'dimensionsSub', dc.sub), unit: 'м',
+      min: Math.max(0.01, +val(d, 'dimensionsMin', dc.min) || 0.1), max: Math.max(0.01, +val(d, 'dimensionsMax', dc.max) || 100),
+      step: Math.max(0.01, +val(d, 'dimensionsStep', dc.step) || 0.1), allowSkip: val(d, 'dimensionsAllowSkip', dc.allowSkip),
+      hint: val(d, 'dimHint', U.dimensions.hint), hintRequired: val(d, 'dimHintRequired', U.dimensions.hintRequired),
+      skip: val(d, 'dimSkip', U.dimensions.skip), presetsTitle: val(d, 'dimPresetsTitle', U.dimensions.presetsTitle)
     };
     if (dims.max < dims.min) dims.max = dims.min;
-    var base = readBase(), cur = content().calc || {}, oldSteps = cur.steps || [];
-    /* ключи, которых нет в форме (метка тарифов, типовые размеры, настройки шагов), не теряем */
+    if (d) dims.presets = $$('[data-presets] .chip', d).map(function (x) { return [+x.dataset.l, +x.dataset.w]; });
+    var base = readBase();
+    /* ключи, которых нет в форме (метка тарифов, настройки шагов), не теряем */
     var out = Object.assign({}, cur, { dimensions: Object.assign({}, cur.dimensions || {}, dims), base: base });
+    out.monument = { enabled: val(m, 'monEnabled', U.monument.enabled), name: val(m, 'monName', U.monument.name), sub: val(m, 'monSub', U.monument.sub),
+      pick: val(m, 'monPick', U.monument.pick), pickOther: val(m, 'monPickOther', U.monument.pickOther), ind: val(m, 'monInd', U.monument.ind), indButton: val(m, 'monIndButton', U.monument.indButton) };
+    out.contact = { name: val(c, 'ctName', U.contact.name), title: val(c, 'ctTitle', U.contact.title), sub: val(c, 'ctSub', U.contact.sub), button: val(c, 'ctButton', U.contact.button),
+      titleInd: val(c, 'ctTitleInd', U.contact.titleInd), subInd: val(c, 'ctSubInd', U.contact.subInd), buttonInd: val(c, 'ctButtonInd', U.contact.buttonInd),
+      comment: val(c, 'ctComment', U.contact.comment), commentPh: val(c, 'ctCommentPh', U.contact.commentPh), ok: val(c, 'ctOk', U.contact.ok), consent: val(c, 'ctConsent', U.contact.consent) };
+    out.summary = { title: val(sm, 'smTitle', U.summary.title), total: val(sm, 'smTotal', U.summary.total), individual: val(sm, 'smIndividual', U.summary.individual),
+      empty: val(sm, 'smEmpty', U.summary.empty), note: val(sm, 'smNote', U.summary.note) };
+    var keys = $$('#calcEd > .blk[data-key]').map(function (x) { return x.dataset.key; }).filter(function (k) { return k !== '@contact' && k !== '@summary'; });
+    if (keys.length) out.order = keys;
     out.steps = $$('#calcEd .step').map(function (st) {
       var old = oldSteps.filter(function (x) { return x.id === st.dataset.id; })[0] || {};
       return Object.assign({}, old, { id: st.dataset.id, name: $('[name=name]', st).value.trim() || 'Шаг', sub: $('[name=sub]', st).value.trim(), type: $('[name=type]', st).value,
@@ -396,13 +511,28 @@
       renderCurveOut(row); toast('Наценка подобрана: ×' + f2(target / ev.cost.total));
       return;
     }
-    var cal = readCalc(), st = b.closest('.step'), si = +st.dataset.si, it = b.closest('.it'), ii = it ? +it.dataset.ii : -1, arr = cal.steps;
-    function mv(list, i, d) { var j = i + d; if (j < 0 || j >= list.length) return; var t = list[i]; list[i] = list[j]; list[j] = t; }
-    if (a === 's-up') mv(arr, si, -1); if (a === 's-down') mv(arr, si, 1);
-    if (a === 's-del' && confirm('Удалить шаг «' + arr[si].name + '»?')) arr.splice(si, 1);
-    if (a === 'i-up') mv(arr[si].items, ii, -1); if (a === 'i-down') mv(arr[si].items, ii, 1);
-    if (a === 'i-del') arr[si].items.splice(ii, 1);
-    if (a === 'i-add') arr[si].items.push({ id: slug('item'), name: 'Новая позиция', price: 0, pricing: { mode: 'fixed' } });
+    if (a === 'p-del') { var chip = b.closest('.chip'); if (chip) chip.remove(); return; }
+    if (a === 'p-add') {
+      var box = b.closest('.dim-presets-ed'), L = parseFloat(String($('[name=pL]', box).value).replace(',', '.')), Wd = parseFloat(String($('[name=pW]', box).value).replace(',', '.'));
+      if (!(L > 0 && Wd > 0 && L <= 100 && Wd <= 100)) { toast('Введите длину и ширину участка, м', true); return; }
+      if ($$('[data-presets] .chip', box).length >= 12) { toast('Не больше 12 типовых размеров', true); return; }
+      var cal0 = readCalc(); cal0.dimensions.presets = (cal0.dimensions.presets || []).concat([[Math.round(L * 100) / 100, Math.round(Wd * 100) / 100]]);
+      setCalc(cal0); drawCalc(); return;
+    }
+    var cal = readCalc(), blkEl = b.closest('.blk'), key = blkEl && blkEl.dataset.key, it = b.closest('.it'), ii = it ? +it.dataset.ii : -1;
+    var st = cal.steps.filter(function (x) { return x.id === key; })[0];
+    function mv(list, i, d) { var j = i + d; if (i < 0 || j < 0 || j >= list.length) return; var t = list[i]; list[i] = list[j]; list[j] = t; }
+    if ((a === 'b-up' || a === 'b-down') && cal.order) mv(cal.order, cal.order.indexOf(key), a === 'b-up' ? -1 : 1);
+    if (a === 's-del' && st && confirm('Удалить шаг «' + st.name + '»?')) {
+      cal.steps = cal.steps.filter(function (x) { return x !== st; }); if (cal.order) cal.order = cal.order.filter(function (k) { return k !== key; });
+    }
+    if (st && a === 'i-up') mv(st.items, ii, -1); if (st && a === 'i-down') mv(st.items, ii, 1);
+    if (st && a === 'i-del') st.items.splice(ii, 1);
+    if (st && a === 'i-add') st.items.push({ id: slug('item'), name: 'Новая позиция', price: 0, pricing: { mode: 'fixed' } });
+    if (cal.order) {                        // шаги в массиве — в том же порядке, что и на сайте
+      var pos = {}; cal.order.forEach(function (k, i) { pos[k] = i; });
+      cal.steps.sort(function (x, y) { return (x.id === 'monument' ? -1 : pos[x.id] == null ? 999 : pos[x.id]) - (y.id === 'monument' ? -1 : pos[y.id] == null ? 999 : pos[y.id]); });
+    }
     setCalc(cal); drawCalc();
   });
   $('#calcEd').addEventListener('input', function (e) {
@@ -412,13 +542,9 @@
   $('#calcEd').addEventListener('change', function (e) {
     var n = e.target && e.target.name;
     if (n === 'pmode' || n === 'cq' || n === 'ctrim') { var cal = readCalc(); setCalc(cal); drawCalc(); }
+    if (n === 'monEnabled' || n === 'dimensionsEnabled') { var bl = e.target.closest('.blk'); if (bl) bl.classList.toggle('off', !e.target.checked); }
   });
   $('#calcBaseEd').addEventListener('input', function () { updateBaseFacts(); refreshAllCurves(); });
-  $('#calcDimensionsEd').addEventListener('change', function (e) {
-    if (e.target && e.target.name === 'dimensionsEnabled') {
-      var d = readCalc(); setCalc(d); drawCalc();
-    }
-  });
   $('#addStep').addEventListener('click', function () {
     var cal = readCalc(); cal.steps.push({ id: slug('step'), name: 'Новый шаг', type: 'radio', sub: '', items: [{ id: slug('item'), name: 'Вариант', price: 0 }] });
     setCalc(cal); drawCalc();

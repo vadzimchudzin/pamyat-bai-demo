@@ -174,11 +174,13 @@
   .czoom.single .zs{bottom:64px}
 }
 
-/* ================= лампада за кадром внизу слева: только её свет (js/lamp.js) ================= */
+/* ================= лампада за кадром внизу слева: только её свет (js/lamp.js) =================
+   яркость, дальность, тени и отражения настраиваются в админке («Оформление» → «Лампада»): переменные ставит js/look.js.
+   Тени — чёткие, вправо-вниз от элементов: ближняя (контур) + дальняя мягкая. */
 .ambience.has-lamp .flame-light{left:calc(var(--lamp-fx,0px) - 820px);bottom:calc(var(--lamp-fb,0px) - 660px);top:auto;width:1640px;height:1320px;transform:none;transform-origin:50% 50%;
-  background:radial-gradient(closest-side,rgba(255,206,140,calc(.34 * var(--flicker,1))) 0%,rgba(255,170,94,calc(.19 * var(--flicker,1))) 24%,rgba(222,124,64,calc(.08 * var(--flicker,1))) 52%,transparent 100%)}
+  background:radial-gradient(closest-side,rgba(255,206,140,calc(.34 * var(--flicker,1) * var(--lamp-power,1.3))) 0%,rgba(255,170,94,calc(.19 * var(--flicker,1) * var(--lamp-power,1.3))) 24%,rgba(222,124,64,calc(.08 * var(--flicker,1) * var(--lamp-power,1.3))) 52%,transparent 100%)}
 .ambience.has-lamp .light-breath{left:calc(var(--lamp-fx,0px) - 460px);bottom:calc(var(--lamp-fb,0px) - 400px);top:auto;width:920px;height:800px;transform:none;transform-origin:50% 50%;
-  background:radial-gradient(closest-side,rgba(255,192,116,calc(.24 * var(--flicker,1))),rgba(241,136,64,calc(.09 * var(--flicker,1))) 46%,transparent 100%)}
+  background:radial-gradient(closest-side,rgba(255,192,116,calc(.24 * var(--flicker,1) * var(--lamp-power,1.3))),rgba(241,136,64,calc(.09 * var(--flicker,1) * var(--lamp-power,1.3))) 46%,transparent 100%)}
 .lamp-shades{position:absolute;inset:0;pointer-events:none;will-change:transform,opacity}
 .lamp-shades>i{position:absolute;display:block}
 .lamp-src,.lamp-src i{position:absolute;pointer-events:none}
@@ -186,22 +188,33 @@
 .lamp-src i{display:block;mix-blend-mode:screen;will-change:transform,opacity}
 /* яркое пятно у левого края — огонь сразу за кадром */
 .lamp-src .ls-core{left:calc(var(--lamp-fx,0px) - 340px);bottom:calc(var(--lamp-fb,0px) - 340px);width:680px;height:680px;border-radius:50%;
-  background:radial-gradient(closest-side,rgba(255,234,182,.74) 0%,rgba(255,198,120,.46) 14%,rgba(255,160,80,.22) 34%,rgba(236,124,58,.08) 62%,transparent 100%)}
+  background:radial-gradient(closest-side,rgba(255,234,182,calc(.74 * var(--lamp-power,1.3))) 0%,rgba(255,198,120,calc(.46 * var(--lamp-power,1.3))) 14%,rgba(255,160,80,calc(.22 * var(--lamp-power,1.3))) 34%,rgba(236,124,58,calc(.08 * var(--lamp-power,1.3))) 62%,transparent 100%)}
 /* отсвет на «полу» — зона подвала и низ контактов */
 .lamp-src .ls-floor{left:calc(var(--lamp-fx,0px) - 1000px);bottom:calc(var(--lamp-fb,0px) - 210px);width:2000px;height:420px;border-radius:50%;transform-origin:50% 50%;
-  background:radial-gradient(closest-side,rgba(255,184,104,.42),rgba(255,150,72,.16) 46%,rgba(255,140,64,.05) 74%,transparent)}
+  background:radial-gradient(closest-side,rgba(255,184,104,calc(.42 * var(--lamp-power,1.3))),rgba(255,150,72,calc(.16 * var(--lamp-power,1.3))) 46%,rgba(255,140,64,calc(.05 * var(--lamp-power,1.3))) 74%,transparent)}
 /* блик на линии подвала: огонь стоит у самой линии */
 .lamp-src .ls-line{left:0;bottom:calc(var(--lamp-lb,60px) - 1px);width:min(1200px,92vw);height:2px;
-  background:linear-gradient(90deg,rgba(255,222,160,.95),rgba(255,190,112,.55) 22%,rgba(255,170,96,.18) 58%,transparent)}
+  background:linear-gradient(90deg,rgba(255,222,160,calc(.95 * var(--lamp-power,1.3))),rgba(255,190,112,calc(.55 * var(--lamp-power,1.3))) 22%,rgba(255,170,96,calc(.18 * var(--lamp-power,1.3))) 58%,transparent)}
 .lamp-lit{isolation:isolate}
 .lamp-lit.lamp-rel{position:relative}
 .lamp-g,.lamp-s{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1}
+/* отражение огня: чёткая тёплая кромка со стороны огня + мягкий блик внутрь */
 .lamp-g{mix-blend-mode:screen;
-  box-shadow:inset calc(var(--lx) * -1.5px) calc(var(--ly) * -1.5px) 0 rgba(255,198,130,calc(var(--li) * .6)),
-    inset calc(var(--lx) * -18px) calc(var(--ly) * -18px) 26px -12px rgba(255,156,74,calc(var(--li) * .62));
-  background:radial-gradient(farthest-corner at var(--gx,0%) var(--gy,100%),rgba(255,170,90,calc(var(--li) * .28)) 0%,rgba(255,170,90,0) 62%)}
-.lamp-s{box-shadow:calc(var(--lx) * var(--li) * -14px - var(--lx) * 4px) calc(var(--ly) * var(--li) * -14px - var(--ly) * 4px) calc(14px + var(--li) * 14px) -4px rgba(10,5,2,calc(.16 + var(--li) * .3))}
-.lamp-in{box-shadow:inset calc(var(--lx) * -1px) calc(var(--ly) * -1px) 0 rgba(255,190,120,calc(var(--li) * .42)),inset calc(var(--lx) * -12px) calc(var(--ly) * -12px) 22px -14px rgba(255,150,70,calc(var(--li) * .35))}
-.lamp-tx{text-shadow:calc(var(--lx) * 1px) calc(var(--ly) * 1px) 0 rgba(255,192,120,calc(var(--li) * .34)),calc(var(--lx) * var(--li) * -5px - var(--lx) * 1.5px) calc(var(--ly) * var(--li) * -5px - var(--ly) * 1.5px) calc(4px + var(--li) * 6px) rgba(8,4,2,calc(.14 + var(--li) * .26))}
+  box-shadow:inset calc(var(--lx) * -1px) calc(var(--ly) * -1px) 0 rgba(255,226,176,calc(var(--li) * .78 * var(--lamp-reflect,1))),
+    inset calc(var(--lx) * -3px) calc(var(--ly) * -3px) 0 -1px rgba(255,186,112,calc(var(--li) * .42 * var(--lamp-reflect,1))),
+    inset calc(var(--lx) * -18px) calc(var(--ly) * -18px) 26px -12px rgba(255,156,74,calc(var(--li) * .7 * var(--lamp-reflect,1)));
+  background:radial-gradient(farthest-corner at var(--gx,0%) var(--gy,100%),rgba(255,172,92,calc(var(--li) * .34 * var(--lamp-reflect,1))) 0%,rgba(255,170,90,0) 58%)}
+/* тень кнопки на карточке: вправо-вниз, контур + мягкая */
+.lamp-s{box-shadow:calc((2px + var(--li) * 4px) * .86) calc((2px + var(--li) * 4px) * .5) calc((1px + var(--li) * 3px) * (1.7 - var(--lamp-crisp,.7))) rgba(8,4,2,calc((.18 + var(--li) * .26) * var(--lamp-shadow,1))),
+  calc((6px + var(--li) * 12px) * .86) calc((6px + var(--li) * 12px) * .5) calc((8px + var(--li) * 10px) * (1.45 - var(--lamp-crisp,.7) * .55)) -2px rgba(10,5,2,calc((.12 + var(--li) * .18) * var(--lamp-shadow,1)))}
+.lamp-in{box-shadow:inset calc(var(--lx) * -1px) calc(var(--ly) * -1px) 0 rgba(255,198,128,calc(var(--li) * .55 * var(--lamp-reflect,1))),inset calc(var(--lx) * -12px) calc(var(--ly) * -12px) 22px -14px rgba(255,150,70,calc(var(--li) * .42 * var(--lamp-reflect,1)))}
+/* текст: тёплый отсвет со стороны огня и чёткая тень вправо-вниз */
+.lamp-tx,.msg.lamp-lit,.btn-line.lamp-lit{text-shadow:calc(var(--lx) * 1px) calc(var(--ly) * 1px) 0 rgba(255,196,124,calc(var(--li) * .4 * var(--lamp-reflect,1))),
+  calc((1px + var(--li) * 2.5px) * .86) calc((1px + var(--li) * 2.5px) * .5) calc((.5px + var(--li) * 2px) * (1.7 - var(--lamp-crisp,.7))) rgba(8,4,2,calc((.22 + var(--li) * .3) * var(--lamp-shadow,1))),
+  calc((3px + var(--li) * 7px) * .86) calc((3px + var(--li) * 7px) * .5) calc((5px + var(--li) * 6px) * (1.45 - var(--lamp-crisp,.7) * .55)) rgba(8,4,2,calc((.1 + var(--li) * .16) * var(--lamp-shadow,1)))}
+.msg.lamp-lit svg,.btn-line.lamp-lit svg{filter:drop-shadow(calc(var(--lx) * 1px) calc(var(--ly) * 1px) 0 rgba(255,196,124,calc(var(--li) * .38 * var(--lamp-reflect,1))))
+  drop-shadow(calc((1px + var(--li) * 2.5px) * .86) calc((1px + var(--li) * 2.5px) * .5) calc((.5px + var(--li) * 1.5px) * (1.7 - var(--lamp-crisp,.7))) rgba(8,4,2,calc((.22 + var(--li) * .3) * var(--lamp-shadow,1))))}
+/* лампада выключена в админке */
+html.lamp-off .lamp-src,html.lamp-off .lamp-shades,html.lamp-off .lamp-g,html.lamp-off .lamp-s{display:none}
 @media (prefers-reduced-motion:reduce){.clb .sv.wait .im:after{animation:none}}
 @media print{.lamp-g,.lamp-s,.lamp-src,.lamp-shades{display:none}}

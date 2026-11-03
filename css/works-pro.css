@@ -1,7 +1,8 @@
 /* ПАМЯТЬ.БАЙ — «Примеры работ» по макету: мраморный фон, заголовок по центру с золотыми линиями,
-   три карточки с тонкой золотой рамкой и тёмной панелью подписи, размытые соседние кадры по краям,
-   круглые стрелки в полях и вытянутая золотая точка активной страницы.
-   Подключается после polish.css. Поля ленты (--vw, --wk-pad) считает js/site.js, высоту карточек — js/works-fix.js. */
+   карточки с тонкой золотой рамкой и мягким затемнением низа фото, короткие размытые «хвосты» соседних
+   кадров по краям, круглые стрелки у краёв карточек и вытянутая золотая точка активной страницы.
+   Подключается после polish.css. Поля ленты (--vw, --wk-w, --wk-pad) считает js/site.js, высоту карточек — js/works-fix.js.
+   Все величины настраиваются в админке (раздел «Оформление» → js/look.js кладёт их в CSS-переменные на <html>). */
 
 /* ---------- фон секции: светлый мрамор, снизу плавно растворяется в фоне страницы ---------- */
 #works:before{
@@ -34,8 +35,11 @@
 
 /* ---------- лента во всю ширину окна: соседние кадры видны в полях ---------- */
 #worksCarousel{
-  --wk-gap:24px;--wk-n:3;--wk-ar:58px;--wk-pad:max(16px,calc((100vw - min(1160px,92vw)) / 2));
-  width:var(--vw,100vw)!important;max-width:none!important;margin-left:calc(50% - var(--vw,100vw) / 2)!important;margin-right:0!important;
+  --wk-gap:24px;--wk-n:var(--wk-n-desk,3);--wk-ar:58px;
+  --wk-pad:max(16px,min(var(--wk-peek,150px),calc((100vw - min(1160px,92vw)) / 2)));
+  --wk-fade:calc(var(--wk-pad) * .72);
+  width:var(--wk-w,calc(min(1160px,92vw) + 2 * var(--wk-pad)))!important;max-width:none!important;
+  margin-left:calc(50% - var(--wk-w,calc(min(1160px,92vw) + 2 * var(--wk-pad))) / 2)!important;margin-right:0!important;
   padding:4px 0 0!important
 }
 #worksCarousel:before,#worksCarousel:after{display:none!important}
@@ -46,6 +50,11 @@
 }
 #worksCarousel .works-track:focus-visible{outline:2px solid rgba(154,116,54,.55);outline-offset:-6px;border-radius:28px}
 #worksCarousel:not(.is-scrollable) .works-track{justify-content:center}
+/* соседние кадры видны только у края ленты и плавно растворяются к её границе */
+#worksCarousel.is-scrollable .works-track{
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 var(--wk-fade),#000 calc(100% - var(--wk-fade)),transparent 100%)!important;
+  mask-image:linear-gradient(90deg,transparent 0,#000 var(--wk-fade),#000 calc(100% - var(--wk-fade)),transparent 100%)!important
+}
 
 /* ---------- карточка ---------- */
 #worksCarousel .work{
@@ -79,16 +88,13 @@
 }
 #worksCarousel .work .mat img{border-radius:0!important}
 #worksCarousel .work:hover .mat .work-photo-main{transform:scale(calc(var(--photo-zoom,1) * 1.03))!important}
-/* тёмная панель под подписью — только если подпись есть */
-#worksCarousel .work .mat:after{
-  height:34%!important;
-  background:linear-gradient(to top,rgba(16,11,6,.34) 0%,rgba(16,11,6,.16) 45%,rgba(16,11,6,0) 100%)!important
+/* мягкое затемнение низа на каждой карточке (сила и высота — в админке); под подписью — не слабее, чем нужно для текста */
+#worksCarousel .work .mat:after,#worksCarousel .work.has-info .mat:after{
+  height:var(--wk-shade-h,45%)!important;opacity:var(--wk-shade,.9)!important;
+  background:linear-gradient(to top,rgba(14,10,6,.94) 0%,rgba(14,10,6,.8) 14%,rgba(14,10,6,.58) 32%,rgba(14,10,6,.34) 52%,
+    rgba(14,10,6,.15) 72%,rgba(14,10,6,.04) 89%,rgba(14,10,6,0) 100%)!important
 }
-#worksCarousel .work.has-info .mat:after{
-  height:60%!important;
-  background:linear-gradient(to top,rgba(17,12,7,.95) 0%,rgba(17,12,7,.9) 17%,rgba(17,12,7,.74) 33%,rgba(17,12,7,.5) 49%,
-    rgba(17,12,7,.26) 66%,rgba(17,12,7,.09) 83%,rgba(17,12,7,0) 100%)!important
-}
+#worksCarousel .work.has-info .mat:after{height:max(var(--wk-shade-h,45%),56%)!important;opacity:max(var(--wk-shade,.9),.9)!important}
 #worksCarousel .work .work-info{
   left:0!important;right:0!important;bottom:0!important;display:flex!important;justify-content:center!important;align-items:flex-end!important;
   padding:0 clamp(16px,1.7vw,24px) clamp(18px,1.8vw,26px)!important;text-align:center
@@ -120,17 +126,19 @@
 /* ---------- соседние кадры в полях: размыты и приглушены ---------- */
 #worksCarousel .wk-veil{
   --vy:linear-gradient(180deg,transparent,#000 22px,#000 calc(100% - 64px),transparent);
+  --vx:linear-gradient(90deg,transparent 0,#000 38%,#000 calc(100% - 20px),transparent);
   position:absolute;z-index:5;top:calc(var(--wk-top,26px) - 24px);height:calc(var(--wk-h,420px) + 96px);width:max(0px,calc(var(--wk-pad) - 4px));pointer-events:none;
-  -webkit-backdrop-filter:blur(8px) saturate(.78);backdrop-filter:blur(8px) saturate(.78);
+  -webkit-backdrop-filter:blur(var(--wk-blur,5px)) saturate(.8);backdrop-filter:blur(var(--wk-blur,5px)) saturate(.8);
   -webkit-mask-composite:source-in;mask-composite:intersect
 }
-#worksCarousel .wk-veil.l{left:0;background:linear-gradient(90deg,rgba(236,226,213,.46),rgba(236,226,213,.26) 70%,rgba(236,226,213,.12));
-  -webkit-mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent),var(--vy);mask-image:linear-gradient(90deg,#000 calc(100% - 24px),transparent),var(--vy)}
-#worksCarousel .wk-veil.r{right:0;background:linear-gradient(270deg,rgba(236,226,213,.46),rgba(236,226,213,.26) 70%,rgba(236,226,213,.12));
-  -webkit-mask-image:linear-gradient(270deg,#000 calc(100% - 24px),transparent),var(--vy);mask-image:linear-gradient(270deg,#000 calc(100% - 24px),transparent),var(--vy)}
+#worksCarousel .wk-veil.l{left:0;background:linear-gradient(90deg,rgba(236,226,213,calc(var(--wk-dim,.3) * 1.45)),rgba(236,226,213,var(--wk-dim,.3)) 62%,rgba(236,226,213,calc(var(--wk-dim,.3) * .4)));
+  -webkit-mask-image:var(--vx),var(--vy);mask-image:var(--vx),var(--vy)}
+#worksCarousel .wk-veil.r{right:0;background:linear-gradient(270deg,rgba(236,226,213,calc(var(--wk-dim,.3) * 1.45)),rgba(236,226,213,var(--wk-dim,.3)) 62%,rgba(236,226,213,calc(var(--wk-dim,.3) * .4)));
+  --vx:linear-gradient(270deg,transparent 0,#000 38%,#000 calc(100% - 20px),transparent);
+  -webkit-mask-image:var(--vx),var(--vy);mask-image:var(--vx),var(--vy)}
 #worksCarousel:not(.is-scrollable) .wk-veil{display:none}
 
-/* ---------- стрелки: крупные круги в полях, тонкая золотая обводка, светлое стекло ---------- */
+/* ---------- стрелки: круги у краёв крайних карточек (или в полях — настройка), тонкая золотая обводка, тёплое стекло ---------- */
 #worksCarousel .works-arrow{
   top:var(--arrow-y,50%)!important;margin:calc(var(--wk-ar) / -2) 0 0!important;width:var(--wk-ar)!important;height:var(--wk-ar)!important;
   border:1px solid rgba(222,186,128,.92)!important;border-radius:50%!important;color:#fff!important;
@@ -140,8 +148,18 @@
   transition:background-color .3s ease,border-color .3s ease,box-shadow .35s ease,scale .35s var(--b-ez,ease),opacity .3s ease!important
 }
 #worksCarousel .works-arrow svg{width:24px!important;height:24px!important;stroke-width:1.7!important;filter:drop-shadow(0 1px 2px rgba(0,0,0,.35))}
-#worksCarousel .works-prev{left:max(6px,calc(var(--wk-pad) / 2 - var(--wk-ar) / 2))!important;right:auto!important}
-#worksCarousel .works-next{right:max(6px,calc(var(--wk-pad) / 2 - var(--wk-ar) / 2))!important;left:auto!important}
+#worksCarousel .works-prev{left:max(4px,calc(var(--wk-pad) - var(--wk-ar) + var(--wk-arin,16px)))!important;right:auto!important}
+#worksCarousel .works-next{right:max(4px,calc(var(--wk-pad) - var(--wk-ar) + var(--wk-arin,16px)))!important;left:auto!important}
+/* у края карточки стрелка лежит и на фото, и на мраморе — светлое плотное стекло и бронзовый шеврон читаются на обоих */
+html:not(.wk-arrows-fields) #worksCarousel .works-arrow{color:#5b4122!important;
+  background:radial-gradient(circle at 50% 28%,rgba(255,253,248,.9),rgba(248,240,228,.76) 72%)!important;border-color:rgba(206,166,104,.95)!important;
+  box-shadow:0 12px 28px -12px rgba(40,24,8,.55),0 2px 6px -2px rgba(40,24,8,.25),inset 0 1px 0 #fff,inset 0 0 0 1px rgba(255,244,222,.5)!important}
+html:not(.wk-arrows-fields) #worksCarousel .works-arrow svg{filter:none!important;stroke-width:1.9!important}
+html:not(.wk-arrows-fields) #worksCarousel .works-arrow:hover{color:#3d2a12!important;background:radial-gradient(circle at 50% 28%,#fff,rgba(252,246,236,.94) 72%)!important;
+  border-color:#e4bd7c!important;box-shadow:0 16px 32px -12px rgba(40,24,8,.6),0 0 0 5px rgba(236,200,140,.22),inset 0 1px 0 #fff!important}
+html.wk-arrows-fields #worksCarousel .works-prev{left:max(6px,calc(var(--wk-pad) / 2 - var(--wk-ar) / 2))!important}
+html.wk-arrows-fields #worksCarousel .works-next{right:max(6px,calc(var(--wk-pad) / 2 - var(--wk-ar) / 2))!important}
+html.wk-arrows-hidden #worksCarousel .works-arrow{display:none!important}
 #worksCarousel .works-arrow:hover{background:radial-gradient(circle at 50% 30%,rgba(255,252,246,.6),rgba(255,248,238,.3) 70%)!important;
   border-color:#f1d29c!important;box-shadow:0 14px 30px -10px rgba(48,30,10,.5),0 0 0 4px rgba(236,200,140,.16),inset 0 1px 0 rgba(255,255,255,.7)!important;scale:1.05}
 #worksCarousel .works-arrow:active{scale:.96}
@@ -161,19 +179,19 @@
 #worksCarousel .works-dot:focus-visible{outline:2px solid #b8873a;outline-offset:3px}
 
 /* ---------- планшет и телефон ---------- */
-@media (max-width:1100px){#worksCarousel{--wk-gap:20px;--wk-ar:46px}}
+@media (max-width:1100px){#worksCarousel{--wk-gap:20px;--wk-ar:46px;--wk-n:min(var(--wk-n-desk,3),3)}}
 @media (max-width:960px){#worksCarousel{--wk-n:2}}
 @media (max-width:640px){
   #works .head p.eyebrow{letter-spacing:.42em!important;gap:14px}
   #works .head p.eyebrow:before{margin-right:.42em}
   #works .head p.eyebrow:before,#works .head p.eyebrow:after{width:34px}
-  #worksCarousel{--wk-n:1;--wk-gap:14px;--wk-ar:38px;--wk-pad:11vw}
+  #worksCarousel{--wk-n:1;--wk-gap:14px;--wk-ar:38px;--wk-pad:11vw;--wk-arin:12px;--wk-fade:calc(var(--wk-pad) * .5)}
   #worksCarousel .works-track{margin:-20px 0 -60px!important;padding-top:20px!important;padding-bottom:66px!important}
   #worksCarousel .work{border-radius:22px!important}
   #worksCarousel .works-arrow svg{width:19px!important;height:19px!important}
   #worksCarousel .work-meta{font-size:13px;gap:6px 11px}
   #worksCarousel .work-meta svg{width:16px;height:16px}
-  #worksCarousel .wk-veil{-webkit-backdrop-filter:blur(4px) saturate(.85);backdrop-filter:blur(4px) saturate(.85)}
+  #worksCarousel .wk-veil{-webkit-backdrop-filter:blur(min(var(--wk-blur,5px),4px)) saturate(.85);backdrop-filter:blur(min(var(--wk-blur,5px),4px)) saturate(.85)}
 }
 @media (hover:none){#worksCarousel .work:hover{transform:none!important}#worksCarousel .work:hover .mat .work-photo-main{transform:scale(var(--photo-zoom,1))!important}}
 @media (prefers-reduced-motion:reduce){
