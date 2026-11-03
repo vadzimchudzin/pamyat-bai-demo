@@ -28,3 +28,5 @@
 #worksLookEd .look-works{display:grid;grid-template-columns:minmax(0,360px) minmax(0,1fr);gap:18px;align-items:start}
 [data-look-save].pulse{box-shadow:0 0 0 3px rgba(201,164,106,.35),0 8px 20px rgba(154,116,54,.25)}
 @media(max-width:1100px){.look-wrap,#worksLookEd .look-works{grid-template-columns:1fr}.look-side{position:static}}
+/* overflow-x:hidden у .app и .main делал их контейнерами прокрутки, и «липкие» колонки (меню слева, предпросмотр) не держались — clip режет так же, но прокрутку не создаёт */
+@supports (overflow-x:clip){.app,.main{overflow-x:clip}.side{overflow-y:auto;overscroll-behavior:contain}}
