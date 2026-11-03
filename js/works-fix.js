@@ -1,4 +1,4 @@
-/* Примеры работ: надёжная загрузка фото, ровные стрелки, стрелки строго по центру фото. */
+/* Примеры работ: надёжная загрузка фото, ровные стрелки по центру фото, размытые соседние кадры в полях. */
 (function () {
   'use strict';
   var car = document.getElementById('worksCarousel');
@@ -36,26 +36,42 @@
     if (work) work.classList.add('is-broken');
   }
 
+  /* Полупрозрачные «вуали» над полями слева и справа: соседние кадры видны размытыми и приглушёнными. */
+  function veils() {
+    ['l', 'r'].forEach(function (side) {
+      if (car.querySelector(':scope > .wk-veil.' + side)) return;
+      var v = document.createElement('div');
+      v.className = 'wk-veil ' + side; v.setAttribute('aria-hidden', 'true');
+      car.appendChild(v);
+    });
+  }
+
   function prep() {
     icons();
+    veils();
+    /* все фото грузим сразу: лента бесконечная, копии по краям должны быть готовы до прокрутки */
     Array.prototype.forEach.call(track.querySelectorAll('.work img'), function (img, i) {
       if (img.dataset.prepared !== '1') {
         img.dataset.prepared = '1';
         img.decoding = 'async';
-        if (i < 3) { img.loading = 'eager'; img.setAttribute('fetchpriority', i === 0 ? 'high' : 'auto'); }
+        img.loading = 'eager';
+        if (i < 3) img.setAttribute('fetchpriority', i === 0 ? 'high' : 'auto');
       }
       if (img.complete && img.getAttribute('src') && img.naturalWidth === 0 && !img.dataset.retry) heal(img);
     });
     placeArrows();
   }
 
-  /* Стрелки по вертикали — ровно на середину карточки с фото. */
+  /* Стрелки по вертикали — ровно на середину карточки; вуали — на высоту карточек. */
   function placeArrows() {
-    var w = track.querySelector('.work');
+    var w = track.querySelector('.work:not(.is-clone)') || track.querySelector('.work');
     if (!w) return;
     var c = car.getBoundingClientRect(), r = w.getBoundingClientRect();
     if (!r.height) return;
-    car.style.setProperty('--arrow-y', (r.top - c.top + r.height / 2).toFixed(1) + 'px');
+    var top = r.top - c.top;
+    car.style.setProperty('--arrow-y', (top + r.height / 2).toFixed(1) + 'px');
+    car.style.setProperty('--wk-top', top.toFixed(1) + 'px');
+    car.style.setProperty('--wk-h', r.height.toFixed(1) + 'px');
   }
 
   track.addEventListener('error', function (e) {

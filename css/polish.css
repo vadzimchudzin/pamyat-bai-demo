@@ -1,50 +1,68 @@
 /* ПАМЯТЬ.БАЙ — финальная полировка (подключается последней):
    кнопки без «AI»-эффектов, затемнение фото работ, свет лампады, калькулятор, карточка каталога. */
 
-/* ================= кнопки: спокойные, плоские, читаемые ================= */
-:root{--b-r:4px;--b-bg:#86632c;--b-bg-h:#6f5022;--b-bg-a:#5f441c;--b-fg:#fffaf1}
-.tone-d,.dk{--b-bg:#c9a467;--b-bg-h:#d8b67e;--b-bg-a:#b9925a;--b-fg:#1b140c}
-.btn,.cta2{border-radius:var(--b-r)!important;box-shadow:none!important;filter:none!important;overflow:visible;
-  font:500 15px/1.2 var(--sans);letter-spacing:.01em;transition:background-color .2s ease,border-color .2s ease,color .2s ease!important}
-.btn{padding:14px 26px}
-.btn:hover,.btn:active,.cta2:hover,.cta2:active{transform:none!important}
-.btn-gold:after,.btn-gold:hover:after,.cta2:after,.cta2:hover:after{content:none!important;display:none!important}
-.btn .arr,.btn:hover .arr{transform:none;transition:none}
-.btn-gold,.cta2{background:var(--b-bg)!important;border:1px solid var(--b-bg)!important;color:var(--b-fg)!important}
-.btn-gold:hover,.cta2:hover{background:var(--b-bg-h)!important;border-color:var(--b-bg-h)!important}
-.btn-gold:active,.cta2:active{background:var(--b-bg-a)!important;border-color:var(--b-bg-a)!important}
-.btn-gold:disabled,.btn-gold[disabled]{opacity:.55;cursor:default}
-.btn-line{background:transparent!important;border:1px solid color-mix(in oklab,var(--ink) 34%,transparent)!important;color:var(--ink)!important}
-.btn-line:hover{background:color-mix(in oklab,var(--ink) 7%,transparent)!important;border-color:color-mix(in oklab,var(--ink) 70%,transparent)!important;box-shadow:none!important}
-.hero-copy .btn-line{color:#2a241c!important;border-color:rgba(42,36,28,.42)!important;background:rgba(255,253,249,.42)!important}
-.hero-copy .btn-line:hover{background:rgba(255,253,249,.7)!important;border-color:rgba(42,36,28,.7)!important}
-.clb .btn-line{color:#2a241c!important;border-color:rgba(42,36,28,.34)!important}
-.clb .btn-gold{--b-bg:#86632c;--b-bg-h:#6f5022;--b-bg-a:#5f441c;--b-fg:#fffaf1}
-.cta2{gap:12px;padding:14px 24px}
-.cta2 i{width:auto;height:auto;background:none!important;color:inherit!important;border-radius:0;font-size:16px;transition:none!important;transform:none!important}
-.btn-sm{padding:10px 18px;font-size:14px}
-/* мессенджеры, «назад», шаги калькулятора, пропуск размеров */
-.msg{border-radius:var(--b-r);padding:11px 16px;background:transparent;border:1px solid color-mix(in oklab,var(--ink) 26%,transparent);box-shadow:none!important;transition:background-color .2s,border-color .2s}
-.msg:hover{transform:none;background:color-mix(in oklab,var(--ink) 7%,transparent);border-color:color-mix(in oklab,var(--ink) 55%,transparent)}
-.back{border-radius:var(--b-r)}
-.back:hover{transform:none;border-color:color-mix(in oklab,var(--ink) 55%,transparent)}
-.stepnav button{border-radius:3px;letter-spacing:.1em}
-.stepnav button.on{border-color:var(--gold);color:var(--ink);background:color-mix(in oklab,var(--gold) 18%,transparent)}
-.dimensions-skip{border-radius:var(--b-r);border-color:color-mix(in oklab,var(--ink) 30%,transparent);color:var(--ink)}
-.dimensions-skip:hover{background:color-mix(in oklab,var(--ink) 7%,transparent);border-color:color-mix(in oklab,var(--ink) 60%,transparent)}
-.soc:hover{transform:none;background:color-mix(in oklab,currentColor 10%,transparent)}
+/* ================= кнопки: овальные, бронза, лёгкая живая анимация =================
+   Наведение: кнопка чуть поднимается, по ней проходит мягкий блик, стрелка сдвигается.
+   Нажатие: короткое «утапливание». Блик — сдвиг фона внутри самой кнопки (без overflow:hidden,
+   чтобы тени лампады могли выходить за край). */
+:root{--b-r:999px;--b-g1:#c9a265;--b-g2:#98702f;--b-fg:#fffaf1;--b-sh:110,76,28;--b-ez:cubic-bezier(.2,.75,.25,1)}
+.tone-d,.dk{--b-g1:#e6c690;--b-g2:#b98d4c;--b-fg:#1b140c;--b-sh:0,0,0}
+.btn,.cta2{position:relative;isolation:isolate;overflow:visible;border-radius:var(--b-r)!important;filter:none!important;
+  font:500 15px/1.2 var(--sans);letter-spacing:.015em;-webkit-tap-highlight-color:transparent;
+  transition:transform .4s var(--b-ez),box-shadow .4s var(--b-ez),background-color .25s ease,border-color .25s ease,color .25s ease!important}
+.btn{padding:15px 30px}
+.btn-sm{padding:11px 20px;font-size:14px}
+.btn:after,.cta2:after{content:""!important;display:block!important;position:absolute;inset:0;z-index:-1;border-radius:inherit;pointer-events:none;
+  background:linear-gradient(105deg,transparent 38%,rgba(255,255,255,.34) 50%,transparent 62%) no-repeat!important;background-size:260% 100%!important;
+  background-position:130% 0!important;transform:none!important;opacity:0;transition:background-position .9s var(--b-ez),opacity .3s ease!important}
+.btn:hover:after,.cta2:hover:after{background-position:-30% 0!important;opacity:1;transform:none!important}
+.btn-gold,.cta2{background:linear-gradient(180deg,var(--b-g1),var(--b-g2))!important;border:1px solid color-mix(in srgb,var(--b-g2) 82%,#000)!important;color:var(--b-fg)!important;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.38),inset 0 -1px 0 rgba(0,0,0,.14),0 6px 16px -8px rgba(var(--b-sh),.6)!important}
+.btn-gold:hover,.cta2:hover{transform:translateY(-2px);box-shadow:inset 0 1px 0 rgba(255,255,255,.45),inset 0 -1px 0 rgba(0,0,0,.12),0 14px 26px -12px rgba(var(--b-sh),.7)!important}
+.btn:active,.cta2:active{transform:translateY(0) scale(.975);transition-duration:.12s!important}
+.btn-gold:disabled,.btn-gold[disabled]{opacity:.55;cursor:default;transform:none!important}
+.btn .arr{display:inline-block;transition:transform .4s var(--b-ez)}
+.btn:hover .arr{transform:translateX(4px)}
+.btn-line{background:color-mix(in srgb,var(--ink) 3%,transparent)!important;border:1px solid color-mix(in srgb,var(--gold) 62%,transparent)!important;color:var(--ink)!important;box-shadow:none!important}
+.btn-line:after{background-image:linear-gradient(105deg,transparent 38%,color-mix(in srgb,var(--gold) 22%,transparent) 50%,transparent 62%)!important}
+.btn-line:hover{transform:translateY(-2px);background:color-mix(in srgb,var(--gold) 12%,transparent)!important;border-color:var(--gold)!important;box-shadow:0 10px 22px -14px rgba(var(--b-sh),.6)!important}
+.hero-copy .btn-line{color:#2a241c!important;border-color:rgba(154,112,48,.6)!important;background:rgba(255,253,249,.5)!important}
+.hero-copy .btn-line:hover{background:rgba(255,253,249,.82)!important;border-color:#9a7030!important}
+.clb .btn-line{color:#2a241c!important;border-color:rgba(154,112,48,.5)!important;background:rgba(255,255,255,.4)!important}
+.clb .btn-gold{--b-g1:#c9a265;--b-g2:#98702f;--b-fg:#fffaf1;--b-sh:110,76,28}
+/* «Смотреть установку» и т. п.: овал с круглой иконкой справа */
+.cta2{gap:14px;padding:6px 6px 6px 24px}
+.cta2 i{display:grid;place-items:center;width:40px;height:40px;border-radius:50%;background:#1f1a15!important;color:#e9c890!important;font-style:normal;font-size:16px;
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.12);transition:transform .45s var(--b-ez)!important;transform:none}
+.cta2:hover i{transform:translateX(3px)!important}
+/* мессенджеры, «назад», шаги калькулятора, пропуск размеров — тот же овал */
+.msg,.back,.dimensions-skip,.stepnav button,.rail button{border-radius:999px!important;-webkit-tap-highlight-color:transparent;
+  transition:transform .35s var(--b-ez),background-color .25s ease,border-color .25s ease,color .25s ease,box-shadow .35s var(--b-ez)!important}
+.msg{padding:11px 18px;background:color-mix(in srgb,var(--ink) 4%,transparent);border:1px solid color-mix(in srgb,var(--gold) 45%,transparent);box-shadow:none!important}
+.msg svg{transition:transform .35s var(--b-ez)}
+.msg:hover{transform:translateY(-2px);background:color-mix(in srgb,var(--gold) 13%,transparent);border-color:var(--gold);box-shadow:0 10px 20px -14px rgba(0,0,0,.7)!important}
+.msg:hover svg{transform:scale(1.1)}
+.msg:active,.back:active,.dimensions-skip:active,.stepnav button:active,.rail button:active{transform:scale(.97);transition-duration:.12s!important}
+.back:hover{transform:translateX(-2px);border-color:var(--gold)}
+.stepnav button{letter-spacing:.1em}
+.stepnav button:hover{transform:translateY(-1px)}
+.stepnav button.on{border-color:var(--gold);color:var(--ink);background:color-mix(in srgb,var(--gold) 18%,transparent)}
+.dimensions-skip{border-color:color-mix(in srgb,var(--gold) 50%,transparent);color:var(--ink)}
+.dimensions-skip:hover{background:color-mix(in srgb,var(--gold) 12%,transparent);border-color:var(--gold)}
+.rail button:hover{transform:translateY(-1px);border-color:color-mix(in srgb,var(--gold) 70%,transparent)}
+.soc{transition:transform .35s var(--b-ez),background-color .25s ease,opacity .25s ease,border-color .25s ease}
+.soc:hover{transform:translateY(-2px);background:color-mix(in srgb,currentColor 10%,transparent)}
 .cc:hover,.mc:hover{transform:none}
-/* стрелки работ — без стекла, свечения и «прыжков» */
-#worksCarousel .works-arrow{border-radius:var(--b-r)!important;background:rgba(24,18,12,.62)!important;border:1px solid rgba(255,255,255,.32)!important;
-  box-shadow:none!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important;scale:none!important}
-#worksCarousel .works-arrow:hover{background:rgba(24,18,12,.84)!important;border-color:rgba(255,255,255,.6)!important;scale:none!important}
-/* шаги «От разметки до сдачи»: прямоугольные чипы, как остальные кнопки */
-.rail button{border-radius:var(--b-r)!important}
-.rail button:hover{border-color:color-mix(in oklab,var(--gold) 60%,transparent)}
-/* фокус с клавиатуры — заметный, но аккуратный */
+/* фокус с клавиатуры — заметный, по форме кнопки */
 .btn:focus-visible,.cta2:focus-visible,.msg:focus-visible,.back:focus-visible,.soc:focus-visible,.stepnav button:focus-visible,
 .dimensions-skip:focus-visible,.dim-preset:focus-visible,.rail button:focus-visible,.clb .sv:focus-visible,.czoom button:focus-visible,.mc:focus-visible,.cc:focus-visible{
-  outline:2px solid #b8873a!important;outline-offset:2px}
+  outline:2px solid #b8873a!important;outline-offset:3px}
+@media (hover:none){.btn:hover,.cta2:hover,.msg:hover,.soc:hover{transform:none}.btn:hover:after,.cta2:hover:after{opacity:0}}
+@media (prefers-reduced-motion:reduce){
+  .btn,.cta2,.msg,.back,.soc,.dimensions-skip,.stepnav button,.rail button{transition:background-color .2s,border-color .2s,color .2s!important}
+  .btn:hover,.cta2:hover,.msg:hover,.back:hover,.soc:hover,.btn:active,.cta2:active{transform:none!important}
+  .btn:after,.cta2:after{display:none!important}.btn:hover .arr,.cta2:hover i{transform:none!important}
+}
 
 /* ================= примеры работ: затемнение от 40% высоты фото вниз, 0 → 50% ================= */
 /* размытая подложка секции (inset:0 -14% на телефонах) раздвигала страницу до 445px — шапка и меню уезжали за край */
@@ -59,7 +77,7 @@
 .dim-presets{margin:0 0 18px;max-width:620px}
 .dim-presets-t{display:block;margin-bottom:8px;font:500 11px var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
 .dim-presets-l{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
-.dim-preset{display:grid;gap:2px;justify-items:start;padding:9px 11px;border:1px solid var(--line);border-radius:var(--b-r);background:transparent;color:var(--ink);cursor:pointer;text-align:left;transition:border-color .2s,background-color .2s}
+.dim-preset{display:grid;gap:2px;justify-items:start;padding:9px 11px;border:1px solid var(--line);border-radius:16px;background:transparent;color:var(--ink);cursor:pointer;text-align:left;transition:border-color .2s,background-color .2s}
 .dim-preset b{font:600 14px var(--sans);font-variant-numeric:tabular-nums}
 .dim-preset i{font:400 12px var(--sans);color:var(--dim);font-style:normal}
 .dim-preset:hover{border-color:color-mix(in oklab,var(--ink) 45%,transparent)}
@@ -92,6 +110,22 @@
 .clb .sv .lb{display:flex;align-items:center;gap:8px;padding:10px 2px 11px;font:500 13.5px/1.25 var(--sans);color:#2a241c}
 .clb .sv .lb i{flex:0 0 auto;width:14px;height:14px;border-radius:2px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
 .clb .sv-note{grid-column:1/-1;margin:2px 0 0;font-size:12.5px;line-height:1.5;color:#6b5e50}
+/* одно фото (комплексы, ограды): рамка в пропорциях снимка, студийная подложка, белый фон фото растворяется (multiply) */
+.clb .pic.single{--pane-h:clamp(260px,55vh,560px);height:auto;aspect-ratio:auto;display:flex;flex-direction:column;align-items:center;gap:10px;min-height:0;padding:0;background:none;border-radius:0;overflow:visible}
+.clb .sv.one{display:block;flex:0 0 auto;width:min(100%,calc(var(--pane-h) * var(--ar,1.5)));padding:0;border:0;border-radius:18px;overflow:hidden;isolation:isolate;
+  background:radial-gradient(115% 85% at 50% 36%,#fff 0%,#fcf9f5 38%,#f3ebe0 74%,#e9dece 100%);
+  box-shadow:0 0 0 1px rgba(70,52,32,.12),0 24px 48px -30px rgba(52,34,16,.55),inset 0 1px 0 rgba(255,255,255,.9);transition:box-shadow .3s var(--ez,ease)}
+.clb .sv.one:hover{border:0;box-shadow:0 0 0 1px rgba(134,99,44,.5),0 28px 56px -30px rgba(52,34,16,.6),inset 0 1px 0 rgba(255,255,255,.9)}
+.clb .sv.one .im{display:block;width:100%;aspect-ratio:var(--ar,1.5);max-height:none;min-height:0}
+.clb .sv.one .im img{position:absolute;inset:0;width:100%;height:100%;max-width:none;max-height:none;object-fit:contain;mix-blend-mode:multiply;transition:transform .6s var(--ez,ease)}
+.clb .sv.one:hover .im img{transform:scale(1.012)}
+.clb .sv.one .zh{position:absolute;right:12px;top:12px;display:inline-flex;align-items:center;gap:6px;padding:7px 11px 7px 9px;border-radius:999px;
+  background:rgba(255,252,247,.78);border:1px solid rgba(134,99,44,.32);color:#5b4422;font:600 11.5px/1 var(--sans);letter-spacing:.08em;
+  -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);box-shadow:0 6px 16px -10px rgba(52,34,16,.5);opacity:0;transform:translateY(-3px);transition:opacity .25s,transform .25s}
+.clb .sv.one:hover .zh,.clb .sv.one:focus-visible .zh{opacity:1;transform:none}
+@media (hover:none){.clb .sv.one .zh{display:none}}
+.clb .pic.single .sv-note{margin:0;text-align:center}
+.czoom.single .zvs{display:none}
 .clb .inf{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-areas:"k k" "t a" "d g";gap:4px 32px;align-items:start}
 .clb .inf .k{grid-area:k;margin:0 0 2px}
 .clb .inf h2{grid-area:t;margin:0 0 10px}
@@ -109,6 +143,8 @@
   .clb .sv .lb{gap:6px;padding:7px 1px 8px;font-size:11.5px}
   .clb .sv .lb i{width:10px;height:10px}
   .clb .sv-note{font-size:11.5px}
+  .clb .pic.single{--pane-h:clamp(200px,40svh,360px);gap:8px}
+  .clb .sv.one{border-radius:12px}
   .clb .x{top:10px;right:10px;width:40px;height:40px}
   .clb .nv{position:absolute;top:var(--nv-y,150px);width:34px;height:34px;font-size:18px;background:rgba(36,30,23,.55);border-color:rgba(255,255,255,.4)}
   .clb .nv.p{left:4px}.clb .nv.n{right:4px}
@@ -135,18 +171,37 @@
   .czoom .zt{flex:1 1 calc(100% - 56px);font-size:14px}
   .czoom .zvs{order:3;width:100%}
   .czoom .zvs button{flex:1 1 0;padding:9px 4px;font-size:12px;gap:6px}
+  .czoom.single .zs{bottom:64px}
 }
 
-/* ================= свет лампады: блики и тени на элементах у пламени (js/lamp.js) ================= */
+/* ================= лампада за кадром внизу слева: только её свет (js/lamp.js) ================= */
+.ambience.has-lamp .flame-light{left:calc(var(--lamp-fx,0px) - 820px);bottom:calc(var(--lamp-fb,0px) - 660px);top:auto;width:1640px;height:1320px;transform:none;transform-origin:50% 50%;
+  background:radial-gradient(closest-side,rgba(255,206,140,calc(.34 * var(--flicker,1))) 0%,rgba(255,170,94,calc(.19 * var(--flicker,1))) 24%,rgba(222,124,64,calc(.08 * var(--flicker,1))) 52%,transparent 100%)}
+.ambience.has-lamp .light-breath{left:calc(var(--lamp-fx,0px) - 460px);bottom:calc(var(--lamp-fb,0px) - 400px);top:auto;width:920px;height:800px;transform:none;transform-origin:50% 50%;
+  background:radial-gradient(closest-side,rgba(255,192,116,calc(.24 * var(--flicker,1))),rgba(241,136,64,calc(.09 * var(--flicker,1))) 46%,transparent 100%)}
+.lamp-shades{position:absolute;inset:0;pointer-events:none;will-change:transform,opacity}
+.lamp-shades>i{position:absolute;display:block}
+.lamp-src,.lamp-src i{position:absolute;pointer-events:none}
+.lamp-src{inset:0}
+.lamp-src i{display:block;mix-blend-mode:screen;will-change:transform,opacity}
+/* яркое пятно у левого края — огонь сразу за кадром */
+.lamp-src .ls-core{left:calc(var(--lamp-fx,0px) - 340px);bottom:calc(var(--lamp-fb,0px) - 340px);width:680px;height:680px;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(255,234,182,.74) 0%,rgba(255,198,120,.46) 14%,rgba(255,160,80,.22) 34%,rgba(236,124,58,.08) 62%,transparent 100%)}
+/* отсвет на «полу» — зона подвала и низ контактов */
+.lamp-src .ls-floor{left:calc(var(--lamp-fx,0px) - 1000px);bottom:calc(var(--lamp-fb,0px) - 210px);width:2000px;height:420px;border-radius:50%;transform-origin:50% 50%;
+  background:radial-gradient(closest-side,rgba(255,184,104,.42),rgba(255,150,72,.16) 46%,rgba(255,140,64,.05) 74%,transparent)}
+/* блик на линии подвала: огонь стоит у самой линии */
+.lamp-src .ls-line{left:0;bottom:calc(var(--lamp-lb,60px) - 1px);width:min(1200px,92vw);height:2px;
+  background:linear-gradient(90deg,rgba(255,222,160,.95),rgba(255,190,112,.55) 22%,rgba(255,170,96,.18) 58%,transparent)}
 .lamp-lit{isolation:isolate}
 .lamp-lit.lamp-rel{position:relative}
 .lamp-g,.lamp-s{position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:-1}
 .lamp-g{mix-blend-mode:screen;
-  box-shadow:inset calc(var(--lx) * -1.5px) calc(var(--ly) * -1.5px) 0 rgba(255,196,128,calc(var(--li) * .55)),
-    inset calc(var(--lx) * -16px) calc(var(--ly) * -16px) 24px -12px rgba(255,156,74,calc(var(--li) * .6));
-  background:radial-gradient(farthest-corner at var(--gx,0%) var(--gy,100%),rgba(255,168,88,calc(var(--li) * .26)) 0%,rgba(255,168,88,0) 62%)}
-.lamp-s{box-shadow:calc(var(--lx) * var(--li) * -16px) calc(var(--ly) * var(--li) * -16px) 26px -8px rgba(10,5,2,calc(var(--li) * .45))}
+  box-shadow:inset calc(var(--lx) * -1.5px) calc(var(--ly) * -1.5px) 0 rgba(255,198,130,calc(var(--li) * .6)),
+    inset calc(var(--lx) * -18px) calc(var(--ly) * -18px) 26px -12px rgba(255,156,74,calc(var(--li) * .62));
+  background:radial-gradient(farthest-corner at var(--gx,0%) var(--gy,100%),rgba(255,170,90,calc(var(--li) * .28)) 0%,rgba(255,170,90,0) 62%)}
+.lamp-s{box-shadow:calc(var(--lx) * var(--li) * -14px - var(--lx) * 4px) calc(var(--ly) * var(--li) * -14px - var(--ly) * 4px) calc(14px + var(--li) * 14px) -4px rgba(10,5,2,calc(.16 + var(--li) * .3))}
 .lamp-in{box-shadow:inset calc(var(--lx) * -1px) calc(var(--ly) * -1px) 0 rgba(255,190,120,calc(var(--li) * .42)),inset calc(var(--lx) * -12px) calc(var(--ly) * -12px) 22px -14px rgba(255,150,70,calc(var(--li) * .35))}
-.lamp-tx{text-shadow:calc(var(--lx) * -1px) calc(var(--ly) * -1px) 0 rgba(255,184,112,calc(var(--li) * .3)),0 0 26px rgba(255,140,60,calc(var(--li) * .16))}
+.lamp-tx{text-shadow:calc(var(--lx) * 1px) calc(var(--ly) * 1px) 0 rgba(255,192,120,calc(var(--li) * .34)),calc(var(--lx) * var(--li) * -5px - var(--lx) * 1.5px) calc(var(--ly) * var(--li) * -5px - var(--ly) * 1.5px) calc(4px + var(--li) * 6px) rgba(8,4,2,calc(.14 + var(--li) * .26))}
 @media (prefers-reduced-motion:reduce){.clb .sv.wait .im:after{animation:none}}
-@media print{.lamp-g,.lamp-s{display:none}}
+@media print{.lamp-g,.lamp-s,.lamp-src,.lamp-shades{display:none}}

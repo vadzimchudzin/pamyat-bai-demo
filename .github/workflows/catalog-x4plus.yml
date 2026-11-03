@@ -1,0 +1,100 @@
+name: Catalog x4plus (complexes & fences)
+
+# Комплексы (K*) и ограды (O*) — одно фото без вариантов камня, поэтому важна чистая фактура.
+# Повторный апскейл ×4 моделью Real-ESRGAN x4plus (реалистичный камень и металл вместо
+# «акварельной» animevideov3) из assets/catalog-originals. PyTorch CPU, 5 параллельных шардов.
+# На выходе 4K + md/ (1600) + sm/ (640) и обновлённый variants.json — коммит в ветку.
+# Фото уже пересчитаны (PR #25); повторный запуск — вручную: Actions → Run workflow.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: catalog-x4plus-${{ github.ref_name }}
+  cancel-in-progress: true
+
+jobs:
+  upscale:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: PyTorch (CPU) + Real-ESRGAN x4plus weights
+        run: |
+          set -euo pipefail
+          pip install -q torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -q numpy pillow
+          curl -fsSL --retry 3 https://github.com/xinntao/Real-ESRGAN/releases/download/v0.1.0/RealESRGAN_x4plus.pth -o /tmp/x4plus.pth
+          echo "4fa0d38905f75ac06eb49a7951b426670021be3018265fd191d2125df9d682f1  /tmp/x4plus.pth" | sha256sum -c -
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save --no-package-lock sharp@0.34.3
+      - name: x4plus shard ${{ matrix.shard }}
+        run: |
+          set -euo pipefail
+          for f in assets/catalog/*.webp; do
+            code="$(basename "$f" .webp)"
+            echo "$code" | grep -qE '^[KO][0-9]+$' || continue
+            if [ -s "assets/catalog-originals/$code.webp" ]; then echo "assets/catalog-originals/$code.webp"; else echo "$f"; fi
+          done | sort -V | awk -v n=5 -v k=${{ matrix.shard }} 'NR % n == k' > /tmp/list.txt
+          cat /tmp/list.txt
+          node tools/media/process.mjs topng /tmp/list.txt /tmp/src
+          python tools/media/x4plus.py /tmp/x4plus.pth /tmp/src /tmp/ai
+          node tools/media/process.mjs catalog /tmp/ai out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: x4-${{ matrix.shard }}
+          path: out
+          include-hidden-files: true
+          retention-days: 3
+
+  commit:
+    # только если все шарды успешны — без частичного обновления
+    needs: upscale
+    if: ${{ needs.upscale.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/media
+          pattern: x4-*
+          merge-multiple: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --no-save --no-package-lock sharp@0.34.3
+      - name: Place images, write manifest, commit
+        run: |
+          set -euo pipefail
+          n="$(ls /tmp/media/*.webp | wc -l)"; echo "images: $n"; test "$n" -gt 0
+          mkdir -p assets/catalog/md assets/catalog/sm
+          cp /tmp/media/*.webp assets/catalog/
+          cp /tmp/media/md/*.webp assets/catalog/md/
+          cp /tmp/media/sm/*.webp assets/catalog/sm/
+          node tools/media/process.mjs manifest assets/catalog
+          mkdir -p tools/media/log
+          { echo "run ${{ github.run_id }} $(date -u +%FT%TZ)  model: RealESRGAN_x4plus (torch cpu)";
+            echo "upscale: ${{ needs.upscale.result }}  images: $n";
+            ls /tmp/media/*.webp | xargs -n1 basename | sort -V | tr '\n' ' '; echo;
+            du -sh assets/catalog assets/catalog/md assets/catalog/sm; } > tools/media/log/x4plus-last-run.txt
+          cat tools/media/log/x4plus-last-run.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/catalog tools/media/log
+          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          git commit -q -m "Catalog: complexes & fences 4K re-upscaled with Real-ESRGAN x4plus (+md/sm, variants.json)"
+          for i in 1 2 3; do git pull -q --rebase origin "${{ github.ref_name }}" && git push -q origin "HEAD:${{ github.ref_name }}" && exit 0; sleep 5; done
+          exit 1
