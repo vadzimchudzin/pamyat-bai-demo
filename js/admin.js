@@ -49,7 +49,7 @@
   function load() {
     api('/api/content?full=1').then(function (d) {
       if (!d.ok) return toast(d.error || 'Не удалось загрузить данные', true);
-      C = d.content; drawCatalog(); drawCalc(); if (window.AdminKit.drawWorks) window.AdminKit.drawWorks(); drawTexts(); drawContacts(); drawTg();
+      C = d.content; drawCatalog(); drawCalc(); if (window.AdminKit.drawWorks) window.AdminKit.drawWorks(); if (window.AdminKit.drawLook) window.AdminKit.drawLook(); drawTexts(); drawContacts(); drawTg();
       loadPricebook(); loadEstimates();
     });
     loadLeads();
