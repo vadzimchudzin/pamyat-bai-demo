@@ -144,6 +144,17 @@ test('студия: кадр раздела — изделие по центру
   assert.ok(small.k <= 1.25 + 1e-9 || small.H === 1200);
   const right = LX.studioLayout([40, 30, 120, 150], 120, 160, 'square', 2400, { r: true });
   assert.ok(Math.abs(right.ox + right.ow - right.W) < 1);
+  // срез сверху — изделие от верхнего края кадра (как place() в studio.py), без пустого поля над срезом
+  const top = LX.studioLayout([300, 0, 900, 1500], 1200, 1600, 'portrait', 2400, { t: true });
+  assert.ok(Math.abs(top.oy) < 1e-6 && Math.abs(top.y) < 1e-6);
+  assert.ok(Math.abs(top.ox + top.ow / 2 - top.W / 2) < 1);
+  // срез с обеих сторон — во всю ширину; комплекс, обрезанный снизу, — до нижнего края
+  const both = LX.studioLayout([0, 200, 1200, 1400], 1200, 1600, 'landscape', 2400, { l: true, r: true });
+  assert.ok(Math.abs(both.ox) < 1e-6 && Math.abs(both.ow - both.W) < 1);
+  const sq = LX.studioLayout([200, 300, 1000, 1600], 1200, 1600, 'square', 2400, { b: true });
+  assert.ok(Math.abs(sq.oy + sq.oh - sq.H) < 1);
+  // верхнее поле не меньше 4% кадра
+  for (const L2 of [L, small, right, sq]) assert.ok(L2.oy >= 0.04 * L2.H - 1);
 });
 
 test('вид каталога: настройки по умолчанию и проверка значений', () => {

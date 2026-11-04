@@ -258,12 +258,23 @@
     var k = Math.min(F.mw * W / bw, F.mh * H / bh);
     // фото мелкое — уменьшаем холст, чтобы не растягивать изделие больше чем в 1,25 раза
     if (k > 1.25) { var s = Math.max(1200 / L, 1.25 / k); W = Math.round(W * s); H = Math.round(H * s); k *= s; }
-    var t = touch || {}, ow = bw * k, oh = bh * k;
-    var x = (W - ow) / 2, y = F.floor * H - oh;
-    if (t.l && !t.r) x = 0; else if (t.r && !t.l) x = W - ow;
-    if (t.l && t.r) { k = W / bw; ow = W; oh = bh * k; x = 0; y = F.floor * H - oh; }
-    if (y < H * 0.04) y = H * 0.04;
-    if (t.b && DEPTH_FRAME[frameName]) y = H - oh;
+    // срезы — как place() в tools/media/studio.py: изделие уходит за обрезанный край кадра
+    var t = touch || {}, bleed = !!(t.b && DEPTH_FRAME[frameName]), x, y;
+    function set(kk, ax) { k = kk; x = ax === 'l' ? 0 : ax === 'r' ? W - bw * k : (W - bw * k) / 2; y = F.floor * H - bh * k; }
+    set(k);
+    if (t.l && t.r) set(W / bw, 'l');                                                   // срез с обеих сторон — во всю ширину
+    else if (t.l || t.r) set(Math.min(1.06 * F.mw * W / bw, F.mh * H / bh), t.l ? 'l' : 'r'); // с одной — прижато к срезу
+    if (bleed) {                                                                         // комплекс / ограда обрезаны снизу
+      if (!(t.l || t.r)) set(Math.min(F.mw * W / bw, 0.9 * H / bh));
+      y = H - bh * k;
+    }
+    if (t.t && !bleed) y = 0;                                                            // срез сверху — от верхнего края кадра
+    // верхнее поле не меньше 4% (кроме среза сверху и изделий во всю ширину): уменьшаем, основание на месте
+    if (!t.t && !(t.l && t.r) && y < H * 0.04) {
+      var bot = y + bh * k, k2 = k * (bot - H * 0.04) / Math.max(1, bh * k);
+      x = t.l ? 0 : t.r ? W - bw * k2 : x + bw * (k - k2) / 2; y = bot - bh * k2; k = k2;
+    }
+    var ow = bw * k, oh = bh * k;
     return { W: W, H: H, k: k, x: x - bbox[0] * k, y: y - bbox[1] * k, ox: x, oy: y, ow: ow, oh: oh, floor: Math.min(H, y + oh) };
   }
   var DEPTH_FRAME = { square: 1, wide: 1 };
