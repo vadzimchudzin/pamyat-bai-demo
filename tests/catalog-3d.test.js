@@ -86,10 +86,10 @@ test('разметка: базовый слой, полосы, экраниро�
 test('образцы: кнопки с подписями, выбран первый', () => {
   R.set(MAN);
   const d = R.dots('B4: выбрать гранит');
-  assert.match(d, /^<div class="r3-dots" role="group" aria-label="B4: выбрать гранит">/, 'div: на телефоне подписи-span скрыты');
-  assert.equal((d.match(/<button /g) || []).length, 5);
+  assert.match(d, /^<div class="r3-dots" aria-hidden="true" title="B4: выбрать гранит">/, 'div: на телефоне подписи-span скрыты');
+  assert.equal((d.match(/<button type="button" tabindex="-1"/g) || []).length, 5, 'внутри карточки-кнопки — вне порядка Tab');
   assert.equal((d.match(/aria-pressed="true"/g) || []).length, 1);
-  assert.match(d, /data-r3k="4" aria-label="Зелёный гранит" aria-pressed="false" style="--c:#28382b"/);
+  assert.match(d, /data-r3k="4" title="Зелёный гранит" aria-pressed="false" style="--c:#28382b"/);
   const s = R.swatches();
   assert.equal((s.match(/<span>/g) || []).length, 5);
   assert.match(s, /<span>Коричневый гранит<\/span>/);

@@ -53,9 +53,11 @@
       '<span class="r3-nm" aria-hidden="true">' + esc(v0.name) + '</span>';
   }
   function dots(label) {
-    // <div>, не <span>: на телефоне dusk.css прячет подписи карточек «.mc .t span»
-    return '<div class="r3-dots" role="group" aria-label="' + esc(label || 'Гранит') + '">' + variants().map(function (x, k) {
-      return '<button type="button" data-r3k="' + k + '" aria-label="' + esc(x.name) + '" aria-pressed="' + (k ? 'false' : 'true') + '" style="--c:' + x.swatch + '"></button>';
+    // <div>, не <span>: на телефоне dusk.css прячет подписи карточек «.mc .t span».
+    // Карточка в сетке сама кнопка (role=button), поэтому кружки — только для мыши и пальца (вне порядка Tab, скрыты от чтения с экрана);
+    // с клавиатуры и экранным диктором гранит выбирают в карточке модели (swatches).
+    return '<div class="r3-dots" aria-hidden="true"' + (label ? ' title="' + esc(label) + '"' : '') + '>' + variants().map(function (x, k) {
+      return '<button type="button" tabindex="-1" data-r3k="' + k + '" title="' + esc(x.name) + '" aria-pressed="' + (k ? 'false' : 'true') + '" style="--c:' + x.swatch + '"></button>';
     }).join('') + '</div>';
   }
   function swatches() {
