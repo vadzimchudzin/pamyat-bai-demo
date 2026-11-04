@@ -7,6 +7,9 @@
   var cur = null, list = [], idx = 0;
   var COARSE = window.matchMedia && matchMedia('(pointer:coarse)').matches;
   var LX = window.PamyatLux || null; // js/catalog-lux.js: студийные фото, золотые рамки, лупа «Детали»
+  var R3 = window.Pamyat3D || null; // js/catalog-3d.js: 3D-рендеры моделей в 5 гранитах, смена камня при наведении
+  var R3K = 0; // гранит, выбранный на карточке в сетке, — с ним открывается карточка модели
+  if (R3) R3.load();
   function fmt(n) { return Number(n).toLocaleString('ru-RU'); }
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; }); }
   function cats() { return (CAT.categories || []).filter(function (c) { return c.visible !== false; }); }
@@ -107,17 +110,24 @@
       return themes();
     }
     var addon = isAddon(c), ar = LX ? LX.stageAr(c.id) : 1;
+    // 3D-модели: квадратный кадр, как у рендеров; позиции со своим фото из админки остаются фото
+    var r3 = list.map(function (m) { return R3 && multiStone(c) ? R3.codeOf(m.img) : ''; }), r3n = r3.filter(Boolean).length;
+    if (r3n) ar = 1;
     box.innerHTML = '<div class="cat-info"><div class="panel glass"><h3>О разделе</h3><p style="color:var(--mut)">' + esc(c.desc || '') + '</p>' +
       (CAT.granite && !addon ? '<p class="muted" style="margin-top:12px">' + esc(CAT.granite) + '</p>' : '') + '</div>' +
       '<div class="panel glass"><h3>' + (addon ? 'Стоимость' : 'В комплекте') + '</h3>' + kitHtml(c) + '</div></div>' +
-      '<div class="mgrid lx-grid' + (addon ? ' addons' : '') + (ar > 1.2 ? ' wide' : '') + '" style="--lx-ar:' + ar.toFixed(4) + '">' + list.map(function (m, i) {
+      '<div class="mgrid lx-grid' + (addon ? ' addons' : '') + (ar > 1.2 ? ' wide' : '') + (r3n ? ' r3g' : '') + '" style="--lx-ar:' + ar.toFixed(4) + '">' + list.map(function (m, i) {
         var t = itemTitle(m, c), sub = addon ? itemPrice(m, c) : (c.short || '');
-        return '<div class="mc glass lx" style="--d:' + ((i % 6) * 0.06).toFixed(2) + 's" data-i="' + i + '" role="button" tabindex="0" aria-label="' + esc(t) + '"><div class="im lx-stage' + (studio(m.img, m.studio) ? '' : ' raw') + '">' +
+        var head = '<div class="mc glass lx' + (r3[i] ? ' r3c' : '') + '" style="--d:' + ((i % 6) * 0.06).toFixed(2) + 's" data-i="' + i + '" role="button" tabindex="0" aria-label="' + esc(t) + '">';
+        if (r3[i]) return head + '<div class="im lx-stage r3s" data-r3="' + r3[i] + '" data-r3-label="' + esc(t) + '">' + R3.stage(r3[i], t, '(max-width:720px) 46vw, 300px') + lxFrame(8) + '</div>' +
+          '<div class="t"><b>' + esc(m.name || m.code) + '</b>' + R3.dots(t + ': выбрать гранит') + '</div></div>';
+        return head + '<div class="im lx-stage' + (studio(m.img, m.studio) ? '' : ' raw') + '">' +
           imgTag(m.img, t, '(max-width:720px) 46vw, 240px', ' style="--z:' + ((c.cover && c.cover.zoomItems) || 1) + '"') + lxFrame(8) + '</div>' +
           '<div class="t"><b>' + esc(m.name || m.code) + '</b><span>' + esc(sub) + '</span></div></div>';
       }).join('') + '</div>';
+    if (r3n) R3.bind(box);
     [].forEach.call(box.querySelectorAll('.mc'), function (el) {
-      var go = function () { openBox(+el.dataset.i); };
+      var go = function () { var st = R3 && el.querySelector('[data-r3]'); R3K = st ? R3.current(st) : 0; openBox(+el.dataset.i); };
       el.addEventListener('click', go);
       el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
     });
@@ -260,6 +270,22 @@
     requestAnimationFrame(placeNav);
   }
 
+  // 3D-модель: один кадр, гранит меняется курсором по фото или образцами под ним; по нажатию — крупно
+  function draw3d(m, alt, code) {
+    if (!PIC) return;
+    ++TOK;
+    var k = R3K; R3K = 0;
+    PIC.className = 'pic single r3p';
+    PIC.innerHTML = '<button type="button" class="sv one" data-v="0" aria-label="' + esc(alt + ': открыть крупно') + '">' +
+      '<span class="im lx-stage r3s" data-r3="' + esc(code) + '" data-r3-label="' + esc(alt) + '">' + R3.stage(code, alt, '(max-width:720px) 92vw, 560px', true) + '</span>' +
+      '<span class="zh" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" focusable="false"><circle cx="10.5" cy="10.5" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.2 15.2 4.6 4.6M10.5 7.8v5.4M7.8 10.5h5.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Крупно</span></button>' +
+      R3.swatches() + '<p class="sv-note">' + (COARSE ? 'Выберите гранит под фото' : 'Ведите курсор по фото — меняется гранит') + '. Рисунок камня у каждой плиты свой.</p>';
+    setAr(1, 1);
+    R3.bind(PIC);
+    var st = PIC.querySelector('[data-r3]'); if (k && st) R3.show(st, k, true);
+    requestAnimationFrame(placeNav);
+  }
+
   /* ---------- крупный просмотр (4K) ---------- */
   var Z = null, ZTOK = 0, ZV = 0, HI = null, ZC = [], ZF = null;
   var HI_MAX = COARSE || (navigator.deviceMemory && navigator.deviceMemory <= 4) ? 2400 : 3840;
@@ -267,13 +293,11 @@
     if (Z) return Z;
     Z = document.createElement('div'); Z.className = 'czoom'; Z.setAttribute('role', 'dialog'); Z.setAttribute('aria-modal', 'true'); Z.setAttribute('aria-label', 'Фото крупно');
     Z.setAttribute('data-lenis-prevent', '');
-    Z.innerHTML = '<div class="zs"></div><div class="zbar"><div class="zt"></div><div class="zvs">' + STONES.map(function (s, v) {
-      return '<button type="button" data-zv="' + v + '"><i style="background:' + s.sw + '"></i><span>' + s.name + '</span></button>';
-    }).join('') + '</div><button type="button" class="zx" aria-label="Закрыть"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div><div class="zl" aria-live="polite"></div>';
+    Z.innerHTML = '<div class="zs"></div><div class="zbar"><div class="zt"></div><div class="zvs"></div><button type="button" class="zx" aria-label="Закрыть"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false"><path d="M6 6l12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button></div><div class="zl" aria-live="polite"></div>';
     document.body.appendChild(Z);
     var zs = $('.zs', Z), drag = null;
     $('.zx', Z).addEventListener('click', closeZoom);
-    [].forEach.call(Z.querySelectorAll('[data-zv]'), function (b) { b.addEventListener('click', function () { zoomVariant(+b.dataset.zv); }); });
+    $('.zvs', Z).addEventListener('click', function (e) { var b = e.target.closest('[data-zv]'); if (b) zoomStep(0, +b.dataset.zv); });
     zs.addEventListener('pointerdown', function (e) {
       if (e.pointerType !== 'mouse' || !zs.classList.contains('zoomed')) return;
       drag = { x: e.clientX, y: e.clientY, l: zs.scrollLeft, t: zs.scrollTop, moved: false };
@@ -331,8 +355,31 @@
       l.forEach(function (f) { f(h.im); });
     });
   }
+  // кнопки камня внизу: три варианта фото или пять гранитов 3D-модели
+  function zoomBar(r3) {
+    var zv = $('.zvs', Z), key = r3 ? 'r3' : 'st'; Z.r3 = r3 || '';
+    if (zv.getAttribute('data-k') === key) return;
+    zv.setAttribute('data-k', key);
+    var vs = r3 ? R3.variants().map(function (x) { return { name: x.name, sw: x.swatch }; }) : STONES;
+    zv.innerHTML = vs.map(function (s, v) { return '<button type="button" data-zv="' + v + '"><i style="background:' + s.sw + '"></i><span>' + esc(s.name) + '</span></button>'; }).join('');
+  }
+  function zoomN() { return Z && Z.r3 ? R3.variants().length : STONES.length; }
+  // d — шаг стрелками, v — конкретный вариант
+  function zoomStep(d, v) {
+    var n = zoomN(); v = v == null ? (ZV + d + n) % n : v;
+    if (Z.r3) zoom3d(Z.r3, v); else zoomVariant(v);
+  }
+  function zoom3d(code, v) {
+    var m = list[idx], vs = R3 ? R3.variants() : []; if (!m || !vs[v]) return;
+    zoomEl().classList.add('on'); zoomBar(code); Z.classList.remove('single'); ZF = null; ZV = v; ++ZTOK;
+    [].forEach.call(Z.querySelectorAll('[data-zv]'), function (b) { b.setAttribute('aria-pressed', +b.dataset.zv === v ? 'true' : 'false'); });
+    var cap = itemTitle(m, cur) + ' · ' + vs[v].name; $('.zt', Z).textContent = cap;
+    var ph = new Image(); ph.decoding = 'async'; ph.className = 'r3z'; ph.src = R3.src(code, vs[v].id); ph.alt = cap; zoomSwap(ph, true);
+    var st = PIC && PIC.querySelector('[data-r3]'); if (st) R3.show(st, v, true);
+  }
   function zoomVariant(v) {
     var m = list[idx]; if (!m) return;
+    zoomBar('');
     var one = !multiStone(cur); if (one) v = 0;
     var tok = ++ZTOK, s = STONES[v], cap = itemTitle(m, cur) + (one ? '' : ' — ' + s.name); ZV = v;
     Z.classList.toggle('single', one);
@@ -359,7 +406,7 @@
   function openZoom(v, at) { zoomEl().classList.add('on'); ZF = at || null; zoomVariant(v); var x = $('.zx', Z); if (x) x.focus({ preventScroll: true }); }
   // дополнительное фото модели (админка → «Доп. фото»): только просмотр, без вариантов камня
   function openPhoto(u, cap) {
-    zoomEl().classList.add('on'); Z.classList.add('single'); ZF = null;
+    zoomEl().classList.add('on'); zoomBar(''); Z.classList.add('single'); ZF = null;
     var tok = ++ZTOK; $('.zt', Z).textContent = cap;
     var ph = new Image(); ph.src = sized(u, 'md'); ph.alt = cap; zoomSwap(ph); zoomLoading(true);
     loadImg(fresh(u), '', function (im) { if (tok !== ZTOK) return; zoomLoading(false); if (im) { var o = im.cloneNode(); o.alt = cap; zoomSwap(o, true); } });
@@ -367,7 +414,12 @@
   }
   function closeZoom() { if (!Z) return; ZTOK++; ZF = null; Z.classList.remove('on'); var zs = $('.zs', Z); zs.innerHTML = ''; zoomLoading(false); }
   function zoomOn() { return !!(Z && Z.classList.contains('on')); }
-  if (PIC) PIC.addEventListener('click', function (e) { var b = e.target.closest('.sv'); if (b) openZoom(+b.dataset.v); });
+  if (PIC) PIC.addEventListener('click', function (e) {
+    var b = e.target.closest('.sv'); if (!b) return;
+    var st = R3 && b.querySelector('[data-r3]');
+    if (st) { zoom3d(st.getAttribute('data-r3'), R3.current(st)); var x = $('.zx', Z); if (x) x.focus({ preventScroll: true }); return; }
+    openZoom(+b.dataset.v);
+  });
 
   /* ---------- «Детали»: линзы «грань и угол», «основание», «фактура камня» + доп. фото ---------- */
   var DTOK = 0, LZ = 6.5;
@@ -377,6 +429,7 @@
     var photos = (Array.isArray(m.photos) ? m.photos : []).filter(function (u) { return typeof u === 'string' && u; }).slice(0, 12);
     host.innerHTML = '';
     if (!LX) return;
+    var r3 = R3 && multiStone(cur) && R3.codeOf(m.img); // у 3D-модели линзы с фото не показываем — только доп. фото
     var put = function (pts, ar) {
       if (tok !== DTOK) return;
       if (!pts && !photos.length) { host.innerHTML = ''; return; }
@@ -394,6 +447,7 @@
         b.addEventListener('click', function () { openPhoto(photos[+b.dataset.photo], t + ' · фото ' + (+b.dataset.photo + 1)); });
       });
     };
+    if (r3) return put(null, 1);
     var wh = MAN && MAN[c], known = LX.focusList(m.focus) || (FOC && LX.focusList(FOC[c]));
     if (known && wh) return put(known, wh[0] / wh[1]);
     // нет готовых точек (фото загружено в админке) — находим изделие на уменьшенной копии
@@ -437,9 +491,11 @@
       a.href = calcHref(m); a.innerHTML = 'Рассчитать стоимость <span class="arr">→</span>';
       if (sec) { sec.href = '/#contact'; sec.textContent = 'Консультация'; }
     }
-    if (multiStone(cur)) drawStones(m, t); else drawSingle(m, t);
+    var c3 = R3 && multiStone(cur) ? R3.codeOf(m.img) : '';
+    if (c3) draw3d(m, t, c3); else if (multiStone(cur)) drawStones(m, t); else drawSingle(m, t);
     drawDetails(m);
-    var nx = list[(idx + 1) % list.length]; if (nx && nx !== m) { var pre = new Image(); pre.decoding = 'async'; pre.src = sized(nx.img, 'md'); }
+    var nx = list[(idx + 1) % list.length];
+    if (nx && nx !== m) { var n3 = R3 && multiStone(cur) ? R3.codeOf(nx.img) : '', pre = new Image(); pre.decoding = 'async'; pre.src = n3 ? R3.src(n3, R3.variants()[0].id) : sized(nx.img, 'md'); }
   }
   $('#clbCalc').addEventListener('click', function (e) {
     if (window.parent !== window && cur && list[idx] && !isAddon(cur)) { e.preventDefault(); window.parent.postMessage({ pamyatModel: list[idx].code, cat: cur.id }, '*'); }
@@ -460,9 +516,9 @@
   document.addEventListener('keydown', function (e) {
     if (zoomOn()) {
       if (e.key === 'Escape') { e.preventDefault(); closeZoom(); }
-      if (!multiStone(cur)) return;
-      if (e.key === 'ArrowLeft') zoomVariant((ZV + STONES.length - 1) % STONES.length);
-      if (e.key === 'ArrowRight') zoomVariant((ZV + 1) % STONES.length);
+      if (!multiStone(cur) || Z.classList.contains('single')) return;
+      if (e.key === 'ArrowLeft') zoomStep(-1);
+      if (e.key === 'ArrowRight') zoomStep(1);
       return;
     }
     if (!$('#clb').classList.contains('on')) return;
@@ -475,7 +531,21 @@
     e.preventDefault(); var h = a.getAttribute('href') || '';
     window.parent.postMessage({ pamyatClose: true, go: h.indexOf('#') > -1 ? h.slice(h.indexOf('#')) : '' }, '*');
   });
-  function route() { if ($('#clb').classList.contains('on')) close(); var id = location.hash.slice(1); id ? open(id) : home(); scrollTo(0, 0); }
+  function route() {
+    if ($('#clb').classList.contains('on')) close();
+    var id = location.hash.slice(1);
+    // раздел с 3D-моделями: ждём манифест рендеров (до 0,7 с), чтобы не показывать сначала фото
+    if (id && R3 && !R3.settled()) {
+      var went = false, go = function () { if (went) return; went = true; open(id); };
+      setTimeout(go, 700); R3.load(go);
+    } else if (id) open(id); else home();
+    scrollTo(0, 0);
+  }
+  // манифест пришёл позже — перерисовываем открытый раздел с 3D
+  document.addEventListener('pamyat:3d', function () {
+    var id = location.hash.slice(1); if (!id || !cur || cur.id !== id || !box.querySelector('.mgrid') || box.querySelector('.mgrid.r3g')) return;
+    open(id); if ($('#clb').classList.contains('on')) show(idx);
+  });
   addEventListener('hashchange', route);
   document.addEventListener('pamyat:catalog', function (e) { CAT = e.detail; route(); });
   route();
