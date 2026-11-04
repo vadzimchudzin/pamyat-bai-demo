@@ -1,0 +1,147 @@
+name: Catalog 3D renders
+
+# 3D-каталог (tools/r3d): контур стелы снимается с исходного фото (main @ SRC_SHA), по нему строится сцена
+# Blender — стела, тумба, цветник с белой крошкой (Cycles, белый фон, мягкая тень). Из одного рендера —
+# 5 вариантов гранита (AOV-альбедо × свет + блики): чёрный, серый, красный, коричневый, зелёный.
+# Результат: assets/catalog/3d/<код>-<гранит>.webp (1000²) + sm/ (500²) + index.json (манифест для сайта);
+# листы для проверки и журнал — tools/r3d/log/. Комплексы, ограды и аксессуары остаются фото.
+# Запуск: правка tools/r3d/run.txt (коды, качество) или Actions → Catalog 3D renders → Run workflow.
+on:
+  push:
+    paths:
+      - tools/r3d/run.txt
+  workflow_dispatch:
+    inputs:
+      codes:
+        description: Коды через пробел или all
+        default: all
+      res:
+        description: Кадр, px
+        default: "1000"
+      spp:
+        description: Сэмплов на пиксель
+        default: "20"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: catalog-3d-${{ github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  SRC_SHA: 1a09605c31d5c0b304ac7fefc1b50da05f2f25e6
+  BLENDER: blender-4.2.3-linux-x64
+  BLENDER_SHA: 3a64efd1982465395abab4259b4091d5c8c56054c7267e9633e4f702a71ea3f4
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: tools/r3d
+      - name: Source photos (main @ SRC_SHA)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SRC_SHA }}
+          path: src
+          sparse-checkout: assets/catalog/md
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Codes of shard
+        id: p
+        env:
+          IN_CODES: ${{ inputs.codes }}
+          IN_RES: ${{ inputs.res }}
+          IN_SPP: ${{ inputs.spp }}
+        run: |
+          set -euo pipefail
+          pip install -q numpy opencv-python-headless pillow
+          if [ "${{ github.event_name }}" = workflow_dispatch ]; then C="$IN_CODES"; R="$IN_RES"; S="$IN_SPP"
+          else
+            C="$(sed -n 's/^codes:[[:space:]]*//p' tools/r3d/run.txt)"
+            R="$(sed -n 's/^res:[[:space:]]*//p' tools/r3d/run.txt)"
+            S="$(sed -n 's/^spp:[[:space:]]*//p' tools/r3d/run.txt)"
+          fi
+          L="$(python tools/r3d/run.py --src src/assets/catalog/md --codes "${C:-all}" --shard ${{ matrix.shard }}/10 --list)"
+          echo "shard ${{ matrix.shard }}: $L"
+          { echo "codes=$L"; echo "res=${R:-1000}"; echo "spp=${S:-20}"; echo "n=$(echo $L | wc -w)"; } >> "$GITHUB_OUTPUT"
+      - name: Blender cache
+        if: steps.p.outputs.n != '0'
+        uses: actions/cache@v4
+        with:
+          path: ~/blender.tar.xz
+          key: ${{ env.BLENDER }}
+      - name: Render shard ${{ matrix.shard }}
+        if: steps.p.outputs.n != '0'
+        env:
+          CODES: ${{ steps.p.outputs.codes }}
+        run: |
+          set -eo pipefail
+          mkdir -p dist/_log
+          {
+            echo "cpu $(nproc)"; free -g | head -2
+            ok() { echo "$BLENDER_SHA  $HOME/blender.tar.xz" | sha256sum -c --quiet - 2>/dev/null; }
+            if ! ok; then
+              for m in https://mirrors.ocf.berkeley.edu/blender https://mirror.clarkson.edu/blender https://ftp.nluug.nl/pub/graphics/blender https://download.blender.org; do
+                curl -fsSL --retry 2 "$m/release/Blender4.2/$BLENDER.tar.xz" -o ~/blender.tar.xz && ok && break
+              done
+            fi
+            ok
+            tar -xJf ~/blender.tar.xz -C ~ && mv ~/$BLENDER ~/blender
+            sudo apt-get -qq update && sudo apt-get -qq install -y --no-install-recommends libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1 libxrender1 libxext6 libx11-6 > /dev/null
+            ~/blender/blender -b --factory-startup -noaudio --version | head -1
+            python tools/r3d/run.py --src src/assets/catalog/md --work "$RUNNER_TEMP/r3d" --out dist --blender ~/blender/blender \
+              --codes "$CODES" --res ${{ steps.p.outputs.res }} --spp ${{ steps.p.outputs.spp }} --tag ${{ matrix.shard }}
+          } 2>&1 | tee dist/_log/shard-${{ matrix.shard }}.txt
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.p.outputs.n != '0'
+        with:
+          name: r3d-${{ matrix.shard }}
+          path: dist
+          retention-days: 3
+
+  commit:
+    needs: render
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          path: /tmp/r3d
+          pattern: r3d-*
+          merge-multiple: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q pillow
+      - name: Place renders, manifest, commit
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          D=assets/catalog/3d; mkdir -p $D/sm tools/r3d/log /tmp/r3d/_log /tmp/r3d/sm
+          f=(/tmp/r3d/*.webp); s=(/tmp/r3d/sm/*.webp); echo "images: ${#f[@]} + sm ${#s[@]}"
+          [ ${#f[@]} -gt 0 ] && cp /tmp/r3d/*.webp $D/
+          [ ${#s[@]} -gt 0 ] && cp /tmp/r3d/sm/*.webp $D/sm/
+          rm -f tools/r3d/log/shard-*.txt
+          for t in /tmp/r3d/_log/*.txt; do tail -c 20000 "$t" > "tools/r3d/log/$(basename "$t")"; done
+          python tools/r3d/manifest.py $D "${{ github.run_id }}" tools/r3d/log /tmp/r3d/_log
+          cat tools/r3d/log/last-run.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A $D tools/r3d/log
+          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          git commit -q -m "Catalog 3D: granite renders, ${#f[@]} images (run ${{ github.run_id }})"
+          for i in 1 2 3 4; do git pull -q --rebase origin "${{ github.ref_name }}" && git push -q origin "HEAD:${{ github.ref_name }}" && exit 0; sleep 7; done
+          exit 1
