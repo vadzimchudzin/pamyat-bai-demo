@@ -8,7 +8,7 @@
   var COARSE = window.matchMedia && matchMedia('(pointer:coarse)').matches;
   var LX = window.PamyatLux || null; // js/catalog-lux.js: студийные фото, золотые рамки, лупа «Детали»
   var R3 = window.Pamyat3D || null; // js/catalog-3d.js: 3D-рендеры моделей в 5 гранитах, смена камня при наведении
-  var R3K = 0; // гранит, выбранный на карточке в сетке, — с ним открывается карточка модели
+  var R3K = -1; // гранит для карточки модели: ≥0 — выбран на карточке в сетке, -1 — как у открытой модели (листание стрелками)
   if (R3) R3.load();
   function fmt(n) { return Number(n).toLocaleString('ru-RU'); }
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; }); }
@@ -274,7 +274,8 @@
   function draw3d(m, alt, code) {
     if (!PIC) return;
     ++TOK;
-    var k = R3K; R3K = 0;
+    var k = R3K, was = PIC.querySelector('[data-r3]'); R3K = -1;
+    if (k < 0) k = was ? R3.current(was) : 0;
     PIC.className = 'pic single r3p';
     PIC.innerHTML = '<button type="button" class="sv one" data-v="0" aria-label="' + esc(alt + ': открыть крупно') + '">' +
       '<span class="im lx-stage r3s" data-r3="' + esc(code) + '" data-r3-label="' + esc(alt) + '">' + R3.stage(code, alt, '(max-width:720px) 92vw, 560px', true) + '</span>' +
@@ -544,6 +545,7 @@
   // манифест пришёл позже — перерисовываем открытый раздел с 3D
   document.addEventListener('pamyat:3d', function () {
     var id = location.hash.slice(1); if (!id || !cur || cur.id !== id || !box.querySelector('.mgrid') || box.querySelector('.mgrid.r3g')) return;
+    if (!multiStone(cur) || !list.some(function (m) { return R3.codeOf(m.img); })) return; // в разделе нет 3D-моделей
     open(id); if ($('#clb').classList.contains('on')) show(idx);
   });
   addEventListener('hashchange', route);
