@@ -6,6 +6,7 @@
   var CAT = window.PAMYAT_CATALOG || window.PAMYAT_CATALOG_DEFAULT || { categories: [], items: [] };
   var cur = null, list = [], idx = 0;
   var COARSE = window.matchMedia && matchMedia('(pointer:coarse)').matches;
+  var LX = window.PamyatLux || null; // js/catalog-lux.js: студийные фото, золотые рамки, лупа «Детали»
   function fmt(n) { return Number(n).toLocaleString('ru-RU'); }
   function esc(v) { return String(v == null ? '' : v).replace(/[&<>"']/g, function (ch) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch]; }); }
   function cats() { return (CAT.categories || []).filter(function (c) { return c.visible !== false; }); }
@@ -22,17 +23,19 @@
   function itemTitle(m, c) { return m.name ? m.name : ((c.short || '') + ' ' + m.code).trim(); }
 
   /* ---------- размеры фото: sm 640 (сетка), md 1600 (карточка), оригинал 4K (увеличение) ---------- */
-  // комплексы и ограды пересчитаны заново (x4plus) — новый адрес, чтобы браузер не взял старую копию из кэша
-  var FRESH = /^\/assets\/catalog\/(?:md\/|sm\/)?[KO]\d+\.webp$/;
-  function fresh(u) { return u && FRESH.test(u) ? u + '?v=x4' : (u || ''); }
+  // все фото каталога пересняты студией (tools/media/studio.py) — новый адрес ?v=…, чтобы браузер не взял старую копию из кэша
+  function fresh(u) { return LX ? LX.url(u) : (u || ''); }
   function assetFile(u) { var m = /^\/assets\/catalog\/([A-Za-z0-9_.-]+\.webp)(?:[?#].*)?$/.exec(u || ''); return m ? m[1] : ''; }
   function sized(u, size) {
     if (!u || !size) return fresh(u);
+    if (LX) return LX.sized(u, size);
     var f = assetFile(u);
-    if (f) return fresh('/assets/catalog/' + size + '/' + f);
+    if (f) return '/assets/catalog/' + size + '/' + f;
     if (/^\/api\/img\?/.test(u) && !/[?&]w=/.test(u)) return u + '&w=' + (size === 'sm' ? 640 : 1600);
     return u;
   }
+  function studio(u, flag) { return LX ? LX.isStudio(u, flag) : false; }
+  function lxFrame(r) { return LX ? LX.glint() + LX.frame(r) : ''; }
   function imgTag(u, alt, sizes, extra) {
     var sm = sized(u, 'sm'), md = sized(u, 'md'), set = sm !== md ? ' srcset="' + esc(sm) + ' 640w, ' + esc(md) + ' 1600w" sizes="' + sizes + '"' : '';
     return '<img loading="lazy" decoding="async" src="' + esc(sm) + '"' + set + ' data-full="' + esc(fresh(u)) + '" alt="' + esc(alt) + '"' + (extra || '') + '>';
@@ -46,23 +49,26 @@
 
   function cover(c) {
     var cv = c.cover || {};
-    if (!cv.img) return '<div class="cover ind">✦<span>По вашему эскизу</span></div>';
-    return '<div class="cover">' + imgTag(cv.img, c.name, '(max-width:720px) 80vw, 340px', ' style="--z:' + (cv.zoom || 1) + ';--pos:' + esc(cv.pos || '50% 50%') + '"') + '</div>';
+    // «По вашему эскизу»: линейный эскиз стелы вместо символа ✦ (на части устройств он был пустым квадратом)
+    if (!cv.img) return '<div class="cover lx-stage ind">' + (LX ? LX.sketch() : '') + '<span>По вашему эскизу</span>' + (LX ? LX.frame(10) : '') + '</div>';
+    var s = LX ? LX.cover(cv) : { img: cv.img, zoom: cv.zoom || 1, pos: cv.pos || '', studio: false };
+    return '<div class="cover lx-stage' + (s.studio ? '' : ' raw') + '">' + imgTag(s.img, c.name, '(max-width:720px) 92vw, 400px', ' style="--z:' + s.zoom + ';--pos:' + esc(s.pos || '50% 50%') + '"') + lxFrame(10) + '</div>';
   }
+  function lxDone() { if (LX) { LX.applyLook(CAT); LX.reveal(box); } }
   function themes() { if (window.pamyatThemes) setTimeout(window.pamyatThemes, 30); if (window.pamyatLamp) setTimeout(window.pamyatLamp.refresh, 60); }
   function title(eyebrow, h, lead, back) {
-    $('#catTitle').innerHTML = '<div class="cat-back">' + back + '</div><p class="eyebrow">' + eyebrow + '</p><h2>' + h + '</h2>' + (lead ? '<p class="lead">' + lead + '</p>' : '');
+    $('#catTitle').innerHTML = '<div class="cat-back">' + back + '</div><p class="eyebrow">' + eyebrow + '</p><h2>' + h + '</h2>' + (LX ? LX.rule() : '') + (lead ? '<p class="lead">' + lead + '</p>' : '');
   }
 
   function home() {
     cur = null;
     title('Каталог', 'Каталог памятников', 'Выберите раздел и модель. Гранит, размеры и гравировку согласуем с вами лично.', '<a class="back" href="/" data-home>← На главную</a>');
-    box.innerHTML = '<div class="cats">' + cats().map(function (c) {
+    box.innerHTML = '<div class="cats">' + cats().map(function (c, i) {
       var n = items(c.id).length;
-      return '<a class="cc glass" href="#' + esc(c.id) + '">' + cover(c) + '<h3>' + esc(c.name) + '</h3><div class="pr">' + price(c) + '</div>' +
-        '<p class="inc">' + esc(c.inc ? 'Входит: ' + c.inc : (c.desc || '')) + '</p><div class="go"><span>' + (n ? n + ' ' + (isAddon(c) ? plural(n, 'изделие', 'изделия', 'изделий') : plural(n, 'модель', 'модели', 'моделей')) : 'Обсудить проект') + '</span><b>Открыть →</b></div></a>';
+      return '<a class="cc glass lx" style="--d:' + ((i % 3) * 0.09).toFixed(2) + 's" href="#' + esc(c.id) + '">' + cover(c) + '<h3>' + esc(c.name) + '</h3>' + (LX ? LX.rule() : '') + '<div class="pr">' + price(c) + '</div>' +
+        '<p class="inc">' + esc(c.inc ? 'Входит: ' + c.inc : (c.desc || '')) + '</p><div class="go"><span>' + (n ? n + ' ' + (isAddon(c) ? plural(n, 'изделие', 'изделия', 'изделий') : plural(n, 'модель', 'модели', 'моделей')) : 'Обсудить проект') + '</span>' + (LX ? LX.go('Открыть') : '<b>Открыть →</b>') + '</div></a>';
     }).join('') + '</div>' + (CAT.granite ? '<p class="note">' + esc(CAT.granite) + '</p>' : '');
-    themes();
+    lxDone(); themes();
   }
   function plural(n, a, b, c) { var m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? b : c; }
 
@@ -97,17 +103,17 @@
         '<button class="btn btn-gold" type="submit">Обсудить проект <span class="arr">→</span></button>' +
         '<p class="muted">Перезвоним в рабочее время. Нажимая кнопку, вы соглашаетесь с политикой обработки персональных данных.</p></form>' +
         '<div class="ok" id="indOk">Спасибо! Перезвоним и обсудим ваш проект.</div></div>';
-      bindInd(c);
+      bindInd(c); lxDone();
       return themes();
     }
-    var addon = isAddon(c);
+    var addon = isAddon(c), ar = LX ? LX.stageAr(c.id) : 1;
     box.innerHTML = '<div class="cat-info"><div class="panel glass"><h3>О разделе</h3><p style="color:var(--mut)">' + esc(c.desc || '') + '</p>' +
       (CAT.granite && !addon ? '<p class="muted" style="margin-top:12px">' + esc(CAT.granite) + '</p>' : '') + '</div>' +
       '<div class="panel glass"><h3>' + (addon ? 'Стоимость' : 'В комплекте') + '</h3>' + kitHtml(c) + '</div></div>' +
-      '<div class="mgrid' + (addon ? ' addons' : '') + '">' + list.map(function (m, i) {
+      '<div class="mgrid lx-grid' + (addon ? ' addons' : '') + (ar > 1.2 ? ' wide' : '') + '" style="--lx-ar:' + ar.toFixed(4) + '">' + list.map(function (m, i) {
         var t = itemTitle(m, c), sub = addon ? itemPrice(m, c) : (c.short || '');
-        return '<div class="mc glass" data-i="' + i + '" role="button" tabindex="0" aria-label="' + esc(t) + '"><div class="im">' +
-          imgTag(m.img, t, '(max-width:720px) 42vw, 220px', ' style="--z:' + ((c.cover && c.cover.zoomItems) || 1) + '"') + '</div>' +
+        return '<div class="mc glass lx" style="--d:' + ((i % 6) * 0.06).toFixed(2) + 's" data-i="' + i + '" role="button" tabindex="0" aria-label="' + esc(t) + '"><div class="im lx-stage' + (studio(m.img, m.studio) ? '' : ' raw') + '">' +
+          imgTag(m.img, t, '(max-width:720px) 46vw, 240px', ' style="--z:' + ((c.cover && c.cover.zoomItems) || 1) + '"') + lxFrame(8) + '</div>' +
           '<div class="t"><b>' + esc(m.name || m.code) + '</b><span>' + esc(sub) + '</span></div></div>';
       }).join('') + '</div>';
     [].forEach.call(box.querySelectorAll('.mc'), function (el) {
@@ -115,7 +121,7 @@
       el.addEventListener('click', go);
       el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } });
     });
-    themes();
+    lxDone(); themes();
   }
 
   function bindInd(c) {
@@ -183,10 +189,10 @@
   function cacheGet(k) { for (var i = 0; i < LRU.length; i++) if (LRU[i][0] === k) return LRU[i][1]; return null; }
   function cachePut(k, v, max) { LRU = LRU.filter(function (e) { return e[0] !== k; }); LRU.unshift([k, v]); var lim = max || 10; if (LRU.length > lim) LRU.length = lim; }
 
-  var PIC = $('#clbPic') || ($('#clbImg') && $('#clbImg').parentNode), TOK = 0, MAN = null;
-  // размеры фото (variants.json от workflow) — карточка сразу получает верные пропорции
-  try { fetch('/assets/catalog/variants.json').then(function (r) { return r.ok ? r.json() : null; }).then(function (j) { MAN = j && j.items || null; }).catch(function () {}); } catch (e) {}
-  function codeOf(m) { var f = assetFile(m.img); return f ? f.replace(/\.webp$/, '') : m.code; }
+  var PIC = $('#clbPic') || ($('#clbImg') && $('#clbImg').parentNode), TOK = 0, MAN = null, FOC = null;
+  // размеры фото и точки «грань / основание / фактура» (variants.json от workflow) — карточка сразу получает верные пропорции
+  try { fetch('/assets/catalog/variants.json' + (LX ? '?v=' + LX.V : '')).then(function (r) { return r.ok ? r.json() : null; }).then(function (j) { MAN = j && j.items || null; FOC = j && j.focus || null; if (FOC && $('#clb').classList.contains('on') && list[idx]) drawDetails(list[idx]); }).catch(function () {}); } catch (e) {}
+  function codeOf(m) { var f = assetFile(m.img); return f ? f.replace(/\.webp$/, '') : ''; }
   function setAr(w, h) { if (PIC && w > 0 && h > 0) PIC.style.setProperty('--ar', (w / h).toFixed(4)); }
   function placeNav() {
     var b = $('#clb .box'), im = PIC && PIC.querySelector('.sv .im'); if (!b || !im) return;
@@ -255,7 +261,7 @@
   }
 
   /* ---------- крупный просмотр (4K) ---------- */
-  var Z = null, ZTOK = 0, ZV = 0, HI = null, ZC = [];
+  var Z = null, ZTOK = 0, ZV = 0, HI = null, ZC = [], ZF = null;
   var HI_MAX = COARSE || (navigator.deviceMemory && navigator.deviceMemory <= 4) ? 2400 : 3840;
   function zoomEl() {
     if (Z) return Z;
@@ -281,22 +287,38 @@
     zs.addEventListener('click', function (e) {
       if (drag && drag.moved) { drag = null; return; } drag = null;
       var md = zs.firstChild; if (!md) return;
+      ZF = null;
       if (zs.classList.contains('zoomed')) { zs.classList.remove('zoomed'); md.style.width = md.style.height = ''; return; }
       if (e.target !== md) return closeZoom();
       var r = md.getBoundingClientRect(), nw = md.naturalWidth || md.width, nh = md.naturalHeight || md.height;
       var s = Math.min(r.width / nw, r.height / nh), cw = nw * s, ch = nh * s, cl = r.left + (r.width - cw) / 2, ct = r.top + (r.height - ch) / 2;
       var fx = (e.clientX - cl) / cw, fy = (e.clientY - ct) / ch;
       if (fx < 0 || fx > 1 || fy < 0 || fy > 1) return closeZoom();
-      var k = Math.max(2, Math.min(3.2, nw / cw)), zr = zs.getBoundingClientRect();
-      zs.classList.add('zoomed'); md.style.width = Math.round(cw * k) + 'px'; md.style.height = Math.round(ch * k) + 'px';
-      zs.scrollLeft = fx * cw * k - (e.clientX - zr.left); zs.scrollTop = fy * ch * k - (e.clientY - zr.top);
+      zoomTo(md, fx, fy, e.clientX, e.clientY);
     });
     return Z;
   }
+  // приблизить фото так, чтобы точка (fx, fy) в долях кадра оказалась под (px, py) — по умолчанию в центре экрана
+  function zoomTo(md, fx, fy, px, py) {
+    var zs = $('.zs', Z), r = md.getBoundingClientRect(), nw = md.naturalWidth || md.width, nh = md.naturalHeight || md.height;
+    if (!nw || !nh || !r.width) return false;
+    var s = Math.min(r.width / nw, r.height / nh), cw = nw * s, ch = nh * s;
+    var k = Math.max(2, Math.min(3.2, nw / cw)), zr = zs.getBoundingClientRect();
+    if (px == null) { px = zr.left + zr.width / 2; py = zr.top + zr.height / 2; }
+    zs.classList.add('zoomed'); md.style.width = Math.round(cw * k) + 'px'; md.style.height = Math.round(ch * k) + 'px';
+    var ox = Math.max(0, (zs.clientWidth - cw * k) / 2); // узкое фото центрируется (margin:auto)
+    zs.scrollLeft = fx * cw * k + ox - (px - zr.left); zs.scrollTop = fy * ch * k - (py - zr.top);
+    return true;
+  }
   function zoomLoading(on) { var l = Z && $('.zl', Z); if (l) { l.textContent = on ? 'Загружаем 4K…' : ''; l.classList.toggle('on', !!on); } }
-  function zoomSwap(el) {
+  function zoomSwap(el, final) {
     var zs = $('.zs', Z); el.classList.add('zm'); el.draggable = false;
     zs.classList.remove('zoomed'); zs.innerHTML = ''; zs.appendChild(el); zoomLoading(false);
+    // переход из линзы «Детали»: сразу приближаем к той же точке (и ещё раз — когда пришло 4K)
+    var f = ZF; if (!f) return;
+    if (final) ZF = null;
+    var go = function () { requestAnimationFrame(function () { if (el.parentNode === zs) zoomTo(el, f[0], f[1]); }); };
+    if (el.tagName === 'IMG' && !el.complete) el.addEventListener('load', go, { once: true }); else go();
   }
   function getHi(m, cb) {
     // HI.cbs !== null — загрузка ещё идёт; после ошибки запись сбрасывается, и следующий вызов грузит 4K заново
@@ -323,21 +345,73 @@
     var key = m.img + '|' + v + '|z';
     getHi(m, function (im) {
       if (tok !== ZTOK) return;
-      if (!im) return zoomLoading(false);
-      if (!v) { var o = im.cloneNode(); o.alt = cap; return zoomSwap(o); }
-      for (var i = 0; i < ZC.length; i++) if (ZC[i][0] === key) return zoomSwap(ZC[i][1]);
+      if (!im) { ZF = null; return zoomLoading(false); }
+      if (!v) { var o = im.cloneNode(); o.alt = cap; return zoomSwap(o, true); }
+      for (var i = 0; i < ZC.length; i++) if (ZC[i][0] === key) return zoomSwap(ZC[i][1], true);
       renderTint(im, s.p, HI_MAX, function (cv) {
         if (!cv) { if (tok === ZTOK) zoomLoading(false); return; }
         cv.setAttribute('role', 'img'); cv.setAttribute('aria-label', cap);
         ZC.unshift([key, cv]); if (ZC.length > 2) ZC.length = 2;
-        if (tok === ZTOK) zoomSwap(cv);
+        if (tok === ZTOK) zoomSwap(cv, true);
       });
     });
   }
-  function openZoom(v) { zoomEl().classList.add('on'); zoomVariant(v); var x = $('.zx', Z); if (x) x.focus({ preventScroll: true }); }
-  function closeZoom() { if (!Z) return; ZTOK++; Z.classList.remove('on'); var zs = $('.zs', Z); zs.innerHTML = ''; zoomLoading(false); }
+  function openZoom(v, at) { zoomEl().classList.add('on'); ZF = at || null; zoomVariant(v); var x = $('.zx', Z); if (x) x.focus({ preventScroll: true }); }
+  // дополнительное фото модели (админка → «Доп. фото»): только просмотр, без вариантов камня
+  function openPhoto(u, cap) {
+    zoomEl().classList.add('on'); Z.classList.add('single'); ZF = null;
+    var tok = ++ZTOK; $('.zt', Z).textContent = cap;
+    var ph = new Image(); ph.src = sized(u, 'md'); ph.alt = cap; zoomSwap(ph); zoomLoading(true);
+    loadImg(fresh(u), '', function (im) { if (tok !== ZTOK) return; zoomLoading(false); if (im) { var o = im.cloneNode(); o.alt = cap; zoomSwap(o, true); } });
+    var x = $('.zx', Z); if (x) x.focus({ preventScroll: true });
+  }
+  function closeZoom() { if (!Z) return; ZTOK++; ZF = null; Z.classList.remove('on'); var zs = $('.zs', Z); zs.innerHTML = ''; zoomLoading(false); }
   function zoomOn() { return !!(Z && Z.classList.contains('on')); }
   if (PIC) PIC.addEventListener('click', function (e) { var b = e.target.closest('.sv'); if (b) openZoom(+b.dataset.v); });
+
+  /* ---------- «Детали»: линзы «грань и угол», «основание», «фактура камня» + доп. фото ---------- */
+  var DTOK = 0, LZ = 6.5;
+  function drawDetails(m) {
+    var host = $('#clbDet'); if (!host) return;
+    var tok = ++DTOK, md = sized(m.img, 'md'), c = codeOf(m), t = itemTitle(m, cur);
+    var photos = (Array.isArray(m.photos) ? m.photos : []).filter(function (u) { return typeof u === 'string' && u; }).slice(0, 12);
+    host.innerHTML = '';
+    if (!LX) return;
+    var put = function (pts, ar) {
+      if (tok !== DTOK) return;
+      if (!pts && !photos.length) { host.innerHTML = ''; return; }
+      host.innerHTML = '<div class="lx-det">' + (pts ? '<h4>Детали</h4><div class="lx-lens">' + pts.map(function (p, i) {
+        var L = LX.lens(LX.aim(p.key, p.f, LZ, ar), LZ, ar);
+        return '<button type="button" data-lens="' + i + '" aria-label="' + esc(p.label + ': рассмотреть в 4K') + '"><span class="o" style="background-image:url(&quot;' + esc(md) + '&quot;);background-size:' + L.size + ';background-position:' + L.pos + '"></span>' + esc(p.label) + '</button>';
+      }).join('') + '</div>' : '') +
+        (photos.length ? (pts ? '' : '<h4>Фото</h4>') + '<div class="lx-more">' + photos.map(function (u, i) {
+          return '<button type="button" data-photo="' + i + '" aria-label="' + esc(t + ': дополнительное фото ' + (i + 1)) + '"><img loading="lazy" decoding="async" src="' + esc(sized(u, 'sm')) + '" alt=""></button>';
+        }).join('') + '</div>' : '') + '</div>';
+      [].forEach.call(host.querySelectorAll('[data-lens]'), function (b) {
+        b.addEventListener('click', function () { var p = pts[+b.dataset.lens]; openZoom(0, LX.lensCenter(LX.aim(p.key, p.f, LZ, ar), LZ, ar)); });
+      });
+      [].forEach.call(host.querySelectorAll('[data-photo]'), function (b) {
+        b.addEventListener('click', function () { openPhoto(photos[+b.dataset.photo], t + ' · фото ' + (+b.dataset.photo + 1)); });
+      });
+    };
+    var wh = MAN && MAN[c], known = LX.focusList(m.focus) || (FOC && LX.focusList(FOC[c]));
+    if (known && wh) return put(known, wh[0] / wh[1]);
+    // нет готовых точек (фото загружено в админке) — находим изделие на уменьшенной копии
+    loadImg(md, m.img, function (im) {
+      if (tok !== DTOK) return;
+      if (!im) return put(null, 1);
+      var ar = im.naturalWidth / im.naturalHeight;
+      if (known) return put(known, ar);
+      var pts = null;
+      try {
+        var k = 160 / Math.max(im.naturalWidth, im.naturalHeight), w = Math.max(8, Math.round(im.naturalWidth * k)), h = Math.max(8, Math.round(im.naturalHeight * k));
+        var cv = document.createElement('canvas'); cv.width = w; cv.height = h;
+        var cx = cv.getContext('2d', { willReadFrequently: true }); cx.drawImage(im, 0, 0, w, h);
+        pts = LX.focusList(LX.focusFromPixels(cx.getImageData(0, 0, w, h).data, w, h));
+      } catch (e) { pts = null; }
+      put(pts, ar);
+    });
+  }
 
   /* ---------- карточка модели ---------- */
   function calcHref(m) { return '/?model=' + encodeURIComponent(m.code) + '&cat=' + encodeURIComponent(cur.id) + '#calc'; }
@@ -364,6 +438,7 @@
       if (sec) { sec.href = '/#contact'; sec.textContent = 'Консультация'; }
     }
     if (multiStone(cur)) drawStones(m, t); else drawSingle(m, t);
+    drawDetails(m);
     var nx = list[(idx + 1) % list.length]; if (nx && nx !== m) { var pre = new Image(); pre.decoding = 'async'; pre.src = sized(nx.img, 'md'); }
   }
   $('#clbCalc').addEventListener('click', function (e) {
@@ -421,6 +496,15 @@
     for (i = 0; i < 256; i++) { acc += hist[i]; if (acc >= cnt * 0.02) { lo = i; break; } }
     for (acc = 0, i = 255; i >= 0; i--) { acc += hist[i]; if (acc >= cnt * 0.04) { hi = i; break; } }
     if (hi - lo < 12) hi = lo + 12;
+    // студийное фото: светлый фон и мягкая тень, связанные с краем кадра, не перекрашиваем (иначе тень «краснеет»),
+    // белый мрамор и блики на краю изделия тоже остаются как есть
+    var bgm = new Uint8Array(n), stk = new Int32Array(n), sp = 0, TB = 150, q0, qx;
+    var lit = function (k) { var u = k << 2; return (d[u] * 54 + d[u + 1] * 183 + d[u + 2] * 19) >> 8 >= TB; };
+    var push = function (k) { if (!bgm[k] && lit(k)) { bgm[k] = 1; stk[sp++] = k; } };
+    for (i = 0; i < w; i++) { push(i); push((h - 1) * w + i); }
+    for (i = 1; i < h - 1; i++) { push(i * w); push(i * w + w - 1); }
+    while (sp) { q0 = stk[--sp]; qx = q0 % w; if (qx > 0) push(q0 - 1); if (qx < w - 1) push(q0 + 1); if (q0 >= w) push(q0 - w); if (q0 < n - w) push(q0 + w); }
+    stk = null;
     // granite tiles: periodic Voronoi crystals (minerals) + biotite specks
     var N = 512, M = N - 1, seed = p.seed | 0;
     function hs(x, y) { var q = (x * 374761393 + y * 668265263 + seed * 2147483 + 1013904223) | 0; q = Math.imul(q ^ (q >>> 13), 1274126177); q ^= q >>> 16; return (q >>> 0) / 4294967296; }
@@ -461,6 +545,7 @@
     for (var yy = 0; yy < h; yy++) {
       var fy = yy * sc;
       for (var xx = 0; xx < w; xx++) {
+        if (bgm[yy * w + xx]) continue;
         o = (yy * w + xx) << 2; r = d[o]; g = d[o + 1]; b = d[o + 2];
         mx = r > g ? (r > b ? r : b) : (g > b ? g : b); mn = r < g ? (r < b ? r : b) : (g < b ? g : b);
         if (mx > 236) continue;
