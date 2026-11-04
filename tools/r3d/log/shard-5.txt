@@ -1,0 +1,37 @@
+cpu 2
+               total        used        free      shared  buff/cache   available
+Mem:               7           1           5           0           1           6
+
+Running kernel seems to be up-to-date.
+
+Restarting services...
+
+Service restarts being deferred:
+ systemctl restart hosted-compute-agent.service
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+Blender 4.2.3 LTS (hash 0e22e4fcea03 built 2024-10-14 23:31:34)
+{"code": "B5", "render": 122.6, "recon": "0.013418088667094707", "ok": true, "sec": 125.6}
+{"code": "B15", "render": 119.6, "recon": "0.013322756625711918", "ok": true, "sec": 122.3}
+{"code": "B25", "render": 118.9, "recon": "0.013636776246130466", "ok": true, "sec": 121.5}
+{"code": "C6", "render": 119.2, "recon": "0.013711233623325825", "ok": true, "sec": 121.8}
+{"code": "C16", "render": 118.4, "recon": "0.01380891166627407", "ok": true, "sec": 121.0}
+{"code": "C26", "render": 117.9, "recon": "0.013704641722142696", "ok": true, "sec": 120.5}
+{"code": "D6", "decor": 0.0, "render": 119.6, "recon": "0.01382279209792614", "ok": true, "sec": 122.6}
+{"code": "E4", "decor": 0.213, "render": 122.1, "recon": "0.01614546962082386", "ok": true, "sec": 125.1}
+{"code": "F2", "decor": 0.0, "render": 120.5, "recon": "0.01365229208022356", "ok": true, "sec": 123.6}
+{"code": "F12", "decor": 0.0, "render": 120.4, "recon": "0.013831003569066525", "ok": true, "sec": 123.5}
+{"code": "F22", "decor": 0.0, "render": 120.2, "recon": "0.01364035066217184", "ok": true, "sec": 123.3}
+{"code": "F32", "decor": 0.0, "render": 120.3, "recon": "0.013609252870082855", "ok": true, "sec": 123.9}
+{"code": "H6", "render": 150.4, "recon": "0.01080332137644291", "ok": true, "sec": 153.6}
+{"code": "H16", "render": 151.2, "recon": "0.010742821730673313", "ok": true, "sec": 154.6}
+{"code": "H26", "render": 148.0, "recon": "0.011077679693698883", "ok": true, "sec": 151.4}
+{"code": "H36", "render": 149.7, "recon": "0.011099659837782383", "ok": true, "sec": 152.8}
+{"code": "I6", "decor": 0.0, "render": 152.6, "recon": "0.011074475012719631", "ok": true, "sec": 156.9}
+{"code": "I16", "decor": 0.0, "render": 151.7, "recon": "0.011107481084764004", "ok": true, "sec": 156.1}
+{"code": "I26", "decor": 0.389, "render": 155.5, "recon": "0.016782712191343307", "ok": true, "sec": 159.8}
+{"code": "P6", "render": 106.0, "recon": "0.014410276897251606", "ok": true, "sec": 108.4}
