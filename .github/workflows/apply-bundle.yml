@@ -1,0 +1,30 @@
+name: apply-bundle
+on:
+  push:
+    branches: [calc-price-modes]
+    paths: ['tools/bundle/SHA256SUMS']
+permissions:
+  contents: write
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Apply bundle
+        run: |
+          set -e
+          cat tools/bundle/p*.b64 | tr -d '\n\r ' | base64 -d > /tmp/b.tgz
+          tar -xzvf /tmp/b.tgz --no-same-owner
+          sha256sum -c tools/bundle/SHA256SUMS
+          git rm -rq tools/bundle
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A js css api tests index.html admin.html
+          git commit -m "Калькулятор: единицы цены (м², м.п., шт.), «от», количество; мобильный фикс"
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin "$GITHUB_REF_NAME" && git push origin "HEAD:$GITHUB_REF_NAME" && exit 0
+            sleep 5
+          done
+          exit 1
