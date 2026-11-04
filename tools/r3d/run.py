@@ -1,11 +1,12 @@
 #!/usr/bin/env python3
 # 3D-рендер каталога: контур с фото → рельеф/декор → сцена Blender (Cycles) → 5 вариантов гранита из одного рендера.
 # python3 run.py --src <папка с фото кодов> --work <tmp> --out <dist> --blender <bin> [--codes "B4 H5"|all] [--shard k/n]
-import argparse, json, os, re, subprocess, sys, time, glob
+import argparse, json, os, re, shutil, subprocess, sys, time, glob
 HERE = os.path.dirname(os.path.abspath(__file__)); sys.path.insert(0, HERE)
 from outline import outline
 from relief import maps
 from mkspec import spec_for, relief_family
+from PIL import Image
 FAM = 'ABCDEFHIP'  # вертикальные, горизонтальные, кресты; комплексы/ограды/аксессуары — фото
 
 def nat(c): return (c[0], int(re.sub(r'\D', '', c) or 0))
@@ -32,8 +33,8 @@ def main():
     ids = [g['id'] for g in json.load(open(os.path.join(HERE, 'granites.json')))]
     bdir = os.path.dirname(os.path.realpath(a.blender))
     bpy3 = (glob.glob(os.path.join(bdir, '*', 'python', 'bin', 'python3*')) or [None])[0]
-    ol = os.path.join(a.work, 'ol'); rd = os.path.join(a.work, 'r')
-    for d in (ol, rd, a.out, os.path.join(a.out, '_log')): os.makedirs(d, exist_ok=True)
+    ol = os.path.join(a.work, 'ol'); rd = os.path.join(a.work, 'r'); stage = os.path.join(a.work, 'stage')
+    for d in (ol, rd, stage, os.path.join(a.out, 'sm'), os.path.join(a.out, '_log')): os.makedirs(d, exist_ok=True)
     log = []
     for code in codes:
         t0 = time.time(); rec = {'code': code}
@@ -50,8 +51,17 @@ def main():
             if not os.path.exists(exr):
                 raise RuntimeError('render failed: ' + (r.stdout + r.stderr)[-1500:])
             rec['render'] = float(m.group(1)) if m else None
-            p = subprocess.run([bpy3, os.path.join(HERE, 'post.py'), exr, a.out, code, json.dumps(ids)], capture_output=True, text=True, timeout=600)
+            # варианты пишутся во временную папку и попадают в --out только полным набором (все граниты, оба размера):
+            # сбой посреди модели не оставит в каталоге смесь новых и старых рендеров
+            sd = os.path.join(stage, code); shutil.rmtree(sd, ignore_errors=True); os.makedirs(sd)
+            p = subprocess.run([bpy3, os.path.join(HERE, 'post.py'), exr, sd, code, json.dumps(ids)], capture_output=True, text=True, timeout=600)
             if p.returncode: raise RuntimeError('post failed: ' + (p.stdout + p.stderr)[-1500:])
+            want = [(os.path.join(sub, '%s-%s.webp' % (code, v)), a.res // (2 if sub else 1)) for v in ids for sub in ('', 'sm')]
+            for f, px in want:
+                with Image.open(os.path.join(sd, f)) as im:
+                    if im.size != (px, px): raise RuntimeError('post: %s is %dx%d, want %d' % (f, im.size[0], im.size[1], px))
+            for f, _ in want: shutil.move(os.path.join(sd, f), os.path.join(a.out, f))
+            shutil.rmtree(sd, ignore_errors=True)
             rec['recon'] = p.stdout.strip().split()[-1] if p.stdout.strip() else None
             os.remove(exr)
             for f in glob.glob(os.path.join(rd, code + '.png')): os.remove(f)
@@ -61,6 +71,9 @@ def main():
         rec['sec'] = round(time.time() - t0, 1); log.append(rec)
         print(json.dumps(rec, ensure_ascii=False)[:600], flush=True)
     json.dump(log, open(os.path.join(a.out, '_log', 'shard-%s.json' % (a.tag or a.shard.replace('/', 'of'))), 'w'), ensure_ascii=False, indent=1)
+    bad = [r['code'] for r in log if not r.get('ok')]
+    if bad:  # шард «красный»; готовые модели всё равно публикуются (commit-джоб), упавшие остаются со старыми рендерами
+        print('FAILED: ' + ' '.join(bad), file=sys.stderr); sys.exit(1)
 
 if __name__ == '__main__':
     main()
