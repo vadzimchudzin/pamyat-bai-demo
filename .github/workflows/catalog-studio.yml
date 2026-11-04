@@ -1,0 +1,118 @@
+name: Catalog studio retouch
+
+# «Студийная» обработка всех фото каталога (tools/media/studio.py): изделие вырезается
+# (ISNet + уточнение края), ставится в единый кадр раздела на ровный белый фон с мягким
+# светом и контактной тенью; убираются «акварельные» разводы апскейла, чёрный гранит —
+# нейтральный, грани и фактура камня — чёткие. Форма и детали изделия не меняются.
+# Исходники — фото из main до обработки (зафиксированный коммит SRC_SHA), поэтому повторный
+# запуск не обрабатывает уже обработанное. Обложки разделов берутся с сайта.
+# На выходе: assets/catalog/<код>.webp (4K) + md/ (1600) + sm/ (640), обложки cover-*.webp,
+# variants.json v2 (кадр и точки «грань / основание / фактура» для лупы «Детали»).
+on:
+  push:
+    branches: [feat/catalog-lux]
+    paths:
+      - tools/media/studio.py
+      - .github/workflows/catalog-studio.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: catalog-studio-${{ github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  SRC_SHA: 1a09605c31d5c0b304ac7fefc1b50da05f2f25e6
+  SITE: https://pamyat-bai-demo.vercel.app
+
+jobs:
+  studio:
+    runs-on: ubuntu-latest
+    timeout-minutes: 100
+    strategy:
+      fail-fast: false
+      matrix:
+        # 0–7 — изделия каталога, 8 — обложки разделов
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Source photos (main @ SRC_SHA)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.SRC_SHA }}
+          path: src
+          sparse-checkout: assets/catalog
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: numpy + OpenCV + onnxruntime, ISNet weights
+        run: |
+          set -euo pipefail
+          pip install -q numpy opencv-python-headless pillow onnxruntime
+          curl -fsSL --retry 3 https://github.com/danielgatis/rembg/releases/download/v0.0.0/isnet-general-use.onnx -o /tmp/isnet.onnx
+          echo "60920e99c45464f2ba57bee2ad08c919a52bbf852739e96947fbb4358c0d964a  /tmp/isnet.onnx" | sha256sum -c -
+      - name: Studio shard ${{ matrix.shard }}
+        env:
+          ISNET: /tmp/isnet.onnx
+          SHARD: ${{ matrix.shard }}
+        run: |
+          set -euo pipefail
+          if [ "$SHARD" = 8 ]; then
+            mkdir -p /tmp/cov
+            for i in 8 5 9; do curl -fsSL --retry 3 "$SITE/api/img?id=$i" -o "/tmp/cov/$i.img"; done
+            C=src/assets/catalog
+            printf '%s\n' "/tmp/cov/8.img=cover-vertical:cover" "/tmp/cov/5.img=cover-complex:cover:ff" "/tmp/cov/9.img=cover-fence:cover" \
+              "$C/I26.webp=cover-horizontal:cover" "$C/P3.webp=cover-cross:cover" "$C/L1.webp=cover-accessories:cover" > /tmp/list.txt
+          else
+            ls src/assets/catalog/*.webp | grep -E '/[A-Z][0-9]+\.webp$' | sort -V | awk -v n=8 -v k="$SHARD" 'NR % n == k' > /tmp/list.txt
+          fi
+          wc -l < /tmp/list.txt
+          python tools/media/studio.py run out /tmp/list.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: studio-${{ matrix.shard }}
+          path: out
+          retention-days: 3
+
+  commit:
+    # только если все шарды успешны — без частичного обновления
+    needs: studio
+    if: ${{ needs.studio.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/media
+          pattern: studio-*
+          merge-multiple: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q numpy opencv-python-headless pillow
+      - name: Place images, write manifest, commit
+        run: |
+          set -euo pipefail
+          n="$(ls /tmp/media/*.webp | wc -l)"; echo "images: $n"; test "$n" -gt 200
+          mkdir -p assets/catalog/md assets/catalog/sm
+          cp /tmp/media/*.webp assets/catalog/
+          cp /tmp/media/md/*.webp assets/catalog/md/
+          cp /tmp/media/sm/*.webp assets/catalog/sm/
+          python tools/media/studio.py manifest assets/catalog /tmp/media
+          mkdir -p tools/media/log
+          { echo "run ${{ github.run_id }} $(date -u +%FT%TZ)  studio s1 (ISNet + tools/media/studio.py), source main@${SRC_SHA:0:7}";
+            echo "images: $n";
+            ls /tmp/media/*.webp | xargs -n1 basename | sort -V | tr '\n' ' '; echo;
+            du -sh assets/catalog assets/catalog/md assets/catalog/sm; } > tools/media/log/studio-last-run.txt
+          cat tools/media/log/studio-last-run.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add assets/catalog tools/media/log
+          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          git commit -q -m "Catalog: studio retouch of all photos — white seamless bg, soft light & contact shadow (4K + md/sm, variants.json v2)"
+          for i in 1 2 3; do git pull -q --rebase origin "${{ github.ref_name }}" && git push -q origin "HEAD:${{ github.ref_name }}" && exit 0; sleep 5; done
+          exit 1
