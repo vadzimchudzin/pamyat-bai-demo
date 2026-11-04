@@ -104,7 +104,8 @@
   function stops(H) {
     if (!CATPAGE) return STOPS;
     var f = function (px) { return Math.min(1, Math.max(0, px / H)); };
-    return [[0, '#ede2d2'], [.4, '#e9ddcb'], [f(H - 640), '#e4d5c0'], [f(H - 470), '#c0a68a'], [f(H - 360), '#7a6453'], [f(H - 240), '#3b312b'], [1, '#4d2f1c']];
+    // каталог: светлое полотно, сумерки — только у подвала (как .catpage .ambience в css/catalog-lux.css)
+    return [[0, '#ede2d2'], [.4, '#e9ddcb'], [f(H - 330), '#e4d5c0'], [f(H - 236), '#c9b196'], [f(H - 150), '#7a6453'], [f(H - 76), '#3b312b'], [1, '#4d2f1c']];
   }
   function bgAt(p, S) {
     for (var i = 1; i < S.length; i++) if (p <= S[i][0]) {
@@ -136,7 +137,7 @@
     if (top) {
       top.classList.toggle('scrolled', hero ? scrollY > h * 0.55 : scrollY > 24);
       var SH = document.documentElement.scrollHeight;
-      top.classList.toggle('dk', CATPAGE ? scrollY + 40 > SH - 420 : (scrollY + 40) / SH > EDGE + 0.03);
+      top.classList.toggle('dk', CATPAGE ? scrollY + 40 > SH - 190 : (scrollY + 40) / SH > EDGE + 0.03);
     }
   }
   themes(); onScroll();
@@ -814,17 +815,22 @@
   };
 
   /* ---------- каталог на главной: крупно один элемент на раздел ---------- */
+  var LX = window.PamyatLux || null; // js/catalog-lux.js: студийные фото, золотые рамки
   function coverHtml(c) {
     var cv = c.cover || {};
-    if (!cv.img) return '<div class="cover ind">✦<span>По вашему эскизу</span></div>';
-    var z = Math.max(0.8, Math.min(2.2, +cv.zoom || 1)), sm = catSized(cv.img, 'sm'), md = catSized(cv.img, 'md');
-    var set = sm !== md ? ' srcset="' + workHtmlEscape(sm) + ' 640w, ' + workHtmlEscape(md) + ' 1600w" sizes="(max-width: 720px) ' + Math.round(88 * z) + 'vw, ' + Math.round(340 * z) + 'px" data-full="' + workHtmlEscape(cv.img) + '" onerror="catFallback(this)"' : '';
-    return '<div class="cover"><img src="' + workHtmlEscape(sm) + '"' + set + ' alt="' + workHtmlEscape(c.name) + '" loading="lazy" decoding="async" style="--z:' + (cv.zoom || 1) + ';--pos:' + (cv.pos || '50% 50%') + '"></div>';
+    // «По вашему эскизу»: линейный эскиз стелы вместо символа ✦ (на части устройств он был пустым квадратом)
+    if (!cv.img) return '<div class="cover lx-stage ind">' + (LX ? LX.sketch() : '') + '<span>По вашему эскизу</span>' + (LX ? LX.frame(10) : '') + '</div>';
+    var s = LX ? LX.cover(cv) : { img: cv.img, zoom: +cv.zoom || 1, pos: cv.pos || '', studio: false };
+    var z = Math.max(0.8, Math.min(2.2, +s.zoom || 1)), sm = catSized(s.img, 'sm'), md = catSized(s.img, 'md'), full = LX ? LX.url(s.img) : s.img;
+    var set = sm !== md ? ' srcset="' + workHtmlEscape(sm) + ' 640w, ' + workHtmlEscape(md) + ' 1600w" sizes="(max-width: 720px) ' + Math.round(92 * z) + 'vw, ' + Math.round(400 * z) + 'px" data-full="' + workHtmlEscape(full) + '" onerror="catFallback(this)"' : '';
+    return '<div class="cover lx-stage' + (s.studio ? '' : ' raw') + '"><img src="' + workHtmlEscape(sm) + '"' + set + ' alt="' + workHtmlEscape(c.name) + '" loading="lazy" decoding="async" style="--z:' + z + ';--pos:' + workHtmlEscape(s.pos || '50% 50%') + '">' +
+      (LX ? LX.glint() + LX.frame(10) : '') + '</div>';
   }
   /* фото каталога: sm 640 / md 1600 (assets/catalog/sm|md), оригинал 4K — только в карточке */
   function catSized(u, size) {
+    if (LX) return LX.sized(u, size);
     var m = /^\/assets\/catalog\/([A-Za-z0-9_.-]+\.webp)(?:[?#].*)?$/.exec(u || '');
-    if (m) return '/assets/catalog/' + size + '/' + m[1] + (/^[KO]\d+\.webp$/.test(m[1]) ? '?v=x4' : ''); // x4plus: новый адрес
+    if (m) return '/assets/catalog/' + size + '/' + m[1];
     if (/^\/api\/img\?/.test(u || '') && !/[?&]w=/.test(u)) return u + '&w=' + (size === 'sm' ? 640 : 1600);
     return u || '';
   }
@@ -835,13 +841,14 @@
   function plural(n, a, b, c) { var m10 = n % 10, m100 = n % 100; return m10 === 1 && m100 !== 11 ? a : m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14) ? b : c; }
   function drawTeaser() {
     var box = $('#catTeaser'); if (!box) return;
-    box.innerHTML = visibleCats().map(function (c) {
+    box.innerHTML = visibleCats().map(function (c, i) {
       var n = (CAT.items || []).filter(function (x) { return x.cat === c.id; }).length;
-      return '<a class="cc glass rv in" href="/catalog#' + c.id + '">' + coverHtml(c) + '<h3>' + c.name + '</h3>' +
+      return '<a class="cc glass rv in lx" style="--d:' + ((i % 3) * 0.09).toFixed(2) + 's" href="/catalog#' + c.id + '">' + coverHtml(c) + '<h3>' + c.name + '</h3>' + (LX ? LX.rule() : '') +
         '<div class="pr">' + (c.price == null ? 'Индивидуальный расчёт' : 'от ' + fmt(c.price) + ' BYN') + '</div>' +
         '<p class="inc">' + (c.inc ? 'Входит: ' + c.inc : (c.desc || '')) + '</p>' +
-        '<div class="go"><span>' + (n ? n + ' ' + (c.calc === false || c.id === 'accessories' ? plural(n, 'изделие', 'изделия', 'изделий') : plural(n, 'модель', 'модели', 'моделей')) : 'Обсудить проект') + '</span><b>Открыть →</b></div></a>';
+        '<div class="go"><span>' + (n ? n + ' ' + (c.calc === false || c.id === 'accessories' ? plural(n, 'изделие', 'изделия', 'изделий') : plural(n, 'модель', 'модели', 'моделей')) : 'Обсудить проект') + '</span>' + (LX ? LX.go('Открыть') : '<b>Открыть →</b>') + '</div></a>';
     }).join('');
+    if (LX) { LX.applyLook(CAT); LX.reveal(box); }
   }
 
   function socialUrl(k, v) {

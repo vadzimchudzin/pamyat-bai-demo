@@ -214,22 +214,54 @@
 
   /* ---------- каталог: разделы, обложки, модели — всё редактируется ---------- */
   var openCats = {};
-  // миниатюра 640px (assets/catalog/sm), если её нет — оригинал
+  var LX = window.PamyatLux || null;   // js/catalog-lux.js: адреса студийных фото, эскиз, «студия» для новых фото
+  // миниатюра 640px (assets/catalog/sm или /api/img?…&w=640), если её нет — оригинал
   function modThumb(src) {
-    var m = /^\/assets\/catalog\/([A-Za-z0-9_.-]+\.webp)(?:[?#].*)?$/.exec(src || '');
-    if (!m) return '<img loading="lazy" decoding="async" src="' + esc(src) + '" alt="">';
-    return '<img loading="lazy" decoding="async" src="/assets/catalog/sm/' + m[1] + '" data-full="' + esc(src) + '" onerror="if(this.dataset.full){this.src=this.dataset.full;this.removeAttribute(\'data-full\')}" alt="">';
+    var full = LX ? LX.url(src) : (src || ''), sm = LX ? LX.sized(src, 'sm') : '';
+    if (!sm) {
+      var m = /^\/assets\/catalog\/([A-Za-z0-9_.-]+\.webp)(?:[?#].*)?$/.exec(src || '');
+      sm = m ? '/assets/catalog/sm/' + m[1] : '';
+    }
+    if (!sm || sm === full) return '<img loading="lazy" decoding="async" src="' + esc(full) + '" alt="">';
+    return '<img loading="lazy" decoding="async" src="' + esc(sm) + '" data-full="' + esc(full) + '" onerror="if(this.dataset.full){this.src=this.dataset.full;this.removeAttribute(\'data-full\')}" alt="">';
+  }
+  // обложка раздела так же, как на сайте: студийная копия старой обложки и масштаб относительно неё
+  function coverView(src, zoom) {
+    var cv = LX ? LX.cover({ img: src, zoom: zoom }) : { img: src, zoom: zoom };
+    return { img: LX ? LX.sized(cv.img, 'md') : cv.img, zoom: Math.max(0.8, Math.min(2.2, Number(cv.zoom) || 1)) };
   }
   function catImg(src, zoom) {
-    var scale = Math.max(0.8, Math.min(2.2, Number(zoom) || 1));
-    return src ? '<img src="' + esc(src) + '" alt="" style="transform:scale(' + scale + ')">' : '<span>✦</span>';
+    if (!src) return LX ? '<i class="adm-sk" title="По вашему эскизу">' + LX.sketch() + '</i>' : '<span>✦</span>';
+    var v = coverView(src, zoom);
+    return '<img src="' + esc(v.img) + '" alt="" style="transform:scale(' + v.zoom + ')">';
+  }
+  function lookCard(K) {
+    var L = LX ? LX.look(K) : { frames: true, motion: 'full', details: true, stage: 'warm' };
+    var studioOn = !(K.look && K.look.studio === false);
+    var opt = function (list, cur) { return list.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === cur ? ' selected' : '') + '>' + o[1] + '</option>'; }).join(''); };
+    return '<div class="card lx-look-ed">' +
+      '<div class="size-global-head"><div><b>Вид каталога и фото</b><p class="hint">Золотые линии, анимации и блок «Детали» в карточке модели (угол, основание, фактура камня). ' +
+      'Студийная обработка: у нового фото убирается однотонный фон, изделие ставится в кадр раздела на белый фон с мягкой тенью — как у остальных моделей. Если фон на фото сложный, фото загрузится как есть.</p></div></div>' +
+      '<div class="lx-look-grid">' +
+        '<label class="chk"><input type="checkbox" name="lxStudio"' + (studioOn ? ' checked' : '') + '> Студийная обработка новых фото</label>' +
+        '<label class="chk"><input type="checkbox" name="lxFrames"' + (L.frames ? ' checked' : '') + '> Золотые рамки и линии</label>' +
+        '<label class="chk"><input type="checkbox" name="lxDetails"' + (L.details ? ' checked' : '') + '> Блок «Детали» в карточке модели</label>' +
+        '<label>Анимации<select name="lxMotion">' + opt([['full', 'Полные'], ['soft', 'Мягкие'], ['off', 'Без анимаций']], L.motion) + '</select></label>' +
+        '<label>Фон под фото<select name="lxStage">' + opt([['warm', 'Белый, слегка подсвеченный'], ['white', 'Чисто белый']], L.stage) + '</select></label>' +
+      '</div></div>';
+  }
+  function photoStrip(m) {
+    var ph = Array.isArray(m.photos) ? m.photos : [];
+    return '<div class="xph">' + ph.map(function (u, pi) {
+      return '<span class="x" data-pi="' + pi + '">' + modThumb(u) + '<button class="ic del" data-c="ph-del" title="Убрать фото">✕</button></span>';
+    }).join('') + '</div>';
   }
   function drawCatalog() {
     var K = C.catalog || { categories: [], items: [] };
     $('#catGranite').value = K.granite || '';
     var sameSizeAll = K.sameSizeAll === true;
     var commonSize = K.commonSize || '';
-    $('#catEd').innerHTML = '<div class="card size-global">' +
+    $('#catEd').innerHTML = lookCard(K) + '<div class="card size-global">' +
       '<div class="size-global-head"><div><b>Единый размер для выбранных элементов</b><p class="hint">Включите настройку, укажите размер ниже, затем в нужных разделах включите выбор элементов и отметьте конкретные строки комплекта. Общий размер заменит размеры только у отмеченных строк.</p></div>' +
       '<label class="chk"><input type="checkbox" name="sameSizeAll"' + (sameSizeAll ? ' checked' : '') + '> Включить общий размер</label></div>' +
       (sameSizeAll ? '<div class="size-global-field">' + field('commonSize', 'Общий размер для отмеченных элементов', commonSize, { wide:true, ph:'Например: 100 × 50 × 5 см' }) +
@@ -261,7 +293,11 @@
           (openCats[c.id] ? '<div class="mods">' + its.map(function (m) {
             var gi = K.items.indexOf(m);
             var addon = c.calc === false || c.id === 'accessories';
-            return '<div class="mod" data-gi="' + gi + '"><div class="ph">' + modThumb(m.img) + '</div>' +
+            return '<div class="mod" data-gi="' + gi + '"><div class="ph">' + modThumb(m.img) +
+              (m.studio === true || (LX && LX.code(m.img)) ? '<i class="st" title="Студийное фото">студия</i>' : '') + '</div>' +
+              '<div class="mup"><label class="btn line xs" title="Заменить основное фото">Заменить<input type="file" accept="image/*" data-up="replace" hidden></label>' +
+              '<label class="btn line xs" title="Дополнительные фото: углы, детали, фактура (видны в карточке модели)">+ Фото<input type="file" accept="image/*" multiple data-up="photos" hidden></label></div>' +
+              photoStrip(m) +
               '<input name="code" value="' + esc(m.code) + '" title="Артикул" placeholder="Артикул">' +
               '<input name="mname" value="' + esc(m.name || '') + '" title="Название (необязательно)" placeholder="Название">' +
               '<input name="msize" value="' + esc(m.size || '') + '" title="Размер (необязательно)" placeholder="Размер">' +
@@ -279,6 +315,9 @@
     if (sharedInput) K.commonSize = sharedInput.value.trim();
     if (K.commonSize == null) K.commonSize = '';
     K.granite = $('#catGranite').value.trim();
+    var lf = $('#catEd [name=lxFrames]');
+    if (lf) K.look = { studio: $('#catEd [name=lxStudio]').checked, frames: lf.checked, details: $('#catEd [name=lxDetails]').checked,
+      motion: $('#catEd [name=lxMotion]').value, stage: $('#catEd [name=lxStage]').value };
     $$('#catEd .catc').forEach(function (el) {
       var c = K.categories[+el.dataset.ci], v = function (n) { var i = $('[name=' + n + ']', el); return i ? i.value.trim() : ''; };
       c.name = v('name') || 'Раздел'; c.short = v('short'); c.inc = v('inc'); c.desc = v('desc');
@@ -318,9 +357,9 @@
     if (inp.name === 'zoom') {
       var card = inp.closest('.catc'), preview = card && card.querySelector('.cov .ph img'), out = card && card.querySelector('[data-zoom-label]');
       var zoom = Math.max(0.8, Math.min(2.2, Number(inp.value) || 1));
-      if (preview) preview.style.transform = 'scale(' + zoom + ')';
-      if (out) out.textContent = Math.round(zoom * 100) + '%';
       var category = C.catalog && C.catalog.categories[+(card && card.dataset.ci)];
+      if (preview) preview.style.transform = 'scale(' + coverView(category && category.cover && category.cover.img, zoom).zoom + ')';
+      if (out) out.textContent = Math.round(zoom * 100) + '%';
       if (category) { category.cover = category.cover || {}; category.cover.zoom = zoom; }
       return;
     }
@@ -370,24 +409,47 @@
       K.items = K.items.filter(function (x) { return x.cat !== c.id; }); K.categories.splice(ci, 1);
     }
     if (a === 'm-del') { var gi = +b.closest('.mod').dataset.gi; if (!confirm('Удалить модель ' + K.items[gi].code + '?')) return; K.items.splice(gi, 1); }
-    if (a === 'as-cover') { var it = K.items[+b.closest('.mod').dataset.gi]; c.cover = c.cover || {}; c.cover.img = it.img; toast('Обложка выбрана — не забудьте «Сохранить»'); }
+    if (a === 'as-cover') {
+      var it = K.items[+b.closest('.mod').dataset.gi]; c.cover = c.cover || {}; c.cover.img = it.img;
+      if (it.studio === true) c.cover.studio = true; else delete c.cover.studio;
+      toast('Обложка выбрана — не забудьте «Сохранить»');
+    }
+    if (a === 'ph-del') {
+      var pm = K.items[+b.closest('.mod').dataset.gi], pi = +b.closest('[data-pi]').dataset.pi;
+      if (pm && Array.isArray(pm.photos)) { pm.photos.splice(pi, 1); if (!pm.photos.length) delete pm.photos; }
+    }
     drawCatalog();
   });
   $('#catEd').addEventListener('change', function (e) {
     var inp = e.target; if (!inp.dataset.up) return;
     readCatalog();
     var K = C.catalog, el = inp.closest('.catc'), c = K.categories[+el.dataset.ci], files = [].slice.call(inp.files || []);
+    var kind = inp.dataset.up, mod = inp.closest('.mod'), it = mod ? K.items[+mod.dataset.gi] : null;
     inp.value = ''; if (!files.length) return;
-    toast('Загружаем ' + files.length + ' фото…');
+    if (kind === 'replace') files = files.slice(0, 1);
+    var studioOn = !!LX && kind !== 'photos' && !(K.look && K.look.studio === false), raw = 0;
+    toast((studioOn ? 'Студийная обработка и загрузка: ' : 'Загружаем ') + files.length + ' фото…');
     var prefix = (c.short || c.name || 'M').trim().charAt(0).toUpperCase();
     files.reduce(function (p, f) {
-      return p.then(function () { return compress(f); }).then(function (data) { return api('/api/upload', { method: 'POST', body: { data: data } }); })
-        .then(function (d) {
+      return p.then(function () { return prepPhoto(f, studioOn ? (kind === 'cover' ? 'cover' : LX.frameOf(c.id)) : ''); })
+        .then(function (r) {
+          if (studioOn && !r.studio) raw++;
+          return api('/api/upload', { method: 'POST', body: { data: r.data } }).then(function (d) { return { d: d, r: r }; });
+        })
+        .then(function (x) {
+          var d = x.d, r = x.r;
           if (!d.ok) return toast(d.error || 'Фото не загрузилось', true);
-          if (inp.dataset.up === 'cover') { c.cover = c.cover || {}; c.cover.img = d.url; }
-          else { var n = K.items.filter(function (x) { return x.cat === c.id; }).length + 1; K.items.push({ code: prefix + '-' + n, cat: c.id, img: d.url }); openCats[c.id] = true; }
+          var mark = function (o) { if (r.studio) o.studio = true; else delete o.studio; if (r.focus) o.focus = r.focus; else delete o.focus; };
+          if (kind === 'cover') { c.cover = c.cover || {}; c.cover.img = d.url; if (r.studio) c.cover.studio = true; else delete c.cover.studio; }
+          else if (kind === 'replace' && it) { it.img = d.url; mark(it); }
+          else if (kind === 'photos' && it) { it.photos = (Array.isArray(it.photos) ? it.photos : []).concat(d.url).slice(0, 12); }
+          else { var n = K.items.filter(function (y) { return y.cat === c.id; }).length + 1, nm = { code: prefix + '-' + n, cat: c.id, img: d.url }; mark(nm); K.items.push(nm); openCats[c.id] = true; }
         });
-    }, Promise.resolve()).then(function () { drawCatalog(); return save('catalog', C.catalog); });
+    }, Promise.resolve()).then(function () {
+      drawCatalog();
+      if (raw) toast('У ' + raw + ' фото сложный фон — загружены без студийной обработки. Лучше всего подходит фото на однотонном фоне', true);
+      return save('catalog', C.catalog);
+    }).catch(function () { toast('Фото не загрузилось — попробуйте ещё раз', true); drawCatalog(); });
   });
   $('#addCat').addEventListener('click', function () {
     readCatalog();
@@ -411,6 +473,79 @@
       };
       fr.onerror = no; fr.readAsDataURL(file);
     });
+  }
+  /* «Студия» для новых фото каталога (как tools/media/studio.py, но в браузере): однотонный фон → прозрачность,
+     изделие в кадре раздела на белом фоне, мягкая контактная тень; точки для блока «Детали». */
+  function fileImage(file) {
+    return new Promise(function (ok, no) {
+      var u = URL.createObjectURL(file), im = new Image();
+      im.onload = function () { ok(im); setTimeout(function () { URL.revokeObjectURL(u); }, 1000); };
+      im.onerror = function () { URL.revokeObjectURL(u); no(new Error('image')); };
+      im.src = u;
+    });
+  }
+  function ellipseShadow(x, cx, cy, rx, ry, alpha) {
+    x.save(); x.translate(cx, cy); x.scale(rx, ry);
+    var g = x.createRadialGradient(0, 0, 0, 0, 0, 1);
+    g.addColorStop(0, 'rgba(28,24,20,' + alpha + ')'); g.addColorStop(0.55, 'rgba(28,24,20,' + (alpha * 0.45).toFixed(3) + ')'); g.addColorStop(1, 'rgba(28,24,20,0)');
+    x.fillStyle = g; x.beginPath(); x.arc(0, 0, 1, 0, Math.PI * 2); x.fill(); x.restore();
+  }
+  function studioPhoto(file, frameName) {
+    return fileImage(file).then(function (im) {
+      var iw = im.naturalWidth || im.width, ih = im.naturalHeight || im.height;
+      var k0 = Math.min(1, 1800 / Math.max(iw, ih)), w = Math.max(8, Math.round(iw * k0)), h = Math.max(8, Math.round(ih * k0));
+      var src = document.createElement('canvas'); src.width = w; src.height = h;
+      var sx = src.getContext('2d', { willReadFrequently: true }); sx.drawImage(im, 0, 0, w, h);
+      var id = sx.getImageData(0, 0, w, h), d = id.data, mk = LX.studioMask(d, w, h);
+      if (!mk.ok) return null;
+      // край без примеси старого фона: цвет = (пиксель − (1 − α)·фон) / α
+      var a = mk.a, bg = mk.bg, n = w * h, i, o, ch, al;
+      for (i = 0; i < n; i++) {
+        al = a[i]; o = i * 4;
+        if (al <= 0.004) { d[o + 3] = 0; continue; }
+        if (al < 0.996) for (ch = 0; ch < 3; ch++) d[o + ch] = Math.max(0, Math.min(255, Math.round((d[o + ch] - (1 - al) * bg[ch]) / al)));
+        d[o + 3] = Math.round(al * 255);
+      }
+      sx.putImageData(id, 0, 0);
+      var L = LX.studioLayout(mk.bbox, w, h, frameName, 2400, mk.touch);
+      var out = document.createElement('canvas'); out.width = L.W; out.height = L.H;
+      var x = out.getContext('2d');
+      x.fillStyle = '#fff'; x.fillRect(0, 0, L.W, L.H);
+      var cx = L.ox + L.ow / 2, depth = frameName === 'square' || frameName === 'wide';
+      if (depth) {
+        // объёмное изделие (комплекс, ограда): мягкая тень по силуэту
+        var sh = document.createElement('canvas'); sh.width = L.W; sh.height = L.H;
+        var s2 = sh.getContext('2d'); s2.drawImage(src, L.x, L.y, w * L.k, h * L.k);
+        s2.globalCompositeOperation = 'source-in'; s2.fillStyle = 'rgb(30,26,22)'; s2.fillRect(0, 0, L.W, L.H);
+        x.save(); x.globalAlpha = 0.16;
+        if ('filter' in x) x.filter = 'blur(' + Math.round(L.H * 0.012) + 'px)';
+        x.drawImage(sh, L.W * 0.012, L.H * 0.018); x.restore();
+      }
+      if (L.floor < L.H - 2) {
+        ellipseShadow(x, cx, L.floor, L.ow * 0.62, Math.max(6, L.H * 0.03), 0.13);   // рассеянная тень на полу
+        ellipseShadow(x, cx, L.floor, L.ow * 0.47, Math.max(3, L.H * 0.009), 0.42);  // контакт под основанием
+      }
+      x.imageSmoothingEnabled = true; x.imageSmoothingQuality = 'high';
+      x.drawImage(src, L.x, L.y, w * L.k, h * L.k);
+      // точки «Детали» по маске в кадре
+      var fw = 220, fh = Math.max(8, Math.round(fw * L.H / L.W)), fc = document.createElement('canvas'); fc.width = fw; fc.height = fh;
+      var fx = fc.getContext('2d', { willReadFrequently: true }), sc = fw / L.W;
+      fx.drawImage(src, L.x * sc, L.y * sc, w * L.k * sc, h * L.k * sc);
+      var fd = fx.getImageData(0, 0, fw, fh).data, fa = new Float32Array(fw * fh);
+      for (i = 0; i < fw * fh; i++) fa[i] = fd[i * 4 + 3] / 255;
+      var focus = LX.focusFromMask(fa, fw, fh, fd);
+      var q = 0.88, data = out.toDataURL('image/webp', q);
+      if (data.indexOf('data:image/webp') !== 0) { q = 0.9; data = out.toDataURL('image/jpeg', q); }
+      var jpg = data.indexOf('data:image/jpeg') === 0;
+      while (data.length * 0.75 > 3.2 * 1024 * 1024 && q > 0.5) { q -= 0.08; data = out.toDataURL(jpg ? 'image/jpeg' : 'image/webp', q); }
+      return { data: data, studio: true, focus: focus };
+    });
+  }
+  // фото для загрузки: студийная обработка (если включена и фон однотонный) или просто сжатие
+  function prepPhoto(file, frameName) {
+    var plain = function () { return compress(file).then(function (data) { return { data: data, studio: false }; }); };
+    if (!frameName || !LX) return plain();
+    return studioPhoto(file, frameName).then(function (r) { return r || plain(); }, plain);
   }
   /* ---------- тексты / контакты / telegram ---------- */
   var TEXTS = [['heroTitle', 'Заголовок первого экрана'], ['heroLead', 'Текст под заголовком', 1], ['worksLead', 'Подпись к «Примерам работ»', 1],
