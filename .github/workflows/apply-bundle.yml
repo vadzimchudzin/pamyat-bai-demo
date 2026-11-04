@@ -1,0 +1,48 @@
+name: Apply file bundle
+
+# Служебный шаг: файлы больше 64 КБ нельзя передать в ветку одним запросом через API-инструмент,
+# поэтому они приходят архивом tools/patches/*.tgz.b64 (tar.gz → base64) с контрольными суммами
+# tools/patches/SHA256SUMS. Workflow распаковывает архив поверх ветки, сверяет суммы,
+# удаляет архив и коммитит файлы. После применения этот workflow удаляется из ветки.
+on:
+  push:
+    branches: [feat/catalog-lux]
+    paths: [tools/patches/**]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: apply-bundle-${{ github.ref_name }}
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Unpack, verify, commit
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          b=(tools/patches/*.tgz.b64)
+          [ ${#b[@]} -gt 0 ] || { echo "no bundles"; exit 0; }
+          for f in "${b[@]}"; do
+            echo "== $f"; base64 -d "$f" | tar -tzvf -
+            if base64 -d "$f" | tar -tzf - | grep -Ev '^(js|css|tests|tools/media)/[A-Za-z0-9._/-]+$|^[a-z-]+\.html$'; then
+              echo "unexpected path in $f"; exit 1
+            fi
+            base64 -d "$f" | tar -xzf - --no-same-owner --no-same-permissions
+          done
+          sha256sum -c tools/patches/SHA256SUMS
+          list="$(awk '{print $2}' tools/patches/SHA256SUMS | tr '\n' ' ')"
+          rm -f tools/patches/*.tgz.b64 tools/patches/SHA256SUMS
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git status --short
+          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          git commit -q -m "Catalog lux: apply bundled files (>64 KB): $list"
+          for i in 1 2 3; do git pull -q --rebase origin "${{ github.ref_name }}" && git push -q origin "HEAD:${{ github.ref_name }}" && exit 0; sleep 5; done
+          exit 1
