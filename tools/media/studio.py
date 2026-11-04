@@ -125,6 +125,44 @@ def border_bg(D, tol):
     ids = ids[ids > 0]
     return np.isin(lab, ids)
 
+def light_parts(core, C, D, S):
+    """светлые детали изделия — белый мрамор, драпировки, светлые грани и фаски: всё, что отделено
+    от белого фона хоть каким-то краем (заливка от рамки кадра) и прилегает к изделию.
+    Не добавляем: просветы цвета фона (внутри оград, между столбиками), старые тени и дымку
+    на полу (под ними в том же столбце нет изделия) и всё ниже основания."""
+    h, w = core.shape
+    ffc = ~border_bg(D, 0.035)
+    ffc = cv2.morphologyEx(ffc.astype(np.uint8), cv2.MORPH_OPEN, disk(2 * S + 1)).astype(bool)
+    rows = np.where(core.any(1))[0]
+    if not len(rows): return np.zeros_like(core)
+    ffc[rows.max() + 1:] = False
+    extra = ffc & ~core
+    n, lab, st, _ = cv2.connectedComponentsWithStats(extra.astype(np.uint8), connectivity=8)
+    out = np.zeros_like(core)
+    if n <= 1: return out
+    ring = np.concatenate([C[0], C[-1], C[:, 0], C[:, -1]])
+    bgc = np.median(ring, axis=0).astype(np.float32)
+    near = cv2.dilate(core.astype(np.uint8), disk(3 * S + 2)).astype(bool)
+    under = np.flipud(np.maximum.accumulate(np.flipud(core.astype(np.uint8)), axis=0)).astype(bool)
+    thick = cv2.erode(extra.astype(np.uint8), disk(2 * S + 1)).astype(bool)
+    A = max(1, int(core.sum()))
+    for i in np.unique(lab[near & extra]):
+        if i <= 0 or st[i, cv2.CC_STAT_AREA] < A * 0.0005: continue
+        x, y, ww, hh = st[i, :4]
+        m = lab[y:y + hh, x:x + ww] == i
+        if float(thick[y:y + hh, x:x + ww][m].mean()) < 0.25: continue  # тонкий ореол по краю камня, а не деталь
+        dg = np.abs(C[y:y + hh, x:x + ww][m] - bgc).max(1)
+        if float(dg.mean()) < 0.06: continue                      # просвет цвета фона
+        if float(np.percentile(D[y:y + hh, x:x + ww][m], 90)) < 0.08:
+            # мягкая тень у основания: ни края, ни рисунка; светлые вставки, окружённые камнем, оставляем
+            y0, y1, x0, x1 = max(0, y - 1), min(h, y + hh + 1), max(0, x - 1), min(w, x + ww + 1)
+            mm = lab[y0:y1, x0:x1] == i
+            rg = cv2.dilate(mm.astype(np.uint8), np.ones((3, 3), np.uint8)).astype(bool) & ~mm
+            if float((~core[y0:y1, x0:x1][rg]).mean()) > 0.05: continue
+        if float(under[y:y + hh, x:x + ww][m].mean()) < 0.6: continue  # тень или дымка на полу
+        out[y:y + hh, x:x + ww] |= m
+    return out
+
 def matte(rgb, model, alpha_in=None, mode='hybrid'):
     """→ (fg RGB float 0..1 без примеси фона, alpha float 0..1)"""
     C = rgb.astype(np.float32) / 255.0
@@ -160,6 +198,7 @@ def matte(rgb, model, alpha_in=None, mode='hybrid'):
         core = cv2.morphologyEx(core.astype(np.uint8), cv2.MORPH_OPEN, disk(2 * S + 1)).astype(bool)
         core = clean_components(core)
         core = fill_holes(core, a0)
+        core = core | light_parts(core, C, D, S)
     coreu = core.astype(np.uint8)
     rb = max(2, int(round(8 * S)))
     inner = cv2.erode(coreu, disk(rb * 0.8)).astype(np.float32)
@@ -200,27 +239,52 @@ def enhance_stone(fg, a, strength=1.0, S=1.0):
     out = out + (ws * (Yt - Yn))[..., None]
     return np.clip(out, 0, 1)
 
+def cut_sides(m, x0, x1, y0, y1, n=2, thr=0.06):
+    """край кадра режет изделие, только если по краю идёт длинный срез (≥ thr размера изделия);
+    кончик угла или гравировки, коснувшийся края при старой обрезке, — не срез"""
+    bw, bh = max(1, x1 - x0), max(1, y1 - y0)
+    run = dict(l=m[:, :n].any(1).sum() / bh, r=m[:, -n:].any(1).sum() / bh,
+               t=m[:n].any(0).sum() / bw, b=m[-n:].any(0).sum() / bw)
+    return {k: bool(v >= thr) for k, v in run.items()}, {k: round(float(v), 3) for k, v in run.items()}
+
 def place(code, fg, a, frame):
     fr = FRAMES[frame]; W, H = fr['W'], fr['H']
     h, w = a.shape
-    ys, xs = np.where(a > 0.5)
+    m = a > 0.5
+    ys, xs = np.where(m)
     y0, y1, x0, x1 = ys.min(), ys.max() + 1, xs.min(), xs.max() + 1
     bw, bh = x1 - x0, y1 - y0
-    tol = max(2, int(0.004 * max(h, w)))
-    touch = dict(l=bool(x0 <= tol), r=bool(x1 >= w - tol), t=bool(y0 <= tol), b=bool(y1 >= h - tol))
+    touch, run = cut_sides(m, x0, x1, y0, y1)
     bleed_b = touch['b'] and kind(code) not in FLOOR_CATS
     k = min(fr['mw'] * W / bw, fr['mh'] * H / bh)
     ox = W / 2 - (x0 + bw / 2) * k
     oy = fr['floor'] * H - y1 * k
-    if touch['l'] != touch['r']:
-        k = min(0.9 * H / bh, 0.94 * W / bw)
+    if touch['l'] and touch['r']:
+        # срезано с обеих сторон — изделие во всю ширину кадра
+        k = W / bw; ox = -x0 * k; oy = fr['floor'] * H - y1 * k
+    elif touch['l'] != touch['r']:
+        # срез с одной стороны — изделие уходит за этот край, масштаб как у остальных
+        k = min(1.06 * fr['mw'] * W / bw, fr['mh'] * H / bh)
         ox = -x0 * k if touch['l'] else W - x1 * k
         oy = fr['floor'] * H - y1 * k
     if bleed_b:
         if not (touch['l'] or touch['r']):
-            k = min(fr['mw'] * W / bw, 0.92 * H / bh)
+            k = min(fr['mw'] * W / bw, 0.9 * H / bh)
             ox = W / 2 - (x0 + bw / 2) * k
         oy = H - y1 * k
+    if touch['t'] and not bleed_b:
+        oy = -y0 * k
+    # верхнее поле не меньше 4% кадра (кроме среза сверху и изделий во всю ширину)
+    top = y0 * k + oy
+    if not touch['t'] and not (touch['l'] and touch['r']) and top < 0.04 * H:
+        k2 = k * (y1 * k + oy - 0.04 * H) / max(1.0, bh * k)
+        if not (touch['l'] or touch['r']):
+            cx = (x0 + bw / 2) * k + ox; ox = cx - (x0 + bw / 2) * k2
+        elif touch['r'] and not touch['l']:
+            ox = W - x1 * k2
+        elif touch['l'] and not touch['r']:
+            ox = -x0 * k2
+        oy = (y1 * k + oy) - y1 * k2; k = k2
     M = np.float32([[k, 0, ox], [0, k, oy]])
     interp = cv2.INTER_AREA if k < 1 else cv2.INTER_CUBIC
     pm = fg * a[..., None]
@@ -228,7 +292,7 @@ def place(code, fg, a, frame):
     a_c = np.clip(cv2.warpAffine(a, M, (W, H), flags=interp, borderMode=cv2.BORDER_CONSTANT, borderValue=0), 0, 1)
     fg_c = np.clip(pm_c / np.maximum(a_c[..., None], 1e-3), 0, 1)
     info = dict(depth=kind(code) in 'KO', k=float(k), bbox=[float((x0 * k + ox) / W), float((y0 * k + oy) / H), float((x1 * k + ox) / W), float((y1 * k + oy) / H)],
-                touch=touch, bleed_b=bool(bleed_b))
+                touch=touch, run=run, bleed_b=bool(bleed_b))
     return fg_c, a_c, info
 
 def shadow(a_c, info):

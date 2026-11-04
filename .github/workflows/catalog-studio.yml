@@ -104,7 +104,7 @@ jobs:
           cp /tmp/media/sm/*.webp assets/catalog/sm/
           python tools/media/studio.py manifest assets/catalog /tmp/media
           mkdir -p tools/media/log
-          { echo "run ${{ github.run_id }} $(date -u +%FT%TZ)  studio s1 (ISNet + tools/media/studio.py), source main@${SRC_SHA:0:7}";
+          { echo "run ${{ github.run_id }} $(date -u +%FT%TZ)  studio s2 (ISNet + tools/media/studio.py), source main@${SRC_SHA:0:7}";
             echo "images: $n";
             ls /tmp/media/*.webp | xargs -n1 basename | sort -V | tr '\n' ' '; echo;
             du -sh assets/catalog assets/catalog/md assets/catalog/sm; } > tools/media/log/studio-last-run.txt
