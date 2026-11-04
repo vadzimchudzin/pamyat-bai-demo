@@ -19,71 +19,86 @@ sc.render.film_transparent = True
 sc.view_settings.view_transform = 'Standard'; sc.view_settings.look = 'None'; sc.view_settings.exposure = spec.get('exposure', 0.0)
 sc.render.threads_mode = 'AUTO'
 sc.render.use_persistent_data = False
+REG = spec.get('region')  # [x0, y0, x1, y1] px от левого верхнего угла: крупный кадр (ограды 2000²) рендерится частями —
+if REG:                     # проходов много (5 гранитов), шумодав целого кадра не помещается в память; части сшивает post.py
+    sc.render.use_border = True; sc.render.use_crop_to_border = True
+    sc.render.border_min_x = REG[0] / RES; sc.render.border_max_x = REG[2] / RES
+    sc.render.border_min_y = 1 - REG[3] / RES; sc.render.border_max_y = 1 - REG[1] / RES
 
 def new_mat(name):
     m = bpy.data.materials.new(name); m.use_nodes = True; return m, m.node_tree.nodes, m.node_tree.links
 
-# ---------- гранит: общие «зёрна» + раскраска для каждого варианта (AOV g0..gN) ----------
+# ---------- гранит: фото-текстуры образцов (texsynth.py → бесшовные плитки), AOV g0..gN — альбедо каждого варианта ----------
 VARS = spec.get('variants', [g['id'] for g in GR])
 for k in range(len(VARS)):
     a = vl.aovs.add(); a.name = 'g%d' % k; a.type = 'COLOR'
+KIND = spec.get('kind', 'monument')
+PHOTO = KIND != 'fence'  # блеск/резьба с исходного фото — только у памятников (у оград фото нет)
+for nm, tp in (('pg', 'COLOR'), ('fw', 'VALUE'), ('cv', 'VALUE')) if PHOTO else ():
+    a = vl.aovs.add(); a.name = nm; a.type = tp
+TEX = spec.get('tex', {})  # id → {path, size_m}
+IMGS = {}
+def img_of(path, color='Non-Color'):
+    if path not in IMGS:
+        im = bpy.data.images.load(path); im.colorspace_settings.name = color; IMGS[path] = im
+    return IMGS[path]
 
-def granite_colors(n, l, gdef, r1, r2, mot):
-    rp = n.new('ShaderNodeValToRGB'); rp.color_ramp.interpolation = 'CONSTANT'
-    els = rp.color_ramp.elements
-    stops = gdef['grains']  # [[pos, [r,g,b]], ...]
-    els[0].position = 0.0; els[0].color = (*stops[0][1], 1)
-    els[1].position = stops[1][0]; els[1].color = (*stops[1][1], 1)
-    for pos, col in stops[2:]:
-        e = els.new(pos); e.color = (*col, 1)
-    l.new(r1, rp.inputs['Fac'])
-    sp = n.new('ShaderNodeMapRange'); sp.inputs['From Min'].default_value = 1 - gdef['speck'][0]; sp.inputs['From Max'].default_value = 1 - gdef['speck'][0] + 0.001
-    sp.clamp = True; l.new(r2, sp.inputs['Value'])
-    mx = n.new('ShaderNodeMix'); mx.data_type = 'RGBA'; mx.blend_type = 'MIX'
-    l.new(sp.outputs['Result'], mx.inputs['Factor']); l.new(rp.outputs['Color'], mx.inputs[6]); mx.inputs[7].default_value = (*gdef['speck'][1], 1)
-    mm = n.new('ShaderNodeMix'); mm.data_type = 'RGBA'; mm.blend_type = 'MULTIPLY'; mm.inputs['Factor'].default_value = 1.0
-    l.new(mx.outputs[2], mm.inputs[6]); l.new(mot, mm.inputs[7])
-    return mm.outputs[2]
+def granite_tex(n, l, vid, rnd, k, P, W3):
+    # трипланарная проекция в мировых координатах: одинаковая ориентация рисунка у всех деталей (стела повёрнута, тумба — нет)
+    t = TEX[vid]; acc = None
+    of = n.new('ShaderNodeVectorMath'); of.operation = 'SCALE'; l.new(rnd, of.inputs[0]); of.inputs['Scale'].default_value = 7.31 + 1.7 * k
+    sc_ = n.new('ShaderNodeVectorMath'); sc_.operation = 'MULTIPLY_ADD'
+    l.new(P, sc_.inputs[0]); sc_.inputs[1].default_value = (1 / t['size_m'],) * 3; l.new(of.outputs[0], sc_.inputs[2])
+    sp_ = n.new('ShaderNodeSeparateXYZ'); l.new(sc_.outputs[0], sp_.inputs[0])
+    for ax, (u, v) in enumerate((('Y', 'Z'), ('X', 'Z'), ('X', 'Y'))):
+        cb = n.new('ShaderNodeCombineXYZ'); l.new(sp_.outputs[u], cb.inputs[0]); l.new(sp_.outputs[v], cb.inputs[1])
+        tx = n.new('ShaderNodeTexImage'); tx.image = img_of(t['path']); tx.interpolation = 'Cubic'; tx.extension = 'REPEAT'
+        l.new(cb.outputs[0], tx.inputs['Vector'])
+        mw = n.new('ShaderNodeVectorMath'); mw.operation = 'SCALE'; l.new(tx.outputs['Color'], mw.inputs[0]); l.new(W3[ax], mw.inputs['Scale'])
+        if acc is None: acc = mw.outputs[0]
+        else:
+            ad = n.new('ShaderNodeVectorMath'); ad.operation = 'ADD'; l.new(acc, ad.inputs[0]); l.new(mw.outputs[0], ad.inputs[1]); acc = ad.outputs[0]
+    return acc
 
-def mat_granite(name, rough=0.1, extra=None):
-    m, n, l = new_mat(name); p = n['Principled BSDF']; out = n['Material Output']
-    tc = n.new('ShaderNodeTexCoord')
-    dn = n.new('ShaderNodeTexNoise'); dn.inputs['Scale'].default_value = 9; dn.inputs['Detail'].default_value = 3
-    l.new(tc.outputs['Object'], dn.inputs['Vector'])
-    dv = n.new('ShaderNodeVectorMath'); dv.operation = 'MULTIPLY_ADD'
-    l.new(dn.outputs['Color'], dv.inputs[0]); dv.inputs[1].default_value = (0.006, 0.006, 0.006); l.new(tc.outputs['Object'], dv.inputs[2])
-    vcache = {}; vorc = {}
-    def vor(scale, cw):
-        # клетки Вороного общие для всех вариантов с тем же масштабом; вес «скоплений» — свой у каждого гранита
-        if scale not in vorc:
-            v = n.new('ShaderNodeTexVoronoi'); v.inputs['Scale'].default_value = scale; l.new(dv.outputs[0], v.inputs['Vector'])
-            sp_ = n.new('ShaderNodeSeparateColor'); l.new(v.outputs['Color'], sp_.inputs[0]); vorc[scale] = sp_.outputs[0]
-        key = (scale, round(cw, 3))
-        if key not in vcache:
-            mixc = n.new('ShaderNodeMix'); mixc.data_type = 'FLOAT'; mixc.inputs['Factor'].default_value = cw
-            l.new(vorc[scale], mixc.inputs[2]); l.new(cm.outputs['Result'], mixc.inputs[3]); vcache[key] = mixc.outputs[0]
-        return vcache[key]
+def zero_aovs(n, l, cv=True):
+    if not PHOTO: return
+    for nm in ('pg', 'fw', 'cv') if cv else ('pg', 'fw'):
+        ao = n.new('ShaderNodeOutputAOV'); ao.aov_name = nm
+        if nm == 'pg': ao.inputs['Color'].default_value = (0, 0, 0, 1)
+        else: ao.inputs['Value'].default_value = 1.0 if nm == 'cv' else 0.0
+
+def mat_granite(name, rough=0.08, extra=None):
+    m, n, l = new_mat(name); p = n['Principled BSDF']
+    tc = n.new('ShaderNodeTexCoord'); oi = n.new('ShaderNodeObjectInfo')
+    rv = n.new('ShaderNodeCombineXYZ'); l.new(oi.outputs['Random'], rv.inputs[0])
+    rr_ = n.new('ShaderNodeMath'); rr_.operation = 'FRACT'; mul = n.new('ShaderNodeMath'); mul.operation = 'MULTIPLY'; mul.inputs[1].default_value = 7.13
+    l.new(oi.outputs['Random'], mul.inputs[0]); l.new(mul.outputs[0], rr_.inputs[0]); l.new(rr_.outputs[0], rv.inputs[1])
+    rz = n.new('ShaderNodeMath'); rz.operation = 'FRACT'; mz = n.new('ShaderNodeMath'); mz.operation = 'MULTIPLY'; mz.inputs[1].default_value = 3.71
+    l.new(oi.outputs['Random'], mz.inputs[0]); l.new(mz.outputs[0], rz.inputs[0]); l.new(rz.outputs[0], rv.inputs[2])
+    coord = tc.outputs['Object']
+    geo0 = n.new('ShaderNodeNewGeometry'); P = geo0.outputs['Position']
+    an = n.new('ShaderNodeVectorMath'); an.operation = 'ABSOLUTE'; l.new(geo0.outputs['Normal'], an.inputs[0])
+    pw = n.new('ShaderNodeVectorMath'); pw.operation = 'MULTIPLY'; l.new(an.outputs[0], pw.inputs[0]); l.new(an.outputs[0], pw.inputs[1])
+    pw2 = n.new('ShaderNodeVectorMath'); pw2.operation = 'MULTIPLY'; l.new(pw.outputs[0], pw2.inputs[0]); l.new(pw.outputs[0], pw2.inputs[1])
+    sw_ = n.new('ShaderNodeSeparateXYZ'); l.new(pw2.outputs[0], sw_.inputs[0])
+    s1 = n.new('ShaderNodeMath'); s1.operation = 'ADD'; l.new(sw_.outputs[0], s1.inputs[0]); l.new(sw_.outputs[1], s1.inputs[1])
+    s2 = n.new('ShaderNodeMath'); s2.operation = 'ADD'; l.new(s1.outputs[0], s2.inputs[0]); l.new(sw_.outputs[2], s2.inputs[1])
+    W3 = []
+    for i in range(3):
+        dv_ = n.new('ShaderNodeMath'); dv_.operation = 'DIVIDE'; l.new(sw_.outputs[i], dv_.inputs[0]); l.new(s2.outputs[0], dv_.inputs[1]); W3.append(dv_.outputs[0])
     mn = n.new('ShaderNodeTexNoise'); mn.inputs['Scale'].default_value = 3.0; mn.inputs['Detail'].default_value = 4
-    l.new(tc.outputs['Object'], mn.inputs['Vector'])
-    mr = n.new('ShaderNodeMapRange'); mr.inputs['From Min'].default_value = 0.3; mr.inputs['From Max'].default_value = 0.7
-    mr.inputs['To Min'].default_value = 0.86; mr.inputs['To Max'].default_value = 1.12; l.new(mn.outputs['Fac'], mr.inputs['Value'])
-    mot = n.new('ShaderNodeCombineColor'); l.new(mr.outputs['Result'], mot.inputs[0]); l.new(mr.outputs['Result'], mot.inputs[1]); l.new(mr.outputs['Result'], mot.inputs[2])
-    # скопления минералов: низкочастотный шум подмешивается к случайному значению зерна
-    cn = n.new('ShaderNodeTexNoise'); cn.inputs['Scale'].default_value = spec.get('cluster_scale', 24); cn.inputs['Detail'].default_value = 2
-    l.new(dv.outputs[0], cn.inputs['Vector'])
-    cm = n.new('ShaderNodeMapRange'); cm.inputs['From Min'].default_value = 0.32; cm.inputs['From Max'].default_value = 0.68; l.new(cn.outputs['Fac'], cm.inputs['Value'])
-    CW = spec.get('cluster', 0.3)
-    dcol = dfac = None
+    l.new(coord, mn.inputs['Vector'])
+    dcol = dfac = fm = None
     if extra:
         mp = n.new('ShaderNodeMapping'); mp.inputs['Scale'].default_value = (1 / extra['sw'], 1 / extra['sh'], 1)
-        l.new(tc.outputs['Object'], mp.inputs['Vector'])
+        l.new(coord, mp.inputs['Vector'])
         geo = n.new('ShaderNodeNewGeometry')
         dt = n.new('ShaderNodeVectorMath'); dt.operation = 'DOT_PRODUCT'; dt.inputs[1].default_value = (0, -1, 0)
-        l.new(geo.outputs['Normal'], dt.inputs[0])
-        fm = n.new('ShaderNodeMapRange'); fm.inputs['From Min'].default_value = 0.55; fm.inputs['From Max'].default_value = 0.85
+        l.new(geo.outputs['True Normal'], dt.inputs[0])
+        fm = n.new('ShaderNodeMapRange'); fm.inputs['From Min'].default_value = 0.80; fm.inputs['From Max'].default_value = 0.93
         l.new(dt.outputs['Value'], fm.inputs['Value'])
         if extra.get('relief'):
-            ri = n.new('ShaderNodeTexImage'); ri.image = bpy.data.images.load(extra['relief']); ri.image.colorspace_settings.name = 'Non-Color'
+            ri = n.new('ShaderNodeTexImage'); ri.image = img_of(extra['relief'])
             ri.extension = 'EXTEND'; ri.interpolation = 'Cubic'; l.new(mp.outputs[0], ri.inputs['Vector'])
             bs = n.new('ShaderNodeMath'); bs.operation = 'MULTIPLY'; bs.inputs[1].default_value = extra.get('bump', 1.0)
             l.new(fm.outputs['Result'], bs.inputs[0])
@@ -91,18 +106,44 @@ def mat_granite(name, rough=0.1, extra=None):
             l.new(bs.outputs[0], bp.inputs['Strength']); l.new(ri.outputs['Color'], bp.inputs['Height'])
             l.new(bp.outputs['Normal'], p.inputs['Normal']); l.new(bp.outputs['Normal'], p.inputs['Coat Normal'])
         if extra.get('decor'):
-            di = n.new('ShaderNodeTexImage'); di.image = bpy.data.images.load(extra['decor']); di.extension = 'CLIP'
+            di = n.new('ShaderNodeTexImage'); di.image = img_of(extra['decor'], 'sRGB'); di.extension = 'CLIP'
             l.new(mp.outputs[0], di.inputs['Vector'])
             df = n.new('ShaderNodeMath'); df.operation = 'MULTIPLY'; l.new(di.outputs['Alpha'], df.inputs[0]); l.new(fm.outputs['Result'], df.inputs[1])
             dg = n.new('ShaderNodeMix'); dg.data_type = 'RGBA'; dg.blend_type = 'MULTIPLY'; dg.inputs['Factor'].default_value = 1.0
             l.new(di.outputs['Color'], dg.inputs[6]); dg.inputs[7].default_value = (*extra.get('decor_gain', (0.95, 0.95, 0.95)), 1)
             dcol, dfac = dg.outputs[2], df.outputs[0]
-            rmx = n.new('ShaderNodeMix'); rmx.data_type = 'FLOAT'
+        if extra.get('photo'):
+            # «блеск с фото»: отражения и резьба исходного фото (чёрный полированный камень) на лицевой грани стелы —
+            # в post.py заменяют собственные блики рендера на лицевой грани (fw), во всех гранитах
+            ph = n.new('ShaderNodeTexImage'); ph.image = img_of(extra['photo'], 'sRGB'); ph.extension = 'CLIP'; ph.interpolation = 'Cubic'
+            l.new(mp.outputs[0], ph.inputs['Vector'])
+            sb = n.new('ShaderNodeMix'); sb.data_type = 'RGBA'; sb.blend_type = 'SUBTRACT'; sb.inputs['Factor'].default_value = 1.0
+            l.new(ph.outputs['Color'], sb.inputs[6]); sb.inputs[7].default_value = (*([extra.get('photo_floor', 0.004)] * 3), 1)
+            gn = n.new('ShaderNodeMix'); gn.data_type = 'RGBA'; gn.blend_type = 'MULTIPLY'; gn.inputs['Factor'].default_value = 1.0; gn.clamp_result = True
+            l.new(sb.outputs[2], gn.inputs[6]); gn.inputs[7].default_value = (*([extra.get('photo_gain', 1.0)] * 3), 1)
+            w = n.new('ShaderNodeMath'); w.operation = 'MULTIPLY'; l.new(fm.outputs['Result'], w.inputs[0]); l.new(ph.outputs['Alpha'], w.inputs[1])
+            if dfac is not None:
+                inv = n.new('ShaderNodeMath'); inv.operation = 'SUBTRACT'; inv.inputs[0].default_value = 1.0; l.new(dfac, inv.inputs[1])
+                w2 = n.new('ShaderNodeMath'); w2.operation = 'MULTIPLY'; l.new(w.outputs[0], w2.inputs[0]); l.new(inv.outputs[0], w2.inputs[1]); w = w2
+            pc = n.new('ShaderNodeMix'); pc.data_type = 'RGBA'; pc.blend_type = 'MULTIPLY'; pc.inputs['Factor'].default_value = 1.0
+            l.new(gn.outputs[2], pc.inputs[6]); l.new(w.outputs[0], pc.inputs[7])
+            ao = n.new('ShaderNodeOutputAOV'); ao.aov_name = 'pg'; l.new(pc.outputs[2], ao.inputs['Color'])
+            ao = n.new('ShaderNodeOutputAOV'); ao.aov_name = 'fw'; l.new(w.outputs[0], ao.inputs['Value'])
+            if extra.get('cav'):
+                cvi = n.new('ShaderNodeTexImage'); cvi.image = img_of(extra['cav']); cvi.extension = 'EXTEND'; cvi.interpolation = 'Cubic'
+                l.new(mp.outputs[0], cvi.inputs['Vector'])
+                cm_ = n.new('ShaderNodeMix'); cm_.data_type = 'FLOAT'; l.new(w.outputs[0], cm_.inputs['Factor']); cm_.inputs[2].default_value = 1.0
+                l.new(cvi.outputs['Color'], cm_.inputs[3])
+                ao = n.new('ShaderNodeOutputAOV'); ao.aov_name = 'cv'; l.new(cm_.outputs[0], ao.inputs['Value'])
+            else:
+                ao = n.new('ShaderNodeOutputAOV'); ao.aov_name = 'cv'; ao.inputs['Value'].default_value = 1.0
+        else:
+            zero_aovs(n, l)
+    else:
+        zero_aovs(n, l)
     cols = []
     for k, vid in enumerate(VARS):
-        gdef = next(g for g in GR if g['id'] == vid)
-        cw = gdef.get('cluster', CW)
-        c = granite_colors(n, l, gdef, vor(gdef['scale'][0], cw), vor(gdef['scale'][1], cw), mot.outputs[0])
+        c = granite_tex(n, l, vid, rv.outputs[0], k, P, W3)
         if dcol is not None:
             mxd = n.new('ShaderNodeMix'); mxd.data_type = 'RGBA'; l.new(dfac, mxd.inputs['Factor']); l.new(c, mxd.inputs[6]); l.new(dcol, mxd.inputs[7]); c = mxd.outputs[2]
         cols.append(c)
@@ -128,15 +169,26 @@ def mat_gravel():
     l.new(rp.outputs['Color'], p.inputs['Base Color']); p.inputs['Roughness'].default_value = 0.5
     for k in range(len(VARS)):
         ao = n.new('ShaderNodeOutputAOV'); ao.aov_name = 'g%d' % k; l.new(rp.outputs['Color'], ao.inputs['Color'])
+    zero_aovs(n, l)
     return m
 
 def mat_ground():
     m, n, l = new_mat('Ground'); p = n['Principled BSDF']; p.inputs['Base Color'].default_value = (0.8, 0.8, 0.8, 1); p.inputs['Roughness'].default_value = 0.9
     for k in range(len(VARS)):
         ao = n.new('ShaderNodeOutputAOV'); ao.aov_name = 'g%d' % k; ao.inputs['Color'].default_value = (0.8, 0.8, 0.8, 1)
+    zero_aovs(n, l)
     return m
 
-GM = mat_granite('Granite', spec.get('rough', 0.1)); GV = mat_gravel(); GD = mat_ground()
+def mat_metal():
+    # кованые вставки оград: чёрная окраска по металлу, одинаковая во всех гранитах
+    m, n, l = new_mat('Iron'); p = n['Principled BSDF']; c = (0.022, 0.022, 0.021, 1)
+    p.inputs['Base Color'].default_value = c; p.inputs['Roughness'].default_value = 0.3; p.inputs['Metallic'].default_value = 0.0
+    for k in range(len(VARS)):
+        ao = n.new('ShaderNodeOutputAOV'); ao.aov_name = 'g%d' % k; ao.inputs['Color'].default_value = c
+    zero_aovs(n, l)
+    return m
+
+GM = mat_granite('Granite', spec.get('rough', 0.08)); GV = mat_gravel(); GD = mat_ground()
 
 def link(ob):
     sc.collection.objects.link(ob); return ob
@@ -156,66 +208,73 @@ def box(name, sx, sy, sz, cx, cy_, z0, mat, bw=0.0025):
     smooth(ob)
     return ob
 
-# ---------- стела ----------
-S = spec['stela']; SW = S['w']; ST = S['t']; BEV = S.get('bevel', 0.003)
-cu = bpy.data.curves.new('StelaC', 'CURVE'); cu.dimensions = '2D'; cu.fill_mode = 'BOTH'
-cu.extrude = ST / 2 - BEV; cu.bevel_depth = BEV; cu.bevel_resolution = 3; cu.resolution_u = 1
-for poly in S['polys']:
-    pts = poly['pts']
-    sp = cu.splines.new('POLY'); sp.points.add(len(pts) - 1)
-    for i, (x, y) in enumerate(pts): sp.points[i].co = (x * SW, y * SW, 0, 1)
-    sp.use_cyclic_u = True
-SX = None
-if S.get('relief') or S.get('decor'):
-    SX = mat_granite('GraniteS', spec.get('rough', 0.1), {'sw': SW, 'sh': S['aspect'] * SW, 'relief': S.get('relief'), 'decor': S.get('decor'), 'bump': S.get('bump', 1.0), 'bump_dist': S.get('bump_dist', 0.004)})
-so = link(bpy.data.objects.new('Stela', cu)); so.data.materials.append(SX or GM)
-select_only(so); bpy.ops.object.convert(target='MESH'); so = bpy.context.view_layer.objects.active
-T = spec['tumba']; TW, TD, TH = T['w'], T['d'], T['h']
-sx0 = T.get('stela_x', -SW / 2)
-so.rotation_euler = (math.radians(90), 0, 0); so.location = (sx0, T.get('stela_y', 0.0), TH - 0.002)
-smooth(so, 30)
-# ---------- тумба ----------
-box('Tumba', TW, TD, TH, 0, 0, 0, GM)
-# ---------- цветник ----------
-B = spec.get('bed')
-if B:
-    BW, BL, BB, BH = B['w'], B['l'], B['b'], B['h']
-    y0 = -TD / 2 - B.get('gap', 0.0); yf = y0 - BL
-    box('BedL', BB, BL, BH, -BW / 2 + BB / 2, (y0 + yf) / 2, 0, GM)
-    box('BedR', BB, BL, BH, BW / 2 - BB / 2, (y0 + yf) / 2, 0, GM)
-    box('BedF', BW - 2 * BB - 0.001, BB, BH, 0, yf + BB / 2, 0, GM)
-    if B.get('back', False): box('BedB', BW - 2 * BB - 0.001, BB, BH, 0, y0 - BB / 2, 0, GM)
-    # крошка: базовая плоскость + камешки (geometry nodes)
-    ix0, ix1 = -BW / 2 + BB, BW / 2 - BB; iy0, iy1 = yf + BB, y0 - (BB if B.get('back', False) else 0)
-    zg = BH - B.get('drop', 0.014)
-    rk = bpy.data.meshes.new('rock'); bm = bmesh.new(); bmesh.ops.create_icosphere(bm, subdivisions=spec.get('rock_sub', 2), radius=0.0065)
-    import random; random.seed(7)
-    for v in bm.verts:
-        v.co.x *= 1.15 + 0.25 * random.random(); v.co.z *= 0.62; v.co *= 0.85 + 0.3 * random.random()
-    bm.to_mesh(rk); bm.free(); rock = bpy.data.objects.new('rock', rk); rk.materials.append(GV)
-    for p in rk.polygons: p.use_smooth = False
-    rcol = bpy.data.collections.new('hidden'); sc.collection.children.link(rcol); rcol.objects.link(rock); rcol.hide_render = True
-    me = bpy.data.meshes.new('gbase'); me.from_pydata([(ix0, iy0, zg), (ix1, iy0, zg), (ix1, iy1, zg), (ix0, iy1, zg)], [], [(0, 1, 2, 3)])
-    gb = link(bpy.data.objects.new('Gravel', me)); gb.data.materials.append(GV)
-    ng = bpy.data.node_groups.new('GravelGN', 'GeometryNodeTree')
-    ng.interface.new_socket(name='Geometry', in_out='INPUT', socket_type='NodeSocketGeometry')
-    ng.interface.new_socket(name='Geometry', in_out='OUTPUT', socket_type='NodeSocketGeometry')
-    N = ng.nodes; Lk = ng.links
-    gi = N.new('NodeGroupInput'); go = N.new('NodeGroupOutput'); jg = N.new('GeometryNodeJoinGeometry')
-    oi = N.new('GeometryNodeObjectInfo'); oi.inputs['Object'].default_value = rock
-    Lk.new(gi.outputs[0], jg.inputs[0])
-    for li, (dmin, dz, seed) in enumerate([(0.0080, 0.0, 1), (0.0095, 0.0032, 5)]):
-        dp = N.new('GeometryNodeDistributePointsOnFaces'); dp.distribute_method = 'POISSON'
-        dp.inputs['Distance Min'].default_value = dmin; dp.inputs['Density Max'].default_value = 60000; dp.inputs['Seed'].default_value = seed
-        rr = N.new('FunctionNodeRandomValue'); rr.data_type = 'FLOAT_VECTOR'; rr.inputs[0].default_value = (0, 0, 0); rr.inputs[1].default_value = (6.283, 6.283, 6.283); rr.inputs['Seed'].default_value = seed + 1
-        rs = N.new('FunctionNodeRandomValue'); rs.data_type = 'FLOAT'; rs.inputs[2].default_value = 0.55; rs.inputs[3].default_value = 1.3; rs.inputs['Seed'].default_value = seed + 2
-        ip = N.new('GeometryNodeInstanceOnPoints')
-        tr = N.new('GeometryNodeTranslateInstances'); tr.inputs['Translation'].default_value = (0, 0, dz)
-        Lk.new(gi.outputs[0], dp.inputs['Mesh']); Lk.new(dp.outputs['Points'], ip.inputs['Points'])
-        Lk.new(oi.outputs['Geometry'], ip.inputs['Instance']); Lk.new(rr.outputs[0], ip.inputs['Rotation']); Lk.new(rs.outputs[1], ip.inputs['Scale'])
-        Lk.new(ip.outputs['Instances'], tr.inputs['Instances']); Lk.new(tr.outputs['Instances'], jg.inputs[0])
-    Lk.new(jg.outputs[0], go.inputs[0])
-    md = gb.modifiers.new('gn', 'NODES'); md.node_group = ng
+if KIND == 'fence':  # ограды: геометрия из fencegeo.py по параметрам fencespec.py
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    import fencegeo
+    fencegeo.build(spec['fence'], {'GM': GM, 'MT': mat_metal(), 'link': link, 'smooth': smooth, 'box': box})
+else:
+    # ---------- стела ----------
+    S = spec['stela']; SW = S['w']; ST = S['t']; BEV = S.get('bevel', 0.003)
+    cu = bpy.data.curves.new('StelaC', 'CURVE'); cu.dimensions = '2D'; cu.fill_mode = 'BOTH'
+    cu.extrude = ST / 2 - BEV; cu.bevel_depth = BEV; cu.bevel_resolution = 3; cu.resolution_u = 1
+    for poly in S['polys']:
+        pts = poly['pts']
+        sp = cu.splines.new('POLY'); sp.points.add(len(pts) - 1)
+        for i, (x, y) in enumerate(pts): sp.points[i].co = (x * SW, y * SW, 0, 1)
+        sp.use_cyclic_u = True
+    SX = None
+    if S.get('relief') or S.get('decor') or S.get('photo'):
+        SX = mat_granite('GraniteS', spec.get('rough', 0.08), {'sw': SW, 'sh': S['aspect'] * SW, 'relief': S.get('relief'), 'decor': S.get('decor'),
+                         'photo': S.get('photo'), 'cav': S.get('cav'), 'photo_gain': S.get('photo_gain', 1.0), 'photo_floor': S.get('photo_floor', 0.004),
+                         'bump': S.get('bump', 1.0), 'bump_dist': S.get('bump_dist', 0.004)})
+    so = link(bpy.data.objects.new('Stela', cu)); so.data.materials.append(SX or GM)
+    select_only(so); bpy.ops.object.convert(target='MESH'); so = bpy.context.view_layer.objects.active
+    T = spec['tumba']; TW, TD, TH = T['w'], T['d'], T['h']
+    sx0 = T.get('stela_x', -SW / 2)
+    so.rotation_euler = (math.radians(90), 0, 0); so.location = (sx0, T.get('stela_y', 0.0), TH - 0.002)
+    smooth(so, 30)
+    # ---------- тумба ----------
+    box('Tumba', TW, TD, TH, 0, 0, 0, GM)
+    # ---------- цветник ----------
+    B = spec.get('bed')
+    if B:
+        BW, BL, BB, BH = B['w'], B['l'], B['b'], B['h']
+        y0 = -TD / 2 - B.get('gap', 0.0); yf = y0 - BL
+        box('BedL', BB, BL, BH, -BW / 2 + BB / 2, (y0 + yf) / 2, 0, GM)
+        box('BedR', BB, BL, BH, BW / 2 - BB / 2, (y0 + yf) / 2, 0, GM)
+        box('BedF', BW - 2 * BB - 0.001, BB, BH, 0, yf + BB / 2, 0, GM)
+        if B.get('back', False): box('BedB', BW - 2 * BB - 0.001, BB, BH, 0, y0 - BB / 2, 0, GM)
+        # крошка: базовая плоскость + камешки (geometry nodes)
+        ix0, ix1 = -BW / 2 + BB, BW / 2 - BB; iy0, iy1 = yf + BB, y0 - (BB if B.get('back', False) else 0)
+        zg = BH - B.get('drop', 0.014)
+        rk = bpy.data.meshes.new('rock'); bm = bmesh.new(); bmesh.ops.create_icosphere(bm, subdivisions=spec.get('rock_sub', 2), radius=0.0065)
+        import random; random.seed(7)
+        for v in bm.verts:
+            v.co.x *= 1.15 + 0.25 * random.random(); v.co.z *= 0.62; v.co *= 0.85 + 0.3 * random.random()
+        bm.to_mesh(rk); bm.free(); rock = bpy.data.objects.new('rock', rk); rk.materials.append(GV)
+        for p in rk.polygons: p.use_smooth = False
+        rcol = bpy.data.collections.new('hidden'); sc.collection.children.link(rcol); rcol.objects.link(rock); rcol.hide_render = True
+        me = bpy.data.meshes.new('gbase'); me.from_pydata([(ix0, iy0, zg), (ix1, iy0, zg), (ix1, iy1, zg), (ix0, iy1, zg)], [], [(0, 1, 2, 3)])
+        gb = link(bpy.data.objects.new('Gravel', me)); gb.data.materials.append(GV)
+        ng = bpy.data.node_groups.new('GravelGN', 'GeometryNodeTree')
+        ng.interface.new_socket(name='Geometry', in_out='INPUT', socket_type='NodeSocketGeometry')
+        ng.interface.new_socket(name='Geometry', in_out='OUTPUT', socket_type='NodeSocketGeometry')
+        N = ng.nodes; Lk = ng.links
+        gi = N.new('NodeGroupInput'); go = N.new('NodeGroupOutput'); jg = N.new('GeometryNodeJoinGeometry')
+        oi = N.new('GeometryNodeObjectInfo'); oi.inputs['Object'].default_value = rock
+        Lk.new(gi.outputs[0], jg.inputs[0])
+        for li, (dmin, dz, seed) in enumerate([(0.0080, 0.0, 1), (0.0095, 0.0032, 5)]):
+            dp = N.new('GeometryNodeDistributePointsOnFaces'); dp.distribute_method = 'POISSON'
+            dp.inputs['Distance Min'].default_value = dmin; dp.inputs['Density Max'].default_value = 60000; dp.inputs['Seed'].default_value = seed
+            rr = N.new('FunctionNodeRandomValue'); rr.data_type = 'FLOAT_VECTOR'; rr.inputs[0].default_value = (0, 0, 0); rr.inputs[1].default_value = (6.283, 6.283, 6.283); rr.inputs['Seed'].default_value = seed + 1
+            rs = N.new('FunctionNodeRandomValue'); rs.data_type = 'FLOAT'; rs.inputs[2].default_value = 0.55; rs.inputs[3].default_value = 1.3; rs.inputs['Seed'].default_value = seed + 2
+            ip = N.new('GeometryNodeInstanceOnPoints')
+            tr = N.new('GeometryNodeTranslateInstances'); tr.inputs['Translation'].default_value = (0, 0, dz)
+            Lk.new(gi.outputs[0], dp.inputs['Mesh']); Lk.new(dp.outputs['Points'], ip.inputs['Points'])
+            Lk.new(oi.outputs['Geometry'], ip.inputs['Instance']); Lk.new(rr.outputs[0], ip.inputs['Rotation']); Lk.new(rs.outputs[1], ip.inputs['Scale'])
+            Lk.new(ip.outputs['Instances'], tr.inputs['Instances']); Lk.new(tr.outputs['Instances'], jg.inputs[0])
+        Lk.new(jg.outputs[0], go.inputs[0])
+        md = gb.modifiers.new('gn', 'NODES'); md.node_group = ng
 
 # ---------- земля (ловец теней) ----------
 bpy.context.view_layer.update()
@@ -306,8 +365,9 @@ fo.file_slots.clear()
 def slot(name, sock):
     fo.file_slots.new(name); CL.new(sock, fo.inputs[name])
 slot('Image', rl.outputs['Image']); slot('Alpha', rl.outputs['Alpha']); slot('DL', dl); slot('GL', gl)
-slot('SC', rl.outputs['Shadow Catcher']); slot('DiffCol', rl.outputs['DiffCol'])
+slot('SC', rl.outputs['Shadow Catcher'])
 for k in range(len(VARS)): slot('g%d' % k, rl.outputs['g%d' % k])
+if PHOTO: slot('pg', rl.outputs['pg']); slot('fw', rl.outputs['fw']); slot('cv', rl.outputs['cv'])
 cmp = ct.nodes.new('CompositorNodeComposite'); CL.new(rl.outputs['Image'], cmp.inputs['Image'])
 sc.render.filepath = OUT + '.png'; sc.render.image_settings.file_format = 'PNG'; sc.render.image_settings.color_mode = 'RGBA'
 import time; t0 = time.time()
