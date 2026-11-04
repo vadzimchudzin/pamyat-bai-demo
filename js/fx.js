@@ -40,11 +40,31 @@
 
   /* ---------- голубь ---------- */
   var hero = document.querySelector('.hero'), sky = hero && hero.querySelector('.sky');
-  var flyEl = null, anim = null, timer = 0, heroVis = true, first = true;
+  var flyEl = null, anim = null, wing = null, timer = 0, heroVis = true, first = true;
+  /* Спрайт: 12 кадров взмаха (цикл с середины удара вниз) + кадр парения; рендер Blender — tools/dove/dove.py.
+     Если картинка не загрузилась — прежний векторный силуэт. */
+  var SPRITE = '/assets/img/dove-flap.webp?v=1', FR = 13, GLIDE = 12, CYC = 12, spr = 0; // spr: 0 — не грузили, 1 — грузится, 2 — готов, -1 — ошибка
+  function loadSprite() {
+    if (spr) return; spr = 1;
+    var im = new Image(); im.onload = function () { spr = 2; }; im.onerror = function () { spr = -1; }; im.src = SPRITE;
+  }
   var SVG = '<svg class="dove" viewBox="0 0 60 30" aria-hidden="true">' +
     '<path class="w1" fill="#f3f1ec" d="M37.4 21.2C36.4 14.6 33.8 8.4 27.6 3.2c.7 4.6 1.3 7.7 2.5 10.4-1.2-.2-2.3-.6-3.3-1 1.8 3.5 4.3 6.3 6.8 8.9z"/>' +
     '<path fill="#fff" d="M8 22.6l5.4.6c3.6-1.6 8.6-2.6 14.6-2.4 6 .2 11 1 15 .4 2-2 4-3.4 6.8-3.4 2.2 0 3.6 1.2 4.2 2.4l3 .8-3 .8c-.8 2.4-3.2 4.6-7 5.6-6 1.6-13 2-19.5 1.6-4.9-.3-9.1-1.2-12.5-2.4L9.5 28l-1.3-1 3.6-2.4z"/>' +
     '<path class="w2" fill="#fff" d="M33.2 21.6C31.2 14 27.2 7 19.2 1.4c1.5 4.6 2 8.1 3.5 11.1-1.3-.2-2.5-.5-3.7-1.1 1.9 3.8 3.8 7 5.5 10.5z"/></svg>';
+  function frameTf(i) { return 'translateX(' + (-i * 100 / FR).toFixed(4) + '%)'; }
+  // крылья: 3 серии по 2–4 взмаха, между ними парение 0,5–1,4 с; темп взмахов растёт со скоростью полёта
+  function wingPlan(sp) {
+    var seg = [], flap = 400 / Math.sqrt(sp), tot = 0, kf = [], t = 0;
+    for (var s = 0; s < 3; s++) {
+      for (var n = 2 + Math.floor(Math.random() * 3), j = 0; j < n; j++) for (var i = 0; i < CYC; i++) seg.push([i, flap / CYC]);
+      seg.push([GLIDE, 500 + Math.random() * 900]);
+    }
+    seg.forEach(function (x) { tot += x[1]; });
+    seg.forEach(function (x) { kf.push({ transform: frameTf(x[0]), offset: t / tot, easing: 'step-end' }); t += x[1]; });
+    kf.push({ transform: frameTf(GLIDE), offset: 1 });
+    return { kf: kf, dur: tot };
+  }
   function visibleSpan() {
     var hr = hero.getBoundingClientRect(), sr = sky.getBoundingClientRect();
     var l = Math.max(hr.left, sr.left, 0), r = Math.min(hr.right, sr.right, document.documentElement.clientWidth);
@@ -54,15 +74,20 @@
     var y = hr.top + Math.max(hh + 18, hr.height * .09) + Math.random() * hr.height * .14;
     return { a: (l - sr.left) / k, b: (r - sr.left) / k, y: (y - sr.top) / k, vh: Math.min(hr.height, sr.height) / k };
   }
-  function clearDove() { if (anim) { try { anim.cancel(); } catch (e) { } anim = null; } if (flyEl) flyEl.style.opacity = '0'; }
+  function stopWing() { if (wing) { try { wing.cancel(); } catch (e) { } wing = null; } }
+  function clearDove() { if (anim) { try { anim.cancel(); } catch (e) { } anim = null; } stopWing(); if (flyEl) flyEl.style.opacity = '0'; }
   function fly(force) {
     if (!sky || !sky.offsetWidth || (calm && !force)) return false;
     var o = opts('dove');
     if (!force && (!o.enabled || document.hidden || !heroVis)) return false;
     if (anim) { if (!force) return false; clearDove(); }
+    loadSprite();
+    var useSpr = spr !== -1;
+    if (flyEl && (flyEl.getAttribute('data-k') === 'spr') !== useSpr) { flyEl.remove(); flyEl = null; }
     if (!flyEl) {
       flyEl = document.createElement('div'); flyEl.className = 'dove-fly'; flyEl.setAttribute('aria-hidden', 'true');
-      flyEl.innerHTML = '<span class="dove-bob">' + SVG + '</span>';
+      flyEl.setAttribute('data-k', useSpr ? 'spr' : 'svg');
+      flyEl.innerHTML = useSpr ? '<span class="dove-sp"><i style="background-image:url(' + SPRITE + ')"></i></span>' : '<span class="dove-bob">' + SVG + '</span>';
       var c3 = sky.querySelector('.c3'); sky.insertBefore(flyEl, c3 || null); // за ближним облаком
     }
     var size = o.size || 26, op = Math.max(.05, Math.min(1, (o.opacity || 65) / 100)), sp = (o.speed || 100) / 100;
@@ -77,13 +102,16 @@
       kf.push({ transform: 'translate3d(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px,0)', opacity: i === 0 || i === N - 1 ? 0 : op * (i === 1 || i === N - 2 ? .7 : 1), offset: f });
     }
     try { anim = flyEl.animate(kf, { duration: dur, easing: 'linear', fill: 'none' }); } catch (e) { return false; }
+    var st = useSpr && flyEl.querySelector('.dove-sp>i');
+    if (st) try { var wp = wingPlan(sp); wing = st.animate(wp.kf, { duration: wp.dur, iterations: Infinity }); wing.currentTime = Math.random() * wp.dur; } catch (e) { wing = null; }
     flyEl.style.opacity = '';
-    anim.onfinish = function () { anim = null; plan(); };
+    anim.onfinish = function () { anim = null; stopWing(); plan(); };
     return true;
   }
   function plan(delay) {
     clearTimeout(timer); timer = 0;
     var o = opts('dove'); if (calm || !o.enabled || !sky) return;
+    loadSprite();
     var lo = Math.max(3, o.gapMin || 25), hi = Math.max(lo, o.gapMax || 45);
     var ms = delay != null ? delay : (first ? 6000 + Math.random() * 8000 : (lo + Math.random() * (hi - lo)) * 1000);
     timer = setTimeout(function () { timer = 0; if (fly(false)) first = false; else if (!anim) plan(5000); }, ms);
