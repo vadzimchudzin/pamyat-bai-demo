@@ -1,0 +1,34 @@
+name: Apply bundle (one-off)
+
+# Разовая распаковка двоичных файлов, переданных частями base64 (tools/bundle/p*.b64 → tar.gz):
+# фото образцов гранита tools/r3d/tex/*.jpg. Проверяет SHA256SUMS, удаляет части и коммитит результат.
+on:
+  push:
+    branches: [r3d-granites-fences]
+    paths:
+      - tools/bundle/SHA256SUMS
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Unpack, verify, commit
+        run: |
+          set -euo pipefail
+          ls tools/bundle
+          cat tools/bundle/p*.b64 | tr -d '\n\r ' | base64 -d > /tmp/b.tgz
+          tar -xzvf /tmp/b.tgz
+          sha256sum -c tools/bundle/SHA256SUMS
+          git rm -rq tools/bundle
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A tools/r3d/tex
+          git commit -q -m "3D catalog: granite sample photos (tools/r3d/tex) from bundle"
+          for i in 1 2 3 4; do git pull -q --rebase origin "${{ github.ref_name }}" && git push -q origin "HEAD:${{ github.ref_name }}" && exit 0; sleep 6; done
+          exit 1
