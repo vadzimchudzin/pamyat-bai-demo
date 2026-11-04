@@ -362,7 +362,38 @@ def finish(fg_c, a_c, Sh, code, full=True):
         out = out + (g * amp + sp * ws * 0.05)[..., None]
     return np.clip(out, 0, 1)
 
-def focus_points(a_c, info):
+def texture_point(o, m, avoid=(), Z=6.5, T=0.03, din=0.025):
+    """«Фактура камня»: участок с самой богатой резьбой / рисунком внутри изделия (линза Z×).
+    Фаски и контур по краю, трава цветника и места линз «грань» / «основание» не считаются;
+    гладкая полированная стела → None (берём самую «глубокую» точку)."""
+    H, W = m.shape
+    s = 400 / max(H, W); sw, sh = max(8, round(W * s)), max(8, round(H * s))
+    o = cv2.resize(o.astype(np.float32), (sw, sh), interpolation=cv2.INTER_AREA)
+    mm = (cv2.resize(m.astype(np.float32), (sw, sh), interpolation=cv2.INTER_AREA) > 0.5).astype(np.float32)
+    ys, xs = np.where(mm > 0)
+    if not len(ys): return None
+    y0, y1 = ys.min(), ys.max()
+    Y = o @ np.float32([0.2126, 0.7152, 0.0722])
+    gx = cv2.Sobel(Y, cv2.CV_32F, 1, 0, ksize=3) / 8; gy = cv2.Sobel(Y, cv2.CV_32F, 0, 1, ksize=3) / 8
+    G = np.sqrt(gx * gx + gy * gy)
+    dt = cv2.distanceTransform(np.pad(mm.astype(np.uint8), 1), cv2.DIST_L2, 5)[1:-1, 1:-1]
+    inner = (dt >= max(2.0, din * max(sw, sh))).astype(np.float32)
+    green = ((o[..., 1] - np.maximum(o[..., 0], o[..., 2])) > 0.06).astype(np.float32)
+    win = max(5, int(round(sw / Z * 0.7)) | 1); k = (win, win)
+    cov = cv2.blur(mm, k)
+    ge = cv2.blur(G * inner * (1 - green), k) / np.maximum(cov, 1e-3)
+    gf = cv2.blur(green * mm, k) / np.maximum(cov, 1e-3)
+    ok = (cov >= 0.88) & (gf < 0.15) & (mm > 0)
+    ok[int(y0 + (y1 - y0) * 0.82):] = False
+    yy, xx = np.mgrid[0:sh, 0:sw]
+    for ax, ay in avoid:
+        ok &= ((xx - ax * sw) ** 2 + (yy - ay * sh) ** 2) >= (0.9 * sw / Z) ** 2
+    if not ok.any(): return None
+    sc = np.where(ok, ge, -1.0)
+    i = int(np.argmax(sc)); y, x = divmod(i, sw)
+    return [round(x / sw, 4), round(y / sh, 4)] if sc.flat[i] >= T else None
+
+def focus_points(a_c, info, out=None):
     H, W = a_c.shape
     m = (a_c > 0.5).astype(np.uint8)
     ys, xs = np.where(m > 0)
@@ -373,7 +404,10 @@ def focus_points(a_c, info):
     up = np.zeros_like(dt); y_lim = int((by0 + (by1 - by0) * 0.6) * H); up[:y_lim] = dt[:y_lim]
     ty, tx = np.unravel_index(int(np.argmax(up)), up.shape)
     def pt(i): return [round(float(xs[i]) / W, 4), round(float(ys[i]) / H, 4)]
-    return dict(corner=pt(i_tr), base=pt(i_br), corner2=pt(i_tl), texture=[round(tx / W, 4), round(ty / H, 4)])
+    tex = [round(tx / W, 4), round(ty / H, 4)]
+    if out is not None:
+        tex = texture_point(out, m > 0, avoid=(pt(i_tr), pt(i_br))) or tex
+    return dict(corner=pt(i_tr), base=pt(i_br), corner2=pt(i_tl), texture=tex)
 
 def save_sizes(out, path_full, sizes=((None, 3840, 82), ('md', 1600, 84), ('sm', 640, 82))):
     im = Image.fromarray((np.clip(out, 0, 1) * 255 + 0.5).astype(np.uint8))
@@ -411,7 +445,7 @@ def process(src, code, outdir, model, frame=None, strength=1.0, mode=None):
     fg_c, a_c, info = place(code, fg, a, frame)
     Sh = shadow(a_c, info)
     out = finish(fg_c, a_c, Sh, code)
-    fp = focus_points(a_c, info)
+    fp = focus_points(a_c, info, out)
     sizes = save_sizes(out, os.path.join(outdir, code + '.webp'))
     info.update(frame=frame, focus=fp, sizes=sizes, sec=round(time.time() - t0, 1))
     return info
@@ -436,13 +470,30 @@ def manifest(cat_dir, parts_dir):
     def key(c):
         import re
         m = re.match(r'([A-Za-z-]+)(\d*)', c); return (m.group(1), int(m.group(2) or 0)) if m else (c, 0)
-    out = dict(v=2, studio='s1', sizes=dict(full=3840, md=1600, sm=640),
+    out = dict(v=2, studio='s2', sizes=dict(full=3840, md=1600, sm=640),
                items={k: items[k] for k in sorted(items, key=key)},
                frame={k: frames[k] for k in sorted(frames, key=key)},
                focus={k: focus[k] for k in sorted(focus, key=key)})
     with open(os.path.join(cat_dir, 'variants.json'), 'w') as fh:
         fh.write(json.dumps(out, ensure_ascii=False, separators=(',', ':')) + '\n')
     print('manifest items:', len(items), 'studio:', len(focus))
+
+def refocus(cat_dir):
+    """пересчёт точки «фактура» в variants.json по готовым фото (без повторной обработки):
+    изделие — всё, что заметно темнее белого фона студии"""
+    path = os.path.join(cat_dir, 'variants.json'); v = json.load(open(path))
+    n = 0
+    for code, f in v.get('focus', {}).items():
+        p = os.path.join(cat_dir, 'md', code + '.webp')
+        if not os.path.exists(p): continue
+        o = np.asarray(Image.open(p).convert('RGB')).astype(np.float32) / 255.0
+        m = cv2.morphologyEx(((1 - o.min(2)) > 0.12).astype(np.uint8), cv2.MORPH_OPEN, disk(1)).astype(bool)
+        tp = texture_point(o, m, avoid=((f[0], f[1]), (f[2], f[3])))
+        if tp: f[4], f[5] = round(tp[0], 3), round(tp[1], 3); n += 1
+    v['studio'] = 's2'
+    with open(path, 'w') as fh:
+        fh.write(json.dumps(v, ensure_ascii=False, separators=(',', ':')) + '\n')
+    print('refocus: texture by detail', n, 'of', len(v.get('focus', {})))
 
 if __name__ == '__main__':
     # studio.py run <out_dir> <list.txt>   — строки «путь=код[:кадр[:режим]]»
@@ -451,6 +502,8 @@ if __name__ == '__main__':
     cmd = sys.argv[1]
     if cmd == 'manifest':
         manifest(sys.argv[2], sys.argv[3]); sys.exit(0)
+    if cmd == 'refocus':
+        refocus(sys.argv[2]); sys.exit(0)
     outdir, lst = sys.argv[2], sys.argv[3]
     os.makedirs(outdir, exist_ok=True)
     res, bad = {}, []

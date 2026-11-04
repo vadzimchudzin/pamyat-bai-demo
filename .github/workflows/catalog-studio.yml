@@ -8,12 +8,9 @@ name: Catalog studio retouch
 # запуск не обрабатывает уже обработанное. Обложки разделов берутся с сайта.
 # На выходе: assets/catalog/<код>.webp (4K) + md/ (1600) + sm/ (640), обложки cover-*.webp,
 # variants.json v2 (кадр и точки «грань / основание / фактура» для лупы «Детали»).
+# Запуск вручную (Actions → Catalog studio retouch → Run workflow); новые фото из админки
+# обрабатываются прямо в браузере при загрузке.
 on:
-  push:
-    branches: [feat/catalog-lux]
-    paths:
-      - tools/media/studio.py
-      - .github/workflows/catalog-studio.yml
   workflow_dispatch:
 
 permissions:
