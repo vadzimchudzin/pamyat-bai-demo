@@ -66,3 +66,29 @@ test('каталог сайта по умолчанию совпадает с с
   const items = d.items.filter(i => i.cat === 'accessories');
   assert.deepEqual(items.map(i => [i.code, i.name, i.size, i.price, i.img]), A.ITEMS.map(i => [i.code, i.name, i.size, i.price, i.img]));
 });
+
+test('v2: группы-чипсы, группа позиции по артикулу, описание без серого и красного гранита', () => {
+  const v1 = clone(STORED); v1.addonsVersion = 1;
+  const cat = clone(A.CATEGORY); delete cat.groups;
+  cat.desc = 'Гранитные вазы, лампады, шары, столики и скамьи. Камень подбираем в тон памятнику: чёрный габбро-диабаз, серый или красный гранит.';
+  v1.categories.push(cat);
+  v1.items = v1.items.concat(A.ITEMS.map(i => { const o = clone(i); delete o.group; return o; }));
+  v1.items.push({ cat: 'accessories', code: 'А-9', name: 'Лампада', img: '/assets/catalog/x.webp' });
+  v1.items.push({ cat: 'accessories', code: 'B77', name: 'Своя позиция', group: '', img: '/assets/catalog/y.webp' });
+  const out = A.migrateCatalog(v1), acc = out.categories.find(c => c.id === 'accessories');
+  assert.equal(out.addonsVersion, 2);
+  assert.deepEqual(acc.groups.map(g => g.id), ['vases', 'lamps', 'tables', 'stands', 'bronze']);
+  assert.ok(!/серый|красный/i.test(acc.desc), acc.desc);
+  const g = {}; out.items.filter(i => i.cat === 'accessories').forEach(i => { g[i.code] = i.group; });
+  assert.deepEqual(g, { V1: 'vases', V2: 'vases', L1: 'lamps', L2: 'lamps', S1: 'stands', T1: 'tables', T2: 'tables', G1: 'stands', 'А-9': 'lamps', B77: '' });
+  assert.equal(out.items.filter(i => i.cat === 'accessories').length, A.ITEMS.length + 2, 'позиции не дублируются');
+  // свои группы и описание владельца не трогаем
+  const own = clone(out); own.addonsVersion = 1; own.categories.find(c => c.id === 'accessories').groups = [{ id: 'mine', name: 'Мои' }];
+  own.categories.find(c => c.id === 'accessories').desc = 'Своё описание';
+  const kept = A.migrateCatalog(own).categories.find(c => c.id === 'accessories');
+  assert.deepEqual(kept.groups, [{ id: 'mine', name: 'Мои' }]);
+  assert.equal(kept.desc, 'Своё описание');
+  // раздел удалён владельцем до v2 — не возвращается
+  const gone = clone(STORED); gone.addonsVersion = 1;
+  assert.deepEqual(A.migrateCatalog(gone).categories.map(c => c.id), STORED.categories.map(c => c.id));
+});
