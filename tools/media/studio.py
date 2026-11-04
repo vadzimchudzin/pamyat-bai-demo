@@ -522,4 +522,5 @@ if __name__ == '__main__':
     tag = os.environ.get('SHARD', '0')
     json.dump(res, open(os.path.join(outdir, 'studio-part-%s.json' % tag), 'w'), ensure_ascii=False)
     if bad: print('failed:', ' '.join(bad))
-    sys.exit(1 if len(bad) > max(2, len(res) // 10) else 0)
+    # любой сбой — шард неуспешен: commit-шаг workflow не запустится, частичного обновления каталога не будет
+    sys.exit(1 if bad else 0)
