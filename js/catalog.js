@@ -532,12 +532,13 @@
     e.preventDefault(); var h = a.getAttribute('href') || '';
     window.parent.postMessage({ pamyatClose: true, go: h.indexOf('#') > -1 ? h.slice(h.indexOf('#')) : '' }, '*');
   });
+  var RT = 0; // номер перехода: отложенное открытие раздела не перебивает более поздний переход
   function route() {
     if ($('#clb').classList.contains('on')) close();
-    var id = location.hash.slice(1);
+    var id = location.hash.slice(1), t = ++RT;
     // раздел с 3D-моделями: ждём манифест рендеров (до 0,7 с), чтобы не показывать сначала фото
     if (id && R3 && !R3.settled()) {
-      var went = false, go = function () { if (went) return; went = true; open(id); };
+      var went = false, go = function () { if (went || t !== RT || location.hash.slice(1) !== id) return; went = true; open(id); };
       setTimeout(go, 700); R3.load(go);
     } else if (id) open(id); else home();
     scrollTo(0, 0);
