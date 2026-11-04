@@ -1,0 +1,19 @@
+cpu 2
+               total        used        free      shared  buff/cache   available
+Mem:               7           0           5           0           1           6
+/home/runner/blender.tar.xz: FAILED open or read
+
+Running kernel seems to be up-to-date.
+
+Restarting services...
+
+Service restarts being deferred:
+ systemctl restart hosted-compute-agent.service
+
+No containers need to be restarted.
+
+No user sessions are running outdated binaries.
+
+No VM guests are running outdated hypervisor (qemu) binaries on this host.
+Blender 4.2.3 LTS (hash 0e22e4fcea03 built 2024-10-14 23:31:34)
+{"code": "E10", "decor": 0.337, "render": 124.4, "recon": "0.017777347937226295", "ok": true, "sec": 127.8}

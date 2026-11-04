@@ -1,0 +1,17 @@
+run 41802443026: ok 15, failed 0, render avg 106.4s max 150.4s
+in manifest: 15 codes
+A1 125.0s
+H5 150.4s
+B4 92.2s
+I12 122.0s decor 0.03
+C12 97.4s
+I26 122.1s decor 0.389
+C25 124.0s decor 0.035
+P1 116.7s
+D2 123.8s decor 0.088
+P5 107.6s
+D7 71.5s decor 0.187
+E5 60.7s decor 0.109
+E10 124.4s decor 0.337
+F5 58.6s
+F24 99.0s
