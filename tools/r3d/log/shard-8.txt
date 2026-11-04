@@ -1,6 +1,7 @@
 cpu 2
                total        used        free      shared  buff/cache   available
-Mem:               7           1           4           0           2           6
+Mem:               7           0           5           0           1           6
+/home/runner/blender.tar.xz: FAILED open or read
 
 Running kernel seems to be up-to-date.
 
@@ -15,23 +16,23 @@ No user sessions are running outdated binaries.
 
 No VM guests are running outdated hypervisor (qemu) binaries on this host.
 Blender 4.2.3 LTS (hash 0e22e4fcea03 built 2024-10-14 23:31:34)
-{"code": "B8", "render": 70.7, "recon": "0.013335805386304855", "ok": true, "sec": 72.9}
-{"code": "B18", "render": 68.7, "recon": "0.013336284086108208", "ok": true, "sec": 70.9}
-{"code": "B28", "render": 68.6, "recon": "0.013362851925194263", "ok": true, "sec": 70.8}
-{"code": "C9", "render": 69.4, "recon": "0.013561255298554897", "ok": true, "sec": 71.5}
-{"code": "C19", "render": 70.0, "recon": "0.013502744026482105", "ok": true, "sec": 72.1}
-{"code": "C29", "render": 68.2, "recon": "0.014333021827042103", "ok": true, "sec": 70.3}
-{"code": "D9", "decor": 0.1, "render": 71.6, "recon": "0.014402567408978939", "ok": true, "sec": 74.0}
-{"code": "E7", "decor": 0.261, "render": 70.4, "recon": "0.01656981185078621", "ok": true, "sec": 72.8}
-{"code": "F5", "decor": 0.0, "render": 68.3, "recon": "0.01438149344176054", "ok": true, "sec": 70.7}
-{"code": "F15", "decor": 0.0, "render": 69.6, "recon": "0.013560366816818714", "ok": true, "sec": 72.0}
-{"code": "F25", "decor": 0.0, "render": 70.6, "recon": "0.013520700857043266", "ok": true, "sec": 73.0}
-{"code": "F35", "decor": 0.0, "render": 68.5, "recon": "0.014360973611474037", "ok": true, "sec": 70.9}
-{"code": "H9", "render": 90.9, "recon": "0.011072698049247265", "ok": true, "sec": 93.5}
-{"code": "H19", "render": 90.4, "recon": "0.010829949751496315", "ok": true, "sec": 93.1}
-{"code": "H29", "render": 91.2, "recon": "0.010856205597519875", "ok": true, "sec": 93.8}
-{"code": "H39", "render": 88.3, "recon": "0.01124035008251667", "ok": true, "sec": 90.9}
-{"code": "I9", "decor": 0.0, "render": 93.0, "recon": "0.01094223465770483", "ok": true, "sec": 96.5}
-{"code": "I19", "decor": 0.0, "render": 90.0, "recon": "0.011531012132763863", "ok": true, "sec": 93.5}
-{"code": "I29", "decor": 0.004, "render": 91.5, "recon": "0.011462640017271042", "ok": true, "sec": 95.0}
-{"code": "P9", "render": 67.2, "recon": "0.015291058458387852", "ok": true, "sec": 69.3}
+{"code": "B8", "render": 57.2, "recon": "0.013335829600691795", "ok": true, "sec": 58.9}
+{"code": "B18", "render": 55.7, "recon": "0.013336211442947388", "ok": true, "sec": 57.4}
+{"code": "B28", "render": 56.8, "recon": "0.013362875208258629", "ok": true, "sec": 58.6}
+{"code": "C9", "render": 56.8, "recon": "0.013561415486037731", "ok": true, "sec": 58.6}
+{"code": "C19", "render": 57.2, "recon": "0.013502606190741062", "ok": true, "sec": 59.0}
+{"code": "C29", "render": 56.3, "recon": "0.014333079569041729", "ok": true, "sec": 58.1}
+{"code": "D9", "decor": 0.1, "render": 56.9, "recon": "0.014402385801076889", "ok": true, "sec": 58.9}
+{"code": "E7", "decor": 0.261, "render": 55.4, "recon": "0.01656963676214218", "ok": true, "sec": 57.3}
+{"code": "F5", "decor": 0.0, "render": 54.3, "recon": "0.014381605200469494", "ok": true, "sec": 56.3}
+{"code": "F15", "decor": 0.0, "render": 55.4, "recon": "0.013560456223785877", "ok": true, "sec": 57.4}
+{"code": "F25", "decor": 0.0, "render": 56.7, "recon": "0.013520898297429085", "ok": true, "sec": 58.7}
+{"code": "F35", "decor": 0.0, "render": 54.2, "recon": "0.014361237175762653", "ok": true, "sec": 56.1}
+{"code": "H9", "render": 72.5, "recon": "0.011072722263634205", "ok": true, "sec": 74.6}
+{"code": "H19", "render": 74.6, "recon": "0.010829917155206203", "ok": true, "sec": 76.7}
+{"code": "H29", "render": 74.4, "recon": "0.0108563844114542", "ok": true, "sec": 76.5}
+{"code": "H39", "render": 71.3, "recon": "0.011240573599934578", "ok": true, "sec": 73.4}
+{"code": "I9", "decor": 0.0, "render": 76.3, "recon": "0.010942046530544758", "ok": true, "sec": 79.2}
+{"code": "I19", "decor": 0.0, "render": 73.2, "recon": "0.011531051248311996", "ok": true, "sec": 76.0}
+{"code": "I29", "decor": 0.004, "render": 73.3, "recon": "0.011462608352303505", "ok": true, "sec": 76.1}
+{"code": "P9", "render": 54.0, "recon": "0.015290921553969383", "ok": true, "sec": 55.7}
