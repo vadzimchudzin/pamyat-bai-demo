@@ -23,6 +23,14 @@ def mask_of(img, loose=False):
         m[reg] = 1
     return m
 
+def mask_dark(img):
+    # только тёмный камень: без светлой тени под тумбой (по ней «верх тумбы» находился у её низа — H/I)
+    a = img.astype(np.float32); m = (a.max(axis=2) < 160).astype(np.uint8)
+    m = cv2.morphologyEx(m, cv2.MORPH_OPEN, np.ones((3, 3), np.uint8))
+    n, lab, st, _ = cv2.connectedComponentsWithStats(m, 8)
+    if n > 1: m = (lab == 1 + np.argmax(st[1:, cv2.CC_STAT_AREA])).astype(np.uint8)
+    return m
+
 def rows(m):
     h = m.shape[0]; L = np.full(h, -1); R = np.full(h, -1)
     for y in range(h):
@@ -86,9 +94,12 @@ def outline(path, code, ol_dir, dbg=True):
     if img is None: raise RuntimeError('cannot read ' + path)
     m = mask_of(img[:, :, ::-1]); k = 0.0
     if code[0] in 'HI':
-        k, xc = bottom_slope(m)
+        k, xc = bottom_slope(mask_dark(img[:, :, ::-1]))
         img, m = deshear(img, m, k, xc)
-    yt, (bl, br, yb) = split(m)
+    try:
+        yt, (bl, br, yb) = split(mask_dark(img[:, :, ::-1]))
+    except RuntimeError:
+        yt, (bl, br, yb) = split(m)
     if use_loose(code):
         ml = mask_of(img[:, :, ::-1], loose=True)
         s = cv2.bitwise_and(ml, cv2.dilate(m, np.ones((9, 9), np.uint8)) | ml_keep(ml, m))

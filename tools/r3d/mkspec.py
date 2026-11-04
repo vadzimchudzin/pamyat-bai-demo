@@ -19,6 +19,8 @@ def spec_for(code, ol_dir, out_prefix, res=1000, samples=20, **kw):
           'stela': {'w': SW, 't': 0.06, 'polys': o['polys'], 'aspect': o['aspect']},
           'tumba': {'w': TW, 'd': 0.20, 'h': 0.15, 'stela_x': stela_x},
           'bed': bed, 'cam': {'az': 25, 'el': 21, 'lens': 45, 'fill': 0.9}}
+    sp['stela']['photo'] = os.path.join(ol_dir, code + '-photo.png')  # блеск и резьба с фото (photo.py) — у всех стел
+    sp['stela']['cav'] = os.path.join(ol_dir, code + '-cav.png')
     if relief_family(code):
         sp['stela']['relief'] = os.path.join(ol_dir, code + '-relief.png')
         dp = os.path.join(ol_dir, code + '-decor.png')
