@@ -1,7 +1,6 @@
 cpu 2
                total        used        free      shared  buff/cache   available
-Mem:               7           0           5           0           1           6
-/home/runner/blender.tar.xz: FAILED open or read
+Mem:               7           1           5           0           1           6
 
 Running kernel seems to be up-to-date.
 
@@ -16,5 +15,23 @@ No user sessions are running outdated binaries.
 
 No VM guests are running outdated hypervisor (qemu) binaries on this host.
 Blender 4.2.3 LTS (hash 0e22e4fcea03 built 2024-10-14 23:31:34)
-{"code": "C12", "render": 97.4, "recon": "0.013754825107753277", "ok": true, "sec": 99.8}
-{"code": "I26", "decor": 0.389, "render": 122.1, "recon": "0.016782701015472412", "ok": true, "sec": 125.6}
+{"code": "B2", "render": 59.7, "recon": "0.013140052556991577", "ok": true, "sec": 61.5}
+{"code": "B12", "render": 57.0, "recon": "0.013584614731371403", "ok": true, "sec": 58.9}
+{"code": "B22", "render": 58.4, "recon": "0.013242687098681927", "ok": true, "sec": 60.1}
+{"code": "C3", "render": 57.9, "recon": "0.013623863458633423", "ok": true, "sec": 59.7}
+{"code": "C13", "render": 60.6, "recon": "0.013649373315274715", "ok": true, "sec": 62.5}
+{"code": "C23", "render": 60.1, "recon": "0.013599833473563194", "ok": true, "sec": 62.0}
+{"code": "D3", "decor": 0.019, "render": 60.9, "recon": "0.013557731173932552", "ok": true, "sec": 63.1}
+{"code": "E1", "decor": 0.167, "render": 59.6, "recon": "0.015227005816996098", "ok": true, "sec": 61.7}
+{"code": "E11", "decor": 0.126, "render": 59.5, "recon": "0.015102575533092022", "ok": true, "sec": 61.6}
+{"code": "F9", "decor": 0.0, "render": 59.4, "recon": "0.013531617820262909", "ok": true, "sec": 61.5}
+{"code": "F19", "decor": 0.0, "render": 59.9, "recon": "0.0134093863889575", "ok": true, "sec": 62.0}
+{"code": "F29", "decor": 0.0, "render": 59.2, "recon": "0.01357155479490757", "ok": true, "sec": 61.3}
+{"code": "H3", "render": 76.9, "recon": "0.011085250414907932", "ok": true, "sec": 79.2}
+{"code": "H13", "render": 79.0, "recon": "0.01070963405072689", "ok": true, "sec": 81.2}
+{"code": "H23", "render": 76.6, "recon": "0.010896886698901653", "ok": true, "sec": 78.9}
+{"code": "H33", "render": 77.4, "recon": "0.010864385403692722", "ok": true, "sec": 79.7}
+{"code": "I3", "decor": 0.0, "render": 80.1, "recon": "0.011040310375392437", "ok": true, "sec": 83.2}
+{"code": "I13", "decor": 0.0, "render": 77.5, "recon": "0.011832363903522491", "ok": true, "sec": 80.6}
+{"code": "I23", "decor": 0.047, "render": 81.3, "recon": "0.011394747532904148", "ok": true, "sec": 84.5}
+{"code": "P3", "render": 51.0, "recon": "0.01425462868064642", "ok": true, "sec": 52.8}
