@@ -239,3 +239,11 @@ html.lamp-off .lamp-src,html.lamp-off .lamp-shades,html.lamp-off .lamp-g,html.la
   #calc #q .radio:has(.qty) .p{margin-left:36px}
   #calc #q .radio .qty{margin-left:auto}
 }
+
+/* «По вашему эскизу»: .cc.lx .cover{color:inherit} перебивал золото подложки — линии рисовались кремовым по кремовому и были не видны */
+.cc.lx .cover.ind,.lx-stage.ind{color:var(--lx-gold-d,#8a6528)}
+.cc.lx .cover.ind .lx-sk{width:min(66%,240px)}
+.lx-sk .s{stroke-width:1.6}
+.lx-sk .g{stroke-width:1.9}
+.lx-sk .f{stroke-width:1.15;opacity:.8}
+.lx-sk .d{stroke-width:1;opacity:.7}
