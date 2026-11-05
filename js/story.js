@@ -1,9 +1,10 @@
-/* ПАМЯТЬ.БАЙ — «От разметки до сдачи»: кинематографичная покадровая сцена по скроллу.
-   • дробный кадр + кросс-фейд соседних кадров (плавно даже между рендерами)
-   • перераспределение скролла по «силе изменений» кадра (meta.flow): резкие места проходят медленнее
-   • инерция кадра (экспоненциальное сглаживание, не зависит от частоты экрана)
-   • приоритетная загрузка вокруг текущего кадра, декодирование заранее (ImageBitmap)
-   • «камера»: медленный наезд, дыхание, параллакс от мыши; зерно, виньетка, свет */
+/* ПАМЯТЬ.БАЙ — «От разметки до сдачи»: покадровый 3D-ролик (Blender/Cycles) по скроллу, v4.
+   Кадры хранятся «дельтами» (assets/story/meta.json, мобильная версия — assets/story-m):
+   • plate.webp — фото-фон участка; k####.webp — ключ каждые meta.key кадров (всё, чем кадр отличается от фона);
+   • f####.webp — атлас прямоугольников, изменившихся относительно предыдущего кадра.
+   Кадр собирается на внутреннем холсте 1:1 (без потерь резкости), на экран выводится с «камерой»
+   (медленный наезд, дыхание, параллакс) и кросс-фейдом к следующему кадру — плавно при любой скорости скролла.
+   Загрузка: по мере подхода к секции, приоритет — текущее место ролика; память — только окно вокруг кадра. */
 (function () {
   'use strict';
   var story = document.getElementById('story');
@@ -18,51 +19,33 @@
   var sticky = $('.story-sticky');
   var items = $$('.sc-item'), rail = $('.rail'), fill = $('.rail-line i');
   var chap = $('.sc-chapter'), num = $('.sc-n');
-
-  var list = window.STORY_FRAMES || null;
-  var N = list ? list.length : +story.dataset.count;
-  var base = small ? story.dataset.framesM : story.dataset.frames;
-  var LAST = 245;                                   // шкала data-f у глав
-  var scale = (N - 1) / LAST;
-  function url(i) { return list ? list[i] : base + 'f' + String(i).padStart(4, '0') + '.webp'; }
+  var base = (small ? story.dataset.framesM : story.dataset.frames) || '/assets/story/';
+  var N = Math.max(2, +story.dataset.count || 2), LAST = N - 1;
 
   /* ---------- HUD поверх кадра ---------- */
   story.classList.add('sp');
   var hud = document.createElement('div'); hud.className = 'sp-hud'; hud.setAttribute('aria-hidden', 'true');
-  hud.innerHTML = '<div class="sp-load"><i></i></div><div class="sp-light"></div><div class="sp-grain"></div>' +
+  hud.innerHTML = '<div class="sp-load"><i></i></div><div class="sp-light"></div>' +
     '<div class="sp-tag"><span class="sp-idx"><b>01</b></span><span class="sp-name">Разметка</span></div>' +
     '<div class="sp-time"><span class="sp-pct">0</span>%</div>' +
     '<div class="sp-bar">' + items.map(function (it) {
-      return '<i style="left:' + (+it.dataset.f / LAST * 100).toFixed(2) + '%"></i>';
+      return '<i style="left:' + (Math.min(1, +it.dataset.f / LAST) * 100).toFixed(2) + '%"></i>';
     }).join('') + '<b></b></div>';
   screen.appendChild(hud);
   var hudIdx = $('.sp-idx b', hud), hudName = $('.sp-name', hud), hudPct = $('.sp-pct', hud);
   var hudBar = $('.sp-bar b', hud), loadBar = $('.sp-load i', hud), ticks = $$('.sp-bar i', hud);
 
-  // зерно плёнки: маленькая текстура шума, генерируется один раз
-  (function () {
-    var c = document.createElement('canvas'); c.width = c.height = 160;
-    var g = c.getContext('2d'), d = g.createImageData(160, 160);
-    for (var i = 0; i < d.data.length; i += 4) { var v = Math.random() * 255 | 0; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
-    g.putImageData(d, 0, 0);
-    $('.sp-grain', hud).style.backgroundImage = 'url(' + c.toDataURL('image/png') + ')';
-  })();
-
-  /* ---------- карта скролл → кадр ---------- */
-  var flow = null, cum = null;
+  /* ---------- карта скролл → кадр (meta.flow: резкие места проходят медленнее) ---------- */
+  var cum = null;
   function buildMap(w) {
     if (!w || w.length < N - 1) w = null;
     cum = new Float64Array(N); var s = 0;
-    for (var i = 0; i < N - 1; i++) { cum[i] = s; s += w ? Math.max(.3, +w[Math.round(i / scale)] || 1) : 1; }
+    for (var i = 0; i < N - 1; i++) { cum[i] = s; s += w ? Math.max(.3, +w[i] || 1) : 1; }
     cum[N - 1] = s;
     for (i = 0; i < N; i++) cum[i] /= s;
-    flow = !!w;
   }
   buildMap(null);
-  if (!list) fetch(base + 'meta.json', { cache: 'force-cache' }).then(function (r) { return r.json(); })
-    .then(function (m) { if (m && m.flow && m.count === N) { buildMap(m.flow); kick(); } }).catch(function () {});
-  // HOLD: короткая пауза на первом и последнем кадре
-  var H0 = 0.035, H1 = 0.05;
+  var H0 = 0.03, H1 = 0.05;          // короткая пауза на первом и последнем кадре
   function progToFrame(p) {
     var q = Math.min(1, Math.max(0, (p - H0) / (1 - H0 - H1)));
     var lo = 0, hi = N - 1;
@@ -76,110 +59,203 @@
     return H0 + q * (1 - H0 - H1);
   }
 
-  /* ---------- загрузка по частям ----------
-     • пока секция далеко — ничего не грузим;
-     • на подходе (~1,5 экрана): кадры вокруг начала + грубая сетка (каждый 8-й) — сцена уже «живая» при быстром скролле;
-     • когда секция на экране: плотнее вокруг текущего кадра и постепенно все кадры;
-     • Save-Data / медленная сеть: только каждый 4-й кадр и узкое окно (кросс-фейд скрывает пропуски). */
-  var imgs = new Array(N), ok = new Uint8Array(N), bmp = new Array(N), loaded = 0, active = 0, started = false;
-  var conn = navigator.connection || {}, lite = !!conn.saveData || /(^|-)2g$|^3g$/.test(conn.effectiveType || '');
-  var MAXQ = lite ? 3 : small ? 4 : 6, WIN = small ? 14 : 9, near = false, seen = false;
-  var coarse = [], coarseStep = [];
-  [32, 16, 8, 4, 2, 1].forEach(function (st) { for (var i = 0; i < N; i += st) if (coarse.indexOf(i) < 0) { coarse.push(i); coarseStep.push(st); } });
-  if (coarse.indexOf(N - 1) < 0) { coarse.splice(1, 0, N - 1); coarseStep.splice(1, 0, 32); }
+  /* ---------- данные ролика ---------- */
+  var meta = null, K = 40, IW = 0, IH = 0;
+  var blob = {}, req = {}, dec = {}, decBusy = 0, total = 1, loadedN = 0, fails = 0;
+  var conn = navigator.connection || {}, lite = !!conn.saveData || /(^|-)2g$/.test(conn.effectiveType || '');
+  var MAXQ = lite ? 2 : small ? 6 : 8, AHEAD = small ? 36 : 48, MAXDEC = 3;
+  var started = false, near = false, visible = true, seen = false;
+  function pad4(i) { return String(i).padStart(4, '0'); }
+  function keyOf(i) { return i - i % K; }
+  function rectsOf(id) {
+    if (id === 'p') return null;
+    return id.charAt(0) === 'k' ? meta.keys[id.slice(1)] : meta.frames[+id.slice(1)];
+  }
+  function hasFile(id) { if (id === 'p') return true; var r = rectsOf(id); return !!(r && r.length); }
+  function fileOf(id) { return id === 'p' ? 'plate.webp' : id.charAt(0) + pad4(+id.slice(1)) + '.webp'; }
+  function ready(id) { return !hasFile(id) || !!dec[id] && dec[id] !== 1; }   // данных нет (кадр не менялся) — тоже «готово»
+
+  fetch(base + 'meta.json', { cache: 'no-cache' }).then(function (r) { if (!r.ok) throw 0; return r.json(); }).then(function (m) {
+    if (!m || m.v !== 2) return;
+    meta = m; K = m.key || 40; IW = m.w; IH = m.h; CP = K % 8 ? (K % 10 ? K : 10) : 8;
+    if (m.count && m.count !== N) { N = m.count; LAST = N - 1; }
+    for (var i = 0; i < N; i++) if (hasFile('f' + i)) total++;
+    for (var k in m.keys) if (hasFile('k' + k)) total++;
+    buildMap(m.flow);
+    initCanvases(); pump(); kick();
+  }).catch(function () {});
+
+  /* сеть: файлы в порядке важности для текущего места ролика */
+  function want(id) { return hasFile(id) && !req[id]; }
   function pickNext() {
-    var c = Math.round(disp), win = lite ? 8 : (visible && seen ? 24 : 12), minStep = lite ? 4 : (seen ? 1 : 8);
-    for (var k = 0; k <= win; k++) {
-      var a = c + k, b = c - k;
-      if (a < N && !imgs[a]) return a;
-      if (b >= 0 && !imgs[b]) return b;
+    if (want('p')) return 'p';
+    var c = Math.min(N - 1, Math.round(disp)), k0 = keyOf(c), j, id;
+    if (k0 > 0 && want(id = 'k' + k0)) return id;
+    for (j = k0; j <= c; j++) if (want(id = 'f' + j)) return id;
+    var ah = Math.min(N - 1, c + AHEAD);
+    for (j = c + 1; j <= ah; j++) {
+      if (j % K === 0 && want(id = 'k' + j)) return id;
+      if (want(id = 'f' + j)) return id;
     }
-    for (var j = 0; j < coarse.length; j++) {
-      if (coarseStep[j] < minStep) break;
-      if (!imgs[coarse[j]]) return coarse[j];
-    }
-    return -1;
+    if (!seen && !visible) return null;                  // пока секцию не видели — только начало
+    for (j = K; j < N; j += K) if (want(id = 'k' + j)) return id;      // ключи: быстрый переход в любое место
+    if (lite) return null;
+    for (j = ah + 1; j < N; j++) if (want(id = 'f' + j)) return id;
+    for (var s = keyOf(c) - K; s >= 0; s -= K) for (j = s; j < s + K; j++) if (want(id = 'f' + j)) return id;
+    return null;
   }
+  var active = 0;
   function pump() {
-    while (started && near && active < MAXQ) {
-      var i = pickNext(); if (i < 0) return;
-      (function (i) {
-        var im = new Image(); im.decoding = 'async'; imgs[i] = im; active++;
-        if ('fetchPriority' in im) im.fetchPriority = Math.abs(i - disp) < 12 ? 'high' : 'low';
-        im.src = url(i);
-        var done = function () {
-          active--; ok[i] = 1; loaded++;
-          loadBar.style.transform = 'scaleX(' + (loaded / N).toFixed(3) + ')';
-          if (loaded >= N) hud.classList.add('ready');
-          if (Math.abs(i - disp) < 3) dirty = true;
+    while (meta && started && near && active < MAXQ) {
+      var id = pickNext(); if (!id) return;
+      req[id] = 1; active++;
+      (function (id) {
+        fetch(base + fileOf(id) + (meta.rev ? '?r=' + meta.rev : '')).then(function (r) { if (!r.ok) throw 0; return r.blob(); }).then(function (b) {
+          active--; blob[id] = b; loadedN++;
+          loadBar.style.transform = 'scaleX(' + Math.min(1, loadedN / total).toFixed(3) + ')';
+          if (loadedN >= total) hud.classList.add('ready');
           kick(); pump();
-        };
-        // без decode() (или если он отказал) ждём событие load — иначе в drawImage попадёт незагруженный кадр
-        var loadOf = function () {
-          return new Promise(function (res, rej) {
-            if (im.complete) return im.naturalWidth ? res() : rej();
-            im.onload = function () { res(); }; im.onerror = rej;
-          });
-        };
-        (im.decode ? im.decode().catch(loadOf) : loadOf()).then(done, function () { active--; imgs[i] = null; setTimeout(pump, 400); });
-      })(i);
+        }, function () { active--; req[id] = 0; fails++; setTimeout(pump, Math.min(8000, 400 * fails)); });
+      })(id);
     }
-  }
-  // декодированные кадры вокруг текущего держим как ImageBitmap — без рывков при отрисовке
-  var bmpBusy = 0;
-  function cacheAround(c) {
-    if (!window.createImageBitmap) return;
-    c = Math.round(c);
-    for (var i = 0; i < N; i++) if (bmp[i] && Math.abs(i - c) > WIN + 4) { if (bmp[i].close) bmp[i].close(); bmp[i] = null; }
-    for (var k = 0; k <= WIN && bmpBusy < 3; k++) [c + k, c - k].forEach(function (i) {
-      if (i < 0 || i >= N || bmp[i] || !ok[i] || bmpBusy >= 3) return;
-      bmp[i] = 'pending'; bmpBusy++;
-      createImageBitmap(imgs[i]).then(function (b) { bmpBusy--; if (bmp[i] === 'pending') bmp[i] = b; else b.close && b.close(); },
-        function () { bmpBusy--; bmp[i] = null; });
-    });
-  }
-  function src(i) { var b = bmp[i]; return b && b !== 'pending' ? b : (ok[i] ? imgs[i] : null); }
-  function nearestIdx(i) {
-    for (var k = 0; k < N; k++) { if (i - k >= 0 && ok[i - k]) return i - k; if (i + k < N && ok[i + k]) return i + k; }
-    return -1;
   }
 
-  /* ---------- отрисовка ---------- */
-  var W = 0, Hh = 0, dirty = true, drawnKey = '', stickyTop = 0;
+  /* декодирование: только окно вокруг текущего кадра */
+  function decode(id) {
+    if (dec[id] || !blob[id] || decBusy >= MAXDEC) return;
+    dec[id] = 1; decBusy++;
+    var b = blob[id];
+    var p = window.createImageBitmap ? createImageBitmap(b) : new Promise(function (res, rej) {
+      var im = new Image(); im.onload = function () { res(im); }; im.onerror = rej; im.src = URL.createObjectURL(b);
+    });
+    p.then(function (bm) { decBusy--; if (dec[id] === 1) dec[id] = bm; else if (bm.close) bm.close(); kick(); },
+      function () { decBusy--; dec[id] = 0; delete blob[id]; req[id] = 0; pump(); });
+  }
+  function drop(id) { var b = dec[id]; if (b && b !== 1 && b.close) b.close(); delete dec[id]; }
+  function manageDecode(c) {
+    c = Math.min(N - 1, Math.max(0, Math.round(c)));
+    var k0 = keyOf(c), lo = Math.max(0, Math.min(k0, c - 2 * CP - 2)), hi = Math.min(N - 1, c + (small ? 20 : 28));
+    decode('p');
+    if (k0 > 0) decode('k' + k0);
+    for (var j = Math.max(k0, lo); j <= hi; j++) { if (j % K === 0 && j > 0) decode('k' + j); decode('f' + j); }
+    if (k0 - K >= 0) { if (k0 - K > 0) decode('k' + (k0 - K)); }
+    for (var id in dec) {
+      if (id === 'p') continue;
+      var n = +id.slice(1);
+      if (id.charAt(0) === 'k' ? (n < k0 - K || n > k0 + 2 * K) : (n < lo - 8 || n > hi + 8)) drop(id);
+    }
+  }
+
+  /* ---------- сборка кадра: холсты в размере кадра ---------- */
+  var A = null, B = null, CP = 8, cps = [], CPMAX = small ? 5 : 6;
+  function mk() {
+    var c = document.createElement('canvas'); c.width = IW; c.height = IH;
+    var g = c.getContext('2d', { alpha: false }); g.imageSmoothingEnabled = false;
+    return { c: c, g: g, f: -1 };
+  }
+  function initCanvases() { A = mk(); B = mk(); }
+  function apply(S, id) {
+    var r = rectsOf(id); if (!r || !r.length) return true;
+    var bm = dec[id]; if (!bm || bm === 1) return false;
+    for (var i = 0; i < r.length; i++) { var q = r[i]; S.g.drawImage(bm, q[4], q[5], q[2], q[3], q[0], q[1], q[2], q[3]); }
+    return true;
+  }
+  function copy(D, S) { D.g.drawImage(S.c, 0, 0); D.f = S.f; D.from = -1; }
+  function segStart(S, k) {           // S ← состояние кадра k (начало отрезка)
+    if (!ready('p')) return false;
+    if (k === 0) {
+      if (!ready('f0')) return false;
+      S.g.drawImage(dec.p, 0, 0); apply(S, 'f0'); S.f = 0; return true;
+    }
+    if (!ready('k' + k)) return false;
+    S.g.drawImage(dec.p, 0, 0); apply(S, 'k' + k); S.f = k; return true;
+  }
+  function saveCP(S) {
+    if (S.f % CP) return;
+    for (var i = 0; i < cps.length; i++) if (cps[i].f === S.f) return;
+    var c;
+    if (cps.length < CPMAX) { c = mk(); cps.push(c); }
+    else {                              // заменяем самую далёкую от текущего кадра
+      var far = 0, fd = -1;
+      for (i = 0; i < cps.length; i++) { var d = Math.abs(cps[i].f - S.f); if (d > fd) { fd = d; far = i; } }
+      c = cps[far];
+    }
+    copy(c, S);
+  }
+  // A ← состояние кадра j (насколько позволяют загруженные данные); возвращает достигнутый кадр
+  function build(j) {
+    if (!A) return -1;
+    if (A.f === j) return j;
+    var k = keyOf(j), best = null, i, c;
+    for (i = 0; i < cps.length; i++) { c = cps[i]; if (c.f >= k && c.f <= j && (!best || c.f > best.f)) best = c; }
+    if (A.f >= k && A.f < j) { if (best && best.f > A.f + 2) copy(A, best); }     // вперёд по отрезку (или с ближней контрольной точки)
+    else if (best) copy(A, best);
+    else if (segStart(A, k)) saveCP(A);
+    else return A.f;
+    while (A.f < j) {
+      var n = A.f + 1;
+      if (!ready('f' + n)) break;
+      apply(A, 'f' + n); A.f = n; saveCP(A);
+    }
+    return A.f;
+  }
+  // B ← A + дельта кадра i+1 (для кросс-фейда); вне её прямоугольников B совпадает с A — швов нет
+  function buildNext(i) {
+    var n = i + 1, r = n < N ? rectsOf('f' + n) : null;
+    if (!r || !r.length || !ready('f' + n)) return false;
+    if (B.f === n && B.from === i) return true;
+    copy(B, A); apply(B, 'f' + n); B.f = n; B.from = i;
+    return true;
+  }
+
+  /* ---------- вывод на экран ---------- */
+  var W = 0, Hh = 0, dpr = 1, stickyTop = 0, lit = false;
   function size() {
-    var r = cv.getBoundingClientRect(), d = Math.min(small ? 2 : 1.75, devicePixelRatio || 1);
-    W = Math.max(1, Math.round(r.width * d)); Hh = Math.max(1, Math.round(r.height * d));
+    var r = cv.getBoundingClientRect(); dpr = Math.min(small ? 2 : 1.75, devicePixelRatio || 1);
+    W = Math.max(1, Math.round(r.width * dpr)); Hh = Math.max(1, Math.round(r.height * dpr));
     if (cv.width !== W || cv.height !== Hh) { cv.width = W; cv.height = Hh; }
-    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     stickyTop = parseFloat(getComputedStyle(sticky).top) || 0;
-    dirty = true; drawnKey = ''; kick();
+    drawn = ''; kick();
   }
-  function blit(im, a) {
-    var iw = im.width || im.naturalWidth, ih = im.height || im.naturalHeight, ir = iw / ih, cr = W / Hh, w, h;
-    if (cr > ir) { w = W; h = W / ir; } else { h = Hh; w = Hh * ir; }
-    ctx.globalAlpha = a; ctx.drawImage(im, (W - w) / 2, (Hh - h) / 2, w, h);
-  }
-  function render(f) {
-    var i0 = Math.floor(f), t = f - i0, i1 = Math.min(N - 1, i0 + 1);
-    t = Math.round(t * 48) / 48;                          // 48 ступеней кросс-фейда хватает глазу
-    var a = ok[i0] ? i0 : nearestIdx(i0), b = ok[i1] ? i1 : a;
+  var drawn = '';
+  function draw(f, zoom, tx, ty) {
+    if (!meta || !A) return;
+    var i = Math.min(N - 1, Math.max(0, Math.floor(f))), t = f - i;
+    var a = build(i);
     if (a < 0) return;
-    var key = a + ':' + b + ':' + t;
-    if (key === drawnKey && !dirty) return;
-    drawnKey = key; dirty = false;
-    blit(src(a), 1);
-    if (b !== a && t > 0) blit(src(b), t);
-    ctx.globalAlpha = 1;
-    if (!screen.classList.contains('lit')) screen.classList.add('lit');
+    var fade = a === i && t > 0.004 && buildNext(i);
+    t = Math.round(t * 64) / 64;
+    var key = a + '|' + (fade ? t : 0) + '|' + zoom.toFixed(4) + '|' + tx.toFixed(1) + '|' + ty.toFixed(1) + '|' + W + 'x' + Hh;
+    if (key === drawn) return;
+    drawn = key;
+    // «камера»: вписываем кадр с обрезкой (cover), наезд вокруг точки 58%/62%, сдвиг; края всегда закрыты
+    var s0 = Math.max(W / IW, Hh / IH), s = s0 * zoom;
+    var ox = .58 * W, oy = .62 * Hh;
+    var e = (W - IW * s0) / 2, g = (Hh - IH * s0) / 2;
+    var X = (e - ox) * zoom + ox + tx * dpr, Y = (g - oy) * zoom + oy + ty * dpr;
+    X = Math.min(0, Math.max(W - IW * s, X)); Y = Math.min(0, Math.max(Hh - IH * s, Y));
+    ctx.setTransform(s, 0, 0, s, X, Y);
+    ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
+    ctx.globalAlpha = 1; ctx.drawImage(A.c, 0, 0);
+    if (fade && t > 0) {
+      var r = rectsOf('f' + (i + 1)); ctx.globalAlpha = t;
+      for (var k = 0; k < r.length; k++) {
+        var q = r[k], x0 = Math.max(0, q[0] - 2), y0 = Math.max(0, q[1] - 2);
+        var x1 = Math.min(IW, q[0] + q[2] + 2), y1 = Math.min(IH, q[1] + q[3] + 2);
+        ctx.drawImage(B.c, x0, y0, x1 - x0, y1 - y0, x0, y0, x1 - x0, y1 - y0);
+      }
+      ctx.globalAlpha = 1;
+    }
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    if (!lit) { lit = true; screen.classList.add('lit'); }
   }
 
   /* ---------- главы ---------- */
   var btns = [];
   items.forEach(function (it) {
     var b = document.createElement('button'); b.type = 'button'; b.textContent = it.dataset.chapter;
-    b.addEventListener('click', function () { goFrame(+it.dataset.f * scale + .001); });
+    b.addEventListener('click', function () { goFrame(+it.dataset.f + .001); });
     rail.appendChild(b); btns.push(b);
-    // разбивка заголовка на строки-маски для «выезда» текста
     var h = $('h3', it); if (h && !h.querySelector('.sp-ln')) h.innerHTML = '<span class="sp-ln"><span>' + h.innerHTML + '</span></span>';
   });
   function goFrame(f) {
@@ -203,13 +279,12 @@
   }
 
   /* ---------- главный цикл ---------- */
-  var target = 0, disp = 0, prog = 0, enter = 0, enterD = 0, mx = 0, my = 0, mxD = 0, myD = 0;
-  var raf = 0, last = 0, visible = true, t0 = performance.now(), shown = 0, idle = 0;
+  var target = 0, disp = 0, shown = 0, prog = 0, enter = 0, enterD = 0, mx = 0, my = 0, mxD = 0, myD = 0;
+  var raf = 0, last = 0, t0 = performance.now(), idle = 0;
   function measure() {
     var r = story.getBoundingClientRect(), span = Math.max(1, story.offsetHeight - sticky.offsetHeight);
     prog = Math.min(1, Math.max(0, -r.top / span));
     target = progToFrame(prog);
-    // въезд: экран «раскрывается», пока секция подходит к залипанию
     enter = Math.min(1, Math.max(0, 1 - (r.top - stickyTop) / (innerHeight * .75)));
   }
   function damp(a, b, k, dt) { return a + (b - a) * (1 - Math.exp(-k * dt)); }
@@ -219,39 +294,37 @@
     measure();
     if (calm) { disp = target; enterD = enter; }
     else {
-      disp = damp(disp, target, 11, dt);
+      disp = damp(disp, target, 10, dt);
       if (Math.abs(disp - target) < .004) disp = target;
       enterD = damp(enterD, enter, 7, dt);
       mxD = damp(mxD, mx, 3.2, dt); myD = damp(myD, my, 3.2, dt);
     }
-    // в покое не оставляем «полупрозрачную» смесь двух кадров — мягко доводим до целого кадра
+    // в покое не оставляем смесь двух кадров — мягко доводим до целого
     idle = Math.abs(disp - target) < .01 ? idle + dt : 0;
     var goal = idle > .14 ? Math.round(disp) : disp;
-    shown = calm ? goal : damp(shown, goal, idle > .14 ? 7 : 22, dt);
+    shown = calm ? goal : damp(shown, goal, idle > .14 ? 7 : 24, dt);
     if (Math.abs(shown - goal) < .003) shown = goal;
-    render(shown);
-    cacheAround(disp);
-    var f245 = disp / scale, k = 0;
-    items.forEach(function (it, j) { if (f245 + .01 >= +it.dataset.f) k = j; });
+
+    var e = enterD, ez = e * e * (3 - 2 * e), q = disp / (N - 1), tt = (now - t0) / 1000, br = calm ? 0 : 1;
+    var zoom = 1.05 + q * .07 + (1 - ez) * .05;
+    var tx = (mxD * -10 + Math.sin(tt * .31) * 2.2 * br) - q * 12;
+    var ty = (myD * -7 + Math.cos(tt * .23) * 1.6 * br) - q * 5;
+    if (meta) { manageDecode(shown); draw(shown, zoom, tx, ty); }
+
+    var k = 0;
+    items.forEach(function (it, j) { if (disp + .01 >= +it.dataset.f) k = j; });
     setChapter(k);
-    var pv = frameToProg(disp);
-    fill.style.transform = 'scaleX(' + pv.toFixed(4) + ')';
+    fill.style.transform = 'scaleX(' + frameToProg(disp).toFixed(4) + ')';
     hudBar.style.transform = 'scaleX(' + (disp / (N - 1)).toFixed(4) + ')';
     hudPct.textContent = Math.round(disp / (N - 1) * 100);
-
-    // камера: медленный наезд к памятнику + еле заметное «дыхание» + параллакс
-    var e = enterD, ez = e * e * (3 - 2 * e), q = disp / (N - 1), tt = (now - t0) / 1000;
-    var br = calm ? 0 : 1;
-    var sc = 1.06 + q * .07 + (1 - ez) * .06;
-    var tx = (mxD * -10 + Math.sin(tt * .31) * 2.2 * br) - q * 14;
-    var ty = (myD * -7 + Math.cos(tt * .23) * 1.6 * br) - q * 6;
-    cv.style.transform = 'translate3d(' + tx.toFixed(2) + 'px,' + ty.toFixed(2) + 'px,0) scale(' + sc.toFixed(4) + ')';
     screen.style.setProperty('--sp-in', ez.toFixed(4));
     screen.style.setProperty('--sp-q', q.toFixed(4));
     screen.style.setProperty('--sp-mx', mxD.toFixed(3));
     screen.style.setProperty('--sp-my', myD.toFixed(3));
 
-    var moving = Math.abs(shown - goal) > .001 || Math.abs(disp - target) > .001 || Math.abs(enterD - enter) > .001 || Math.abs(mxD - mx) > .002 || Math.abs(myD - my) > .002;
+    var built = !meta || !A || A.f === Math.floor(Math.min(N - 1, shown));
+    var moving = Math.abs(shown - goal) > .001 || Math.abs(disp - target) > .001 || Math.abs(enterD - enter) > .001 ||
+      Math.abs(mxD - mx) > .002 || Math.abs(myD - my) > .002 || !built || decBusy > 0;
     if (visible && (moving || !calm)) kick();
   }
   function kick() { if (!raf) raf = requestAnimationFrame(loop); }
@@ -264,8 +337,6 @@
   });
   if (fine) screen.addEventListener('pointerleave', function () { mx = my = 0; kick(); });
 
-  // грузим, только когда до секции осталось ~1,5 экрана (и ставим загрузку на паузу, если ушли далеко);
-  // крутим цикл только когда секция видна
   if ('IntersectionObserver' in window) {
     new IntersectionObserver(function (es) {
       es.forEach(function (en) { near = en.isIntersecting; if (near) { started = true; pump(); } });
@@ -276,7 +347,8 @@
         if (visible) { seen = true; last = 0; kick(); pump(); }
       });
     }, { rootMargin: '10% 0px' }).observe(story);
-  } else { started = near = seen = true; pump(); }
+  } else { started = near = seen = true; }
 
   measure(); disp = shown = target; size(); setChapter(0); kick();
+  window.PAMYAT_STORY = { frame: function () { return A ? A.f : -1; }, target: function () { return target; }, count: function () { return N; } };
 })();

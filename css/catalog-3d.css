@@ -1,5 +1,5 @@
 /* ПАМЯТЬ.БАЙ — 3D-каталог (js/catalog-3d.js): модель отрендерена в 5 гранитах.
-   Мышь: курсор ведут по фото — меняется гранит (полосы внизу кадра показывают, какой по счёту), имя камня — в плашке.
+   Мышь: курсор ведут по фото — меняется гранит, имя камня — в плашке. Образцы — фото фактуры камня (sw/*.jpg).
    Телефон и клавиатура: кружки-образцы под фото. Белый фон рендера растворяется в студийной подложке (multiply). */
 
 /* ---------- слои рендера ---------- */
@@ -16,14 +16,11 @@
 .lx-js .lx.lx-in .lx-stage>.r3w{transition:transform 1.6s var(--lx-ez),opacity 1.1s var(--lx-ez) var(--d,0s)}
 @media (hover:hover) and (pointer:fine){.lx.lx-in:hover .lx-stage>.r3w{transform:scale(calc(var(--z,1) * 1.03))}}
 
-/* ---------- полосы-варианты и название камня (видны, пока курсор на фото) ---------- */
-.r3-bar{position:absolute;left:16px;right:16px;bottom:12px;z-index:4;display:flex;gap:4px;pointer-events:none;opacity:0;transition:opacity .25s ease}
-.r3-bar i{flex:1 1 0;height:3px;border-radius:3px;background:var(--c);opacity:.28;transition:opacity .16s linear,transform .16s ease}
-.r3-bar i.on{opacity:1;transform:scaleY(1.35)}
+/* ---------- название камня (видно, пока курсор на фото) ---------- */
 .r3-nm{position:absolute;left:14px;top:14px;z-index:4;padding:5px 10px;border-radius:999px;background:rgba(255,253,249,.92);border:1px solid rgba(176,138,72,.32);
   font:500 11.5px/1.2 var(--sans);letter-spacing:.03em;color:#4f3d27;white-space:nowrap;pointer-events:none;opacity:0;transform:translateY(-3px);
   transition:opacity .25s ease,transform .25s ease}
-.r3s.r3-on .r3-bar,.r3s.r3-on .r3-nm{opacity:1;transform:none}
+.r3s.r3-on .r3-nm{opacity:1;transform:none}
 
 /* ---------- сетка: карточки крупнее, кружки-образцы рядом с кодом ---------- */
 .mgrid.lx-grid.r3g{--lx-col:230px}
@@ -31,7 +28,7 @@
 .mc.r3c .t b{min-width:0}
 .r3-dots{display:flex;align-items:center;gap:1px;margin-right:-5px}
 .r3-dots button{width:24px;height:24px;padding:0;margin:0;border:0;border-radius:50%;background:none;cursor:pointer;display:grid;place-items:center;-webkit-tap-highlight-color:transparent}
-.r3-dots button:before{content:"";width:12px;height:12px;border-radius:50%;background:var(--c);box-shadow:inset 0 0 0 1px rgba(0,0,0,.14),0 1px 2px rgba(60,40,20,.18);
+.r3-dots button:before{content:"";width:12px;height:12px;border-radius:50%;background:var(--c) var(--t,none) center/cover;box-shadow:inset 0 0 0 1px rgba(0,0,0,.14),0 1px 2px rgba(60,40,20,.18);
   transition:transform .16s ease,box-shadow .2s ease}
 .r3-dots button.hv:before{transform:scale(1.2)}
 .r3-dots button[aria-pressed=true]:before{box-shadow:0 0 0 2px #fffdf9,0 0 0 3.2px var(--lx-gold,#b08a48)}
@@ -42,7 +39,7 @@
 .clb .r3-sw{display:flex;flex-wrap:wrap;justify-content:center;gap:6px}
 .clb .r3-sw button{display:inline-flex;align-items:center;gap:7px;margin:0;padding:6px 12px 6px 7px;border:1px solid rgba(176,138,72,.3);border-radius:999px;background:#fffdf9;
   font:500 12.5px/1.2 var(--sans);color:#4f453b;cursor:pointer;transition:border-color .2s ease,box-shadow .2s ease,color .2s ease}
-.clb .r3-sw i{width:16px;height:16px;border-radius:50%;box-shadow:inset 0 0 0 1px rgba(0,0,0,.16)}
+.clb .r3-sw i,.czoom .zvs i.r3t{width:16px;height:16px;border-radius:50%;background:var(--c) var(--t,none) center/cover;box-shadow:inset 0 0 0 1px rgba(0,0,0,.16)}
 .clb .r3-sw button:hover,.clb .r3-sw button.hv{border-color:rgba(154,116,54,.7)}
 .clb .r3-sw button[aria-pressed=true]{border-color:#9a7436;box-shadow:inset 0 0 0 1px #9a7436;color:#241e17}
 .clb .r3-sw button:focus-visible{outline:2px solid var(--lx-gold,#b08a48);outline-offset:2px}
@@ -50,7 +47,7 @@
 /* крупный просмотр: края рендера (мягкая тень у кромки кадра) растворяются в фоне */
 .czoom .zs .zm.r3z{-webkit-mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3ClinearGradient id='x'%3E%3Cstop offset='0' stop-opacity='0'/%3E%3Cstop offset='.05'/%3E%3Cstop offset='.95'/%3E%3Cstop offset='1' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='y' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23fff' stop-opacity='0'/%3E%3Cstop offset='.04' stop-color='%23fff'/%3E%3Cstop offset='.96' stop-color='%23fff'/%3E%3Cstop offset='1' stop-color='%23fff' stop-opacity='0'/%3E%3C/linearGradient%3E%3Cmask id='m'%3E%3Crect width='100' height='100' fill='url(%23y)'/%3E%3C/mask%3E%3Crect width='100' height='100' fill='url(%23x)' mask='url(%23m)'/%3E%3C/svg%3E") center/contain no-repeat;mask:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' width='100' height='100'%3E%3ClinearGradient id='x'%3E%3Cstop offset='0' stop-opacity='0'/%3E%3Cstop offset='.05'/%3E%3Cstop offset='.95'/%3E%3Cstop offset='1' stop-opacity='0'/%3E%3C/linearGradient%3E%3ClinearGradient id='y' x2='0' y2='1'%3E%3Cstop offset='0' stop-color='%23fff' stop-opacity='0'/%3E%3Cstop offset='.04' stop-color='%23fff'/%3E%3Cstop offset='.96' stop-color='%23fff'/%3E%3Cstop offset='1' stop-color='%23fff' stop-opacity='0'/%3E%3C/linearGradient%3E%3Cmask id='m'%3E%3Crect width='100' height='100' fill='url(%23y)'/%3E%3C/mask%3E%3Crect width='100' height='100' fill='url(%23x)' mask='url(%23m)'/%3E%3C/svg%3E") center/contain no-repeat}
 
-@media (hover:none){.r3-bar,.r3-nm{display:none}}
+@media (hover:none){.r3-nm{display:none}}
 @media (max-width:720px){
   .mc.r3c .t{gap:2px 6px}
   .r3-dots{gap:0;margin-right:-4px}
@@ -64,4 +61,4 @@
   .clb .r3-sw button[aria-pressed=true] span{display:inline}
   .clb .r3-sw i{width:18px;height:18px}
 }
-@media (prefers-reduced-motion:reduce){.r3s .r3w>img.r3v,.r3-bar i,.r3-dots button:before{transition:none}}
+@media (prefers-reduced-motion:reduce){.r3s .r3w>img.r3v,.r3-dots button:before{transition:none}}

@@ -218,3 +218,32 @@
 html.lamp-off .lamp-src,html.lamp-off .lamp-shades,html.lamp-off .lamp-g,html.lamp-off .lamp-s{display:none}
 @media (prefers-reduced-motion:reduce){.clb .sv.wait .im:after{animation:none}}
 @media print{.lamp-g,.lamp-s,.lamp-src,.lamp-shades{display:none}}
+/* калькулятор: количество у позиций «за шт.» (− 1 +) */
+.radio .qty,.tog .qty{display:inline-flex;align-items:center;gap:6px;flex:none;padding:3px;border:1px solid rgba(214,176,122,.45);border-radius:999px;background:rgba(255,248,236,.05);cursor:default}
+.qty .qb{width:28px;height:28px;padding:0;border:0;border-radius:50%;background:rgba(214,176,122,.16);color:var(--gold);font-family:inherit;font-size:17px;font-weight:600;line-height:1;cursor:pointer;display:grid;place-items:center;transition:background .2s}
+.qty .qb:hover{background:rgba(214,176,122,.32)}
+.qty .qb.off{opacity:.35;cursor:default}
+.qty .qb:focus-visible{outline:2px solid var(--gold);outline-offset:1px}
+.qty b{min-width:16px;text-align:center;font-weight:600;font-variant-numeric:tabular-nums}
+.qty small{font-size:12px;opacity:.7;margin:0 2px 0 -3px}
+#calc #q .radio:has(.qty) .p,#calc #q .tog:has(.qty) .p{flex:none;max-width:none;white-space:nowrap}
+/* телефон: цена (и количество) — второй строкой под названием, как задумано в dusk.css (там не хватало переноса строки) */
+@media(max-width:720px){
+  #calc #q .tog{flex-wrap:wrap}
+  #calc #q .tog .t{flex:1 1 calc(100% - 66px);min-width:0}
+  #calc #q .tog .qty{margin-left:auto}
+}
+@media(max-width:560px){
+  #calc #q .radio:has(.qty){flex-wrap:wrap}
+  #calc #q .radio:has(.qty) .t{flex:1 1 calc(100% - 40px);min-width:0}
+  #calc #q .radio:has(.qty) .p{margin-left:36px}
+  #calc #q .radio .qty{margin-left:auto}
+}
+
+/* «По вашему эскизу»: .cc.lx .cover{color:inherit} перебивал золото подложки — линии рисовались кремовым по кремовому и были не видны */
+.cc.lx .cover.ind,.lx-stage.ind{color:var(--lx-gold-d,#8a6528)}
+.cc.lx .cover.ind .lx-sk{width:min(66%,240px)}
+.lx-sk .s{stroke-width:1.6}
+.lx-sk .g{stroke-width:1.9}
+.lx-sk .f{stroke-width:1.15;opacity:.8}
+.lx-sk .d{stroke-width:1;opacity:.7}

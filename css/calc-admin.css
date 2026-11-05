@@ -65,9 +65,21 @@
 @media(max-width:1180px){.curve-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.curve-cols{grid-template-columns:1fr}}
 @media(max-width:860px){.base-grid{grid-template-columns:repeat(2,minmax(120px,1fr))}}
 @media(max-width:560px){.curve-grid,.base-grid,.trim-grid{grid-template-columns:1fr}}
-.calc-colh,.it-main{grid-template-columns:minmax(170px,1.5fr) 120px minmax(130px,1fr) 185px 112px}
-@media(max-width:1100px){.calc-colh,.it-main{grid-template-columns:minmax(150px,1.5fr) 100px minmax(115px,1fr) 170px 106px}}
+.calc-colh,.it-main{grid-template-columns:minmax(170px,1.5fr) 236px 54px minmax(130px,1fr) 112px}
+@media(max-width:1100px){.calc-colh,.it-main{grid-template-columns:minmax(150px,1.5fr) 216px 50px minmax(115px,1fr) 106px}}
 @media(max-width:860px){.it-main{grid-template-columns:1fr 1fr}.calc-colh{display:none}}
+/* цена + единица (BYN ↔ BYN/м² …) и «от» — справа от цены */
+.pr-box{display:flex;min-width:0}
+.pr-box input{flex:1 1 auto;min-width:0;border-top-right-radius:0!important;border-bottom-right-radius:0!important}
+.pr-box .pm-sel{flex:0 0 108px;width:108px;border-top-left-radius:0!important;border-bottom-left-radius:0!important;margin-left:-1px;
+  background-color:rgba(154,116,54,.12);font-weight:700;color:#7a5a24;cursor:pointer}
+.ot-chk{display:flex;align-items:center;justify-content:center;gap:4px;height:100%;min-height:36px;border:1px solid rgba(154,116,54,.35);border-radius:10px;
+  cursor:pointer;font-weight:700;font-size:13px;color:#8d7a5a;user-select:none;transition:background .2s,color .2s,border-color .2s}
+.ot-chk input{margin:0;accent-color:#9a7436}
+.ot-chk:has(input:checked){background:rgba(154,116,54,.16);border-color:#9a7436;color:#6b4c18}
+.piece-panel .simple-grid{grid-template-columns:minmax(150px,220px) 1fr;align-items:center}
+.piece-panel .hint{margin:0;color:#7d7466;font-size:13px}
+@media(max-width:560px){.piece-panel .simple-grid{grid-template-columns:1fr}}
 /* смета владельца */
 .est-table{min-width:680px}
 .est-table .neg{color:#b3402e}

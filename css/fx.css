@@ -48,11 +48,15 @@
 .faq-cta .btn svg{width:16px;height:16px;flex:none;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;opacity:.9}
 .faq-cta .btn[hidden]{display:none}
 
-/* ================= голубь: одинокий, маленький, далеко в небе ================= */
+/* ================= голубь: одинокий, маленький, далеко в небе (спрайт; SVG — запасной вариант) ================= */
 .dove-fly{position:absolute;left:0;top:0;pointer-events:none;opacity:0;will-change:transform,opacity}
 .dove-bob{display:block;animation:dove-bob 2.2s ease-in-out infinite}
 .dove{display:block;width:var(--dove-w,26px);height:auto;overflow:visible;filter:drop-shadow(0 0 .5px rgba(78,60,42,.55)) drop-shadow(0 1px 1px rgba(78,60,42,.22))}
 .dove-fly.rtl .dove{transform:scaleX(-1)}
+/* спрайт Blender (js/fx.js): 13 кадров 128×184 в одну строку; кадр меняется сдвигом ленты */
+.dove-sp{display:block;width:var(--dove-w,26px);aspect-ratio:128/184;margin-top:calc(var(--dove-w,26px) * -.3);overflow:hidden;filter:drop-shadow(0 0 .5px rgba(78,60,42,.5)) drop-shadow(0 1px 1px rgba(78,60,42,.2))}
+.dove-sp>i{display:block;width:1300%;height:100%;background:0 0/100% 100% no-repeat;transform:translateX(-92.3077%);backface-visibility:hidden}
+.dove-fly.rtl .dove-sp{transform:scaleX(-1)}
 .dove .w1,.dove .w2{transform-box:fill-box;transform-origin:50% 100%;animation:dove-flap 2.2s ease-in-out infinite}
 .dove .w1{animation-name:dove-flap-far;opacity:.78}
 /* три-четыре взмаха и плавное парение; цикл начинается и заканчивается парением — без рывков */

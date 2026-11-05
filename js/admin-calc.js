@@ -145,6 +145,7 @@
   function formModel(it) {
     var p = PP.normalizePricing(it);
     if (p.mode === 'fixed') return { mode: 'fixed' };
+    if (p.mode === 'piece') return { mode: 'piece', maxQty: p.maxQty };
     var tr = { enabled: false, tileA: 60, tileB: 50, material: 0, cut: 0 };
     if (p.mode === 'curve' && it.pricing && it.pricing.simple) {
       var sn = PP.normalizeCurve(it.pricing.curve);
@@ -199,30 +200,49 @@
       '<div class="curve-out"></div></div>';
   }
 
-  /* простая ставка: цена = ставка × измерение (не ниже минимума) — без затрат и наценки */
+  /* ставка: цена = ставка × измерение (не ниже минимума) — без затрат и наценки; сама ставка — в поле цены */
   function simplePanel(m) {
-    var u = unitOf(m.quantity);
+    var area = m.quantity === 'area';
     return '<div class="curve-panel simple-panel"><div class="simple-grid">' +
-      '<label class="nf"><span>Что измеряем</span><select name="cq">' + MEASURES.map(function (x) {
-        return '<option value="' + x[0] + '"' + (m.quantity === x[0] ? ' selected' : '') + '>' + x[1] + '</option>';
-      }).join('') + '</select></label>' +
-      nf('srate', 'Ставка, BYN за 1 ' + u, m.rate, 'Цена = ставка × ' + (m.quantity === 'area' ? 'площадь' : 'метры')) +
+      (area ? '<input type="hidden" name="cq" value="area">'
+        : '<label class="nf"><span>Что измеряем</span><select name="cq">' + MEASURES.filter(function (x) { return x[0] !== 'area'; }).map(function (x) {
+          return '<option value="' + x[0] + '"' + (m.quantity === x[0] ? ' selected' : '') + '>' + x[1] + '</option>';
+        }).join('') + '</select><small>Цена = ставка × метры</small></label>') +
       nf('cmin', 'Минимальная сумма, BYN', m.min, '0 — без минимума') +
-      nf('cshare', 'Доля от измерения, %', m.share, 'Например, 50% — только две стороны', ' max="100" min="1"') +
-      nf('cpiece', 'Продаётся кратно, м', m.piece, '0 — не округлять') +
+      nf('cshare', 'Доля от измерения, %', m.share, area ? 'Например, 50% — половина площади' : 'Например, 50% — только две стороны', ' max="100" min="1"') +
+      nf('cpiece', 'Продаётся кратно, ' + (area ? 'м²' : 'м'), m.piece, '0 — не округлять') +
       '</div><div class="curve-out"></div></div>';
   }
+  /* за штуку: на сайте «100 BYN/шт.», клиент выбирает количество, в итоге — цена × количество */
+  function piecePanel(m) {
+    return '<div class="curve-panel simple-panel piece-panel"><div class="simple-grid">' +
+      nf('cmaxq', 'Максимум, шт.', m.maxQty, 'Клиент выбирает количество от 1 до этого числа', ' min="1" max="99"', 0) +
+      '<p class="hint">На сайте у выбранной позиции появятся кнопки «− 1 +». В итог и в заявку идёт цена × количество.</p>' +
+      '</div></div>';
+  }
+  var PMODES = [
+    ['fixed', 'BYN', 'Цена за всё'], ['area', 'BYN/м²', 'Ставка за 1 м² площади участка'], ['line', 'BYN/м.п.', 'Ставка за 1 погонный метр'],
+    ['piece', 'BYN/шт.', 'Цена за 1 шт. — клиент выбирает количество'], ['curve', 'По размеру', 'Кривая цен: затраты + наценка, зависит от размеров участка']
+  ];
+  function pmOf(m) { return m.mode === 'simple' ? (m.quantity === 'area' ? 'area' : 'line') : m.mode === 'curve' ? 'curve' : m.mode === 'piece' ? 'piece' : 'fixed'; }
   function itemHTML(it, ii) {
-    var m = formModel(it), curve = m.mode === 'curve' || m.mode === 'simple', simple = m.mode === 'simple';
-    return '<div class="it calc-it' + (curve ? ' is-curve' : '') + (simple ? ' is-simple' : '') + '" data-ii="' + ii + '" data-id="' + esc(it.id) + '">' +
+    var m = formModel(it), pm = pmOf(m), curve = pm === 'curve', simple = pm === 'area' || pm === 'line';
+    var ph = { fixed: 'инд. расчёт', area: 'ставка', line: 'ставка', piece: 'инд. расчёт' }[pm];
+    var tt = { fixed: 'Цена, BYN (пусто — индивидуальный расчёт)', area: 'Ставка, BYN за 1 м²', line: 'Ставка, BYN за 1 м.п.', piece: 'Цена за 1 шт., BYN (пусто — индивидуальный расчёт)' }[pm];
+    var val = simple ? plain(m.rate) : (it.price == null ? '' : it.price);
+    return '<div class="it calc-it' + (curve || simple ? ' is-curve' : '') + (simple ? ' is-simple' : '') + (pm === 'piece' ? ' is-piece' : '') + '" data-ii="' + ii + '" data-id="' + esc(it.id) + '" data-pm="' + pm + '">' +
       '<div class="it-main">' +
       '<input name="iname" value="' + esc(it.name) + '" placeholder="Название">' +
+      '<div class="pr-box">' +
       (curve ? '<input name="iprice" class="calc-price-ro" readonly tabindex="-1" title="Цена в базовой точке — считается автоматически" value="">'
-        : '<input name="iprice" type="number" min="0" step="0.01" value="' + (it.price == null ? '' : it.price) + '" placeholder="инд. расчёт">') +
+        : '<input name="iprice" type="number" min="0" step="0.01" value="' + esc(val) + '" placeholder="' + ph + '" title="' + tt + '">') +
+      '<select name="pmode" class="pm-sel" aria-label="Единица цены" title="' + esc(PMODES.filter(function (x) { return x[0] === pm; })[0][2]) + '">' + PMODES.map(function (x) {
+        return '<option value="' + x[0] + '"' + (x[0] === pm ? ' selected' : '') + ' title="' + esc(x[2]) + '">' + x[1] + '</option>';
+      }).join('') + '</select></div>' +
+      '<label class="ot-chk" title="Показывать «от» перед ценой на сайте"><input type="checkbox" name="ifrom"' + (it.from === true ? ' checked' : '') + '><span>от</span></label>' +
       '<input name="inote" value="' + esc(it.note || '') + '" placeholder="Подпись / примечание">' +
-      '<select name="pmode" aria-label="Тип тарификации"><option value="fixed"' + (!curve ? ' selected' : '') + '>Фиксированная</option><option value="simple"' + (simple ? ' selected' : '') + '>За м² / м.п. (ставка)</option><option value="curve"' + (curve && !simple ? ' selected' : '') + '>По размеру (кривая)</option></select>' +
       '<div class="tools"><button class="ic" data-act="i-up" title="Выше">↑</button><button class="ic" data-act="i-down" title="Ниже">↓</button><button class="ic del" data-act="i-del" title="Удалить">✕</button></div>' +
-      '</div>' + (simple ? simplePanel(m) : curve ? curvePanel(m) : '') + '</div>';
+      '</div>' + (simple ? simplePanel(m) : curve ? curvePanel(m) : pm === 'piece' ? piecePanel(m) : '') + '</div>';
   }
 
   function stepCard(s, num) {
@@ -230,7 +250,7 @@
       '<div class="step-head"><span class="blk-n">' + num + '</span>' + field('name', 'Название вкладки', s.name) + field('sub', 'Подсказка под заголовком', s.sub) +
       '<label>Выбор<select name="type"><option value="radio"' + (s.type !== 'multi' ? ' selected' : '') + '>Один вариант</option><option value="multi"' + (s.type === 'multi' ? ' selected' : '') + '>Несколько</option></select></label>' +
       '<div class="tools"><button class="ic" data-act="b-up" title="Выше">↑</button><button class="ic" data-act="b-down" title="Ниже">↓</button><button class="ic del" data-act="s-del" title="Удалить шаг">✕</button></div></div>' +
-      '<div class="colh calc-colh"><span>Позиция</span><span>Цена в базовой точке, BYN</span><span>Подпись</span><span>Тарификация</span><span></span></div>' +
+      '<div class="colh calc-colh"><span>Позиция</span><span>Цена и единица</span><span title="Показывать «от» перед ценой">«от»</span><span>Подпись</span><span></span></div>' +
       '<div class="items">' + (s.items || []).map(itemHTML).join('') + '</div>' +
       '<button class="btn line sm" data-act="i-add" style="margin-top:12px">+ Позиция</button></div>';
   }
@@ -252,49 +272,65 @@
   }
 
   /* ----- чтение позиции из формы ----- */
+  var LINE_Q = { perimeter: 1, halfPerimeter: 1, length: 1, width: 1 };
+  function noTrim() { return { enabled: false, tileA: 60, tileB: 50, material: 0, cut: 0 }; }
+  function simplePricing(q, rate, c) {
+    c = c || {};
+    return { mode: 'curve', simple: true, quantity: q, curve: { share: c.share > 0 ? c.share : 1, piece: c.piece > 0 ? c.piece : 0, costFixed: 0, costUnit: rate,
+      reserve: 0, markup: 1, min: c.min > 0 ? c.min : 0, trim: noTrim() } };
+  }
+  /* тип цены переключили — цена в базовой точке остаётся прежней */
+  function convertItem(out, prev, pm, bd, base) {
+    var pp = prev.pricing || {}, pc = pp.curve || {}, P0 = prev.price == null ? null : Math.max(0, +prev.price || 0);
+    if (pm === 'fixed' || pm === 'piece') {
+      out.price = P0;
+      out.pricing = pm === 'piece' ? { mode: 'piece', maxQty: 10 } : { mode: 'fixed' };
+      return out;
+    }
+    if (pm === 'area' || pm === 'line') {
+      var q = pm === 'area' ? 'area' : (LINE_Q[pp.quantity] ? pp.quantity : 'perimeter');
+      var c = pp.mode === 'curve' ? pc : {}, mv = PP.measureValue(q, bd) * (c.share > 0 ? c.share : 1);
+      out.pricing = simplePricing(q, mv > 0 && P0 ? Math.round(P0 / mv * 100) / 100 : 0, c);
+    } else if (pp.mode === 'curve') {     // со ставки на кривую: та же цена, дальше можно добавить затраты и наценку
+      out.pricing = { mode: 'curve', quantity: pp.quantity || 'area', curve: { share: pc.share > 0 ? pc.share : 1, piece: pc.piece || 0, costFixed: 0,
+        costUnit: pc.costUnit || 0, reserve: 0, markup: 1, min: pc.min || 0, trim: noTrim() } };
+    } else {
+      out.pricing = { mode: 'curve', quantity: 'area', curve: { share: 1, piece: 0, costFixed: 0, costUnit: (P0 || 0) / bd.area, reserve: 0, markup: 1, min: 0, trim: noTrim() } };
+    }
+    var a = PP.analyzeAt(out, bd, { base: base });
+    out.price = a ? PP.roundMoney(a.price) : 0;
+    return out;
+  }
   function readItem(row, base, force) {
     base = base || readBase();
     var g = function (n) { var e = $('[name=' + n + ']', row); return e ? e.value : ''; };
     var n = function (x, d) { var v = parseFloat(String(g(x)).replace(',', '.')); return isFinite(v) ? v : d; };
-    var pm = force || g('pmode'), mode = pm === 'curve' || pm === 'simple' ? pm : 'fixed';
-    var out = { id: row.dataset.id, name: g('iname').trim() || 'Позиция', note: g('inote').trim() || undefined };
-    if (mode === 'fixed') {
+    var R = row.dataset.pm || 'fixed', pm = force || g('pmode') || R, fb = $('[name=ifrom]', row);
+    if (pm === 'simple') pm = (g('cq') || 'area') === 'area' ? 'area' : 'line';
+    var out = { id: row.dataset.id, name: g('iname').trim() || 'Позиция', note: g('inote').trim() || undefined, from: fb && fb.checked ? true : undefined };
+    var bd = PP.dimsOf(base.length, base.width);
+    if (pm !== R) return keepExtra(convertItem(out, readItem(row, base, R), pm, bd, base), row);
+    if (pm === 'fixed' || pm === 'piece') {
       var p = g('iprice').trim();
       out.price = p === '' ? null : Math.max(0, Math.round(+p * 100) / 100);
-      out.pricing = { mode: 'fixed' };
+      out.pricing = pm === 'piece' ? { mode: 'piece', maxQty: Math.round(Math.min(99, Math.max(1, n('cmaxq', 10)))) } : { mode: 'fixed' };
       return keepExtra(out, row);
     }
-    var bd = PP.dimsOf(base.length, base.width), hasSimple = !!$('[name=srate]', row), hasCurve = !!$('[name=cfix]', row);
-    var noTrim = { enabled: false, tileA: 60, tileB: 50, material: 0, cut: 0 };
-    if (mode === 'simple') {
-      var q = g('cq') || 'area', share = Math.min(100, Math.max(1, n('cshare', 100))) / 100, rate;
-      if (hasSimple) rate = Math.max(0, n('srate', 0));
-      else {                               // переключили на ставку: цена в базовой точке остаётся прежней
-        var prev = hasCurve ? readItem(row, base, 'curve') : null, P0 = prev ? prev.price : (parseFloat(g('iprice')) || 0);
-        var mv = PP.measureValue(q, bd) * share; rate = mv > 0 ? Math.round(P0 / mv * 100) / 100 : 0;
-      }
-      out.pricing = { mode: 'curve', simple: true, quantity: q, curve: { share: share, piece: Math.max(0, n('cpiece', 0)), costFixed: 0, costUnit: rate, reserve: 0, markup: 1,
-        min: Math.max(0, n('cmin', 0)), trim: noTrim } };
+    if (pm === 'area' || pm === 'line') {   // ставка: цена = ставка × измерение (не ниже минимума)
+      var q = pm === 'area' ? 'area' : (LINE_Q[g('cq')] ? g('cq') : 'perimeter');
+      out.pricing = simplePricing(q, Math.max(0, Math.round(n('iprice', 0) * 100) / 100),
+        { share: Math.min(100, Math.max(1, n('cshare', 100))) / 100, piece: Math.max(0, n('cpiece', 0)), min: Math.max(0, n('cmin', 0)) });
       var sa = PP.analyzeAt(out, bd, { base: base });
       out.price = sa ? PP.roundMoney(sa.price) : 0;
       return keepExtra(out, row);
     }
-    if (hasSimple && !hasCurve) {          // со ставки на кривую: та же цена, дальше можно добавить затраты и наценку
-      out.pricing = { mode: 'curve', quantity: g('cq') || 'area', curve: { share: Math.min(100, Math.max(1, n('cshare', 100))) / 100, piece: Math.max(0, n('cpiece', 0)),
-        costFixed: 0, costUnit: Math.max(0, n('srate', 0)), reserve: 0, markup: 1, min: Math.max(0, n('cmin', 0)), trim: noTrim } };
-    } else if (!$('[name=cq]', row)) {            // позиция только что переключена с «фиксированной»: сохраняем её цену в базовой точке
-      var P = parseFloat(g('iprice')) || 0;
-      out.pricing = { mode: 'curve', quantity: 'area', curve: { share: 1, piece: 0, costFixed: 0, costUnit: P / bd.area, reserve: 0, markup: 1, min: 0,
-        trim: { enabled: false, tileA: 60, tileB: 50, material: 0, cut: 0 } } };
-    } else {
-      var trimBox = $('[name=ctrim]', row);
-      out.pricing = { mode: 'curve', quantity: g('cq') || 'area', curve: {
-        share: Math.min(100, Math.max(1, n('cshare', 100))) / 100, piece: Math.max(0, n('cpiece', 0)),
-        costFixed: Math.max(0, n('cfix', 0)), costUnit: Math.max(0, n('cunit', 0)), reserve: Math.max(0, n('cres', 0)),
-        markup: n('cmk', 1) > 0 ? n('cmk', 1) : 1, min: Math.max(0, n('cmin', 0)),
-        trim: { enabled: !!(trimBox && trimBox.checked && !trimBox.disabled), tileA: Math.max(1, n('ctA', 60)), tileB: Math.max(1, n('ctB', 50)),
-          material: Math.max(0, n('cmat', 0)), cut: Math.max(0, n('ccut', 0)) } } };
-    }
+    var trimBox = $('[name=ctrim]', row);
+    out.pricing = { mode: 'curve', quantity: g('cq') || 'area', curve: {
+      share: Math.min(100, Math.max(1, n('cshare', 100))) / 100, piece: Math.max(0, n('cpiece', 0)),
+      costFixed: Math.max(0, n('cfix', 0)), costUnit: Math.max(0, n('cunit', 0)), reserve: Math.max(0, n('cres', 0)),
+      markup: n('cmk', 1) > 0 ? n('cmk', 1) : 1, min: Math.max(0, n('cmin', 0)),
+      trim: { enabled: !!(trimBox && trimBox.checked && !trimBox.disabled), tileA: Math.max(1, n('ctA', 60)), tileB: Math.max(1, n('ctB', 50)),
+        material: Math.max(0, n('cmat', 0)), cut: Math.max(0, n('ccut', 0)) } } };
     var a = PP.analyzeAt(out, bd, { base: base });
     out.price = a ? PP.roundMoney(a.price) : 0;
     return keepExtra(out, row);

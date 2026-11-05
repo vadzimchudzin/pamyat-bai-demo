@@ -146,12 +146,13 @@
   function normalizePricing(it) {
     var raw = (it && it.pricing) || {}, name = String((it && it.name) || '');
     var mode = raw.mode || legacyInferMode(name);
-    if (mode !== 'curve' && mode !== 'area' && mode !== 'linear') mode = 'fixed';
-    var quantity = raw.quantity || (mode === 'area' ? 'area' : mode === 'linear' ? 'perimeter' : mode === 'curve' ? 'area' : 'unit');
+    if (mode !== 'curve' && mode !== 'area' && mode !== 'linear' && mode !== 'piece') mode = 'fixed';
+    var quantity = mode === 'piece' ? 'piece' : raw.quantity || (mode === 'area' ? 'area' : mode === 'linear' ? 'perimeter' : mode === 'curve' ? 'area' : 'unit');
     var k = raw.coefficient || {};
     return {
       mode: mode,
       quantity: quantity,
+      maxQty: mode === 'piece' ? Math.round(num(raw.maxQty, 10, 1, 99)) : null,   /* «за шт.»: клиент выбирает количество 1…maxQty */
       curve: mode === 'curve' ? normalizeCurve(raw.curve) : null,
       coefficient: {   /* старая схема «коэффициент смещения» — оставлена для уже сохранённых позиций */
         enabled: k.enabled === true,
@@ -226,6 +227,12 @@
     }
 
     var basePrice = override != null ? override : storedPrice;
+    if (p.mode === 'piece') {               /* цена за 1 шт. × количество, выбранное клиентом (размеры не влияют) */
+      if (basePrice == null) return { amount: null, quantity: 0, unit: 'шт.', coefficient: 1, base: null, mode: 'piece' };
+      var qn = pieceQty(opts.qty, p.maxQty);
+      basePrice = Math.max(0, basePrice);
+      return { amount: roundMoney(basePrice * qn), quantity: qn, unit: 'шт.', coefficient: 1, base: basePrice, mode: 'piece' };
+    }
     if (basePrice == null) return { amount: null, quantity: 0, unit: '', coefficient: 1, base: null, mode: p.mode };
     basePrice = Math.max(0, basePrice);
     if (p.mode === 'fixed' || !d || !d.provided) {
@@ -240,6 +247,20 @@
       coefficient: roundMoney(coefficient), base: basePrice, mode: p.mode
     };
   }
+  /* количество для позиций «за шт.»: целое 1…max (по умолчанию 1) */
+  function pieceQty(v, max) {
+    var m = Math.max(1, Math.round(Number(max) || 10)), q = Math.round(Number(v));
+    return !isFinite(q) || q < 1 ? 1 : Math.min(m, q);
+  }
+  /* единица цены позиции для подписи «… BYN/<ед.>»: '' — цена за всё, 'м²', 'м.п.', 'шт.' */
+  function priceUnit(it) {
+    var p = normalizePricing(it);
+    if (p.mode === 'piece') return 'шт.';
+    if (p.mode === 'fixed') return '';
+    if (p.mode === 'curve') { var lr = linearRate(it); return lr ? lr.unit : ''; }
+    return p.mode === 'area' || p.quantity === 'area' ? 'м²' : 'м.п.';
+  }
+
   function legacyCoefficient(p, d) {
     var k = p.coefficient;
     if (!k || !k.enabled || !d || !d.provided) return 1;
@@ -333,7 +354,7 @@
     num: num, fmt: fmt, roundMoney: roundMoney, roundTo: roundTo,
     normalizeBase: normalizeBase, dimsOf: dimsOf, measureValue: measureValue, measureUnit: measureUnit,
     trimInfo: trimInfo, normalizeCurve: normalizeCurve, normalizePricing: normalizePricing,
-    calcItem: calcItem, analyzeAt: analyzeAt, curvePoints: curvePoints, linearRate: linearRate, inferMode: legacyInferMode,
+    calcItem: calcItem, analyzeAt: analyzeAt, pieceQty: pieceQty, priceUnit: priceUnit, curvePoints: curvePoints, linearRate: linearRate, inferMode: legacyInferMode,
     legacyCoefficient: function (it, d) { return legacyCoefficient(normalizePricing(it), d); },
     sanitizeCalcForPublic: sanitizeCalcForPublic
   };

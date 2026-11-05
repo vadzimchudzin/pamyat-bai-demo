@@ -1,13 +1,15 @@
 name: Catalog 3D renders
 
 # 3D-каталог (tools/r3d): контур стелы снимается с исходного фото (main @ SRC_SHA), по нему строится сцена
-# Blender — стела, тумба, цветник с белой крошкой (Cycles, белый фон, мягкая тень). Из одного рендера —
-# 5 вариантов гранита (AOV-альбедо × свет + блики): чёрный, серый, красный, коричневый, зелёный.
-# Результат: assets/catalog/3d/<код>-<гранит>.webp (1000²) + sm/ (500²) + index.json (манифест для сайта);
-# листы для проверки и журнал — tools/r3d/log/. Комплексы, ограды и аксессуары остаются фото.
+# Blender — стела, тумба, цветник с белой крошкой (Cycles, белый фон, мягкая тень). Ограды O1–O12 — 3D-модели
+# по параметрам (tools/r3d/fencespec.py, fencegeo.py), кадр крупнее (fres, 2000²). Из одного рендера —
+# 5 вариантов гранита (AOV-текстура × свет + блики) по фото образцов tools/r3d/tex/*.jpg: габбро-диабаз (чёрный),
+# красный, серо-голубой, коричневый, мультиколор (granites.json). Резьба и гравировка — с исходного фото.
+# Результат: assets/catalog/3d/<код>-<гранит>.webp (1000², ограды 2000²) + sm/ (половина) + sw/ (образцы камня)
+# + index.json (манифест для сайта); листы для проверки и журнал — tools/r3d/log/. Комплексы и аксессуары — фото.
 # Модель попадает в результат только полным набором (все граниты, оба размера). Если хоть одна модель не
 # отрендерилась, шард завершается ошибкой (видно в Actions и в last-run.txt), но готовые модели публикуются,
-# а у упавших остаются прежние рендеры.
+# а у упавших остаются прежние рендеры. Файлы гранитов, которых больше нет в granites.json, удаляются.
 # Запуск: правка tools/r3d/run.txt (коды, качество) или Actions → Catalog 3D renders → Run workflow.
 on:
   push:
@@ -19,8 +21,11 @@ on:
         description: Коды через пробел или all
         default: all
       res:
-        description: Кадр, px
+        description: Кадр памятников, px
         default: "1000"
+      fres:
+        description: Кадр оград, px
+        default: "2000"
       spp:
         description: Сэмплов на пиксель
         default: "20"
@@ -63,19 +68,21 @@ jobs:
         env:
           IN_CODES: ${{ inputs.codes }}
           IN_RES: ${{ inputs.res }}
+          IN_FRES: ${{ inputs.fres }}
           IN_SPP: ${{ inputs.spp }}
         run: |
           set -euo pipefail
           pip install -q numpy opencv-python-headless pillow
-          if [ "${{ github.event_name }}" = workflow_dispatch ]; then C="$IN_CODES"; R="$IN_RES"; S="$IN_SPP"
+          if [ "${{ github.event_name }}" = workflow_dispatch ]; then C="$IN_CODES"; R="$IN_RES"; F="$IN_FRES"; S="$IN_SPP"
           else
             C="$(sed -n 's/^codes:[[:space:]]*//p' tools/r3d/run.txt)"
             R="$(sed -n 's/^res:[[:space:]]*//p' tools/r3d/run.txt)"
+            F="$(sed -n 's/^fres:[[:space:]]*//p' tools/r3d/run.txt)"
             S="$(sed -n 's/^spp:[[:space:]]*//p' tools/r3d/run.txt)"
           fi
           L="$(python tools/r3d/run.py --src src/assets/catalog/md --codes "${C:-all}" --shard ${{ matrix.shard }}/10 --list)"
           echo "shard ${{ matrix.shard }}: $L"
-          { echo "codes=$L"; echo "res=${R:-1000}"; echo "spp=${S:-20}"; echo "n=$(echo $L | wc -w)"; } >> "$GITHUB_OUTPUT"
+          { echo "codes=$L"; echo "res=${R:-1000}"; echo "fres=${F:-2000}"; echo "spp=${S:-20}"; echo "n=$(echo $L | wc -w)"; } >> "$GITHUB_OUTPUT"
       - name: Blender cache
         if: steps.p.outputs.n != '0'
         uses: actions/cache@v4
@@ -102,7 +109,7 @@ jobs:
             sudo apt-get -qq update && sudo apt-get -qq install -y --no-install-recommends libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1 libxrender1 libxext6 libx11-6 > /dev/null
             ~/blender/blender -b --factory-startup -noaudio --version | head -1
             python tools/r3d/run.py --src src/assets/catalog/md --work "$RUNNER_TEMP/r3d" --out dist --blender ~/blender/blender \
-              --codes "$CODES" --res ${{ steps.p.outputs.res }} --spp ${{ steps.p.outputs.spp }} --tag ${{ matrix.shard }}
+              --codes "$CODES" --res ${{ steps.p.outputs.res }} --fres ${{ steps.p.outputs.fres }} --spp ${{ steps.p.outputs.spp }} --tag ${{ matrix.shard }}
           } 2>&1 | tee dist/_log/shard-${{ matrix.shard }}.txt
       - uses: actions/upload-artifact@v4
         if: always() && steps.p.outputs.n != '0'
@@ -133,10 +140,11 @@ jobs:
         run: |
           set -euo pipefail
           shopt -s nullglob
-          D=assets/catalog/3d; mkdir -p $D/sm tools/r3d/log /tmp/r3d/_log /tmp/r3d/sm
-          f=(/tmp/r3d/*.webp); s=(/tmp/r3d/sm/*.webp); echo "images: ${#f[@]} + sm ${#s[@]}"
+          D=assets/catalog/3d; mkdir -p $D/sm $D/sw tools/r3d/log /tmp/r3d/_log /tmp/r3d/sm /tmp/r3d/sw
+          f=(/tmp/r3d/*.webp); s=(/tmp/r3d/sm/*.webp); w=(/tmp/r3d/sw/*.jpg); echo "images: ${#f[@]} + sm ${#s[@]} + sw ${#w[@]}"
           [ ${#f[@]} -gt 0 ] && cp /tmp/r3d/*.webp $D/
           [ ${#s[@]} -gt 0 ] && cp /tmp/r3d/sm/*.webp $D/sm/
+          [ ${#w[@]} -gt 0 ] && cp /tmp/r3d/sw/*.jpg $D/sw/
           rm -f tools/r3d/log/shard-*.txt
           for t in /tmp/r3d/_log/*.txt; do tail -c 20000 "$t" > "tools/r3d/log/$(basename "$t")"; done
           python tools/r3d/manifest.py $D "${{ github.run_id }}" tools/r3d/log /tmp/r3d/_log

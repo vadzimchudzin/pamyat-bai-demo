@@ -409,6 +409,21 @@ async function createEstimateFromLead(leadId, by) {
         }
         return;
       }
+      if (pricingMode === 'piece') {
+        // «за шт.»: цена за 1 шт. × количество, которое клиент выбрал в калькуляторе
+        const qmap = lead.config && lead.config.qty && typeof lead.config.qty === 'object' ? lead.config.qty : {};
+        const qn = PP.pieceQty(qmap[st.id + ':' + id], PP.normalizePricing(item).maxQty);
+        const pieceNotes = [];
+        if (item.note) pieceNotes.push(item.note);
+        if (item.price == null) pieceNotes.push('Цена не задана в каталоге — подтвердить вручную');
+        rows.push({
+          article: articleForTarget(target, fallbackArticle),
+          name: st.name + ' · ' + item.name,
+          unit: 'шт.', qty: qn, price: Math.max(0, Number(basePrice) || 0),
+          note: pieceNotes.join(' · ')
+        });
+        return;
+      }
       const calculated = estimatePricing(item, basePrice, dimensions);
       const noteParts = [];
       if (item.note) noteParts.push(item.note);

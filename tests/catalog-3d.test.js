@@ -70,21 +70,22 @@ test('гранит по положению курсора: равные поло
   assert.equal(R.pick(10, 250, 0), 0);
 });
 
-test('разметка: базовый слой, полосы, экранирование подписи', () => {
-  R.set(MAN);
+test('разметка: базовый слой, без полосы-индикатора, экранирование подписи', () => {
+  R.set(MAN); R.prefs(null);
   const h = R.stage('B4', 'Памятник "B4" <1>', '(max-width:720px) 46vw, 300px');
   assert.match(h, /^<span class="r3w"><img class="r3v on" data-k="0" src="\/assets\/catalog\/3d\/sm\/B4-black\.webp\?v=41802443026"/);
   assert.match(h, /loading="lazy"/);
   assert.match(h, /alt="Памятник &quot;B4&quot; &lt;1&gt;"/);
-  assert.equal((h.match(/<i /g) || []).length, 5, 'полоса на каждый гранит');
+  assert.doesNotMatch(h, /r3-bar|<i /, 'полосы внизу кадра больше нет');
   assert.match(h, /<span class="r3-nm" aria-hidden="true">Габбро-диабаз<\/span>$/);
   const big = R.stage('B4', 'x', '560px', true);
   assert.match(big, /src="\/assets\/catalog\/3d\/B4-black\.webp\?v=/, 'в карточке модели — крупный рендер');
   assert.doesNotMatch(big, /loading="lazy"/);
+  assert.match(R.stage('B4', 'x', '300px', false, 'vertical'), /^<span class="r3w" data-c="vertical">/, 'раздел — для своих гранитов');
 });
 
 test('образцы: кнопки с подписями, выбран первый', () => {
-  R.set(MAN);
+  R.set(MAN); R.prefs(null);
   const d = R.dots('B4: выбрать гранит');
   assert.match(d, /^<div class="r3-dots" aria-hidden="true" title="B4: выбрать гранит">/, 'div: на телефоне подписи-span скрыты');
   assert.equal((d.match(/<button type="button" tabindex="-1"/g) || []).length, 5, 'внутри карточки-кнопки — вне порядка Tab');
@@ -93,6 +94,40 @@ test('образцы: кнопки с подписями, выбран перв�
   const s = R.swatches();
   assert.equal((s.match(/<span>/g) || []).length, 5);
   assert.match(s, /<span>Коричневый гранит<\/span>/);
+});
+
+test('образцы с фото фактуры и размер кадра по коду (ограды 2000²)', () => {
+  R.set({ v: 9, res: 1000, rs: { O3: 2000, X1: 2000, B4: 'x' }, codes: ['B4', 'O3'],
+    variants: [{ id: 'black', name: 'Габбро-диабаз', swatch: '#1b1c1a', tex: 'sw/black.jpg' }, { id: 'red', name: 'Красный гранит', swatch: '#7a3f25', tex: '../x.jpg' }] });
+  R.prefs(null);
+  assert.equal(R.res('O3'), 2000); assert.equal(R.res('B4'), 1000); assert.equal(R.res('X1'), 1000, 'размер только для известных кодов');
+  assert.equal(R.srcset('O3', 'red'), '/assets/catalog/3d/sm/O3-red.webp?v=9 1000w, /assets/catalog/3d/O3-red.webp?v=9 2000w');
+  const d = R.dots('');
+  assert.match(d, /style="--c:#1b1c1a;--t:url\('\/assets\/catalog\/3d\/sw\/black\.jpg\?v=9'\)"/);
+  assert.match(d, /style="--c:#7a3f25"><\/button>/, 'чужой путь к фактуре не принимается');
+});
+
+test('граниты из админки: названия, выключенные на сайте и в разделе', () => {
+  R.set(MAN);
+  R.prefs({ stoneSet: { names: { red: ' Рубин ', gray: '' }, off: ['green'] }, categories: [{ id: 'cross', stoneOff: ['gray', 'brown'] }, { id: 'vertical' }] });
+  assert.deepEqual(R.variants().map(x => x.id), ['black', 'gray', 'red', 'brown']);
+  assert.equal(R.variants()[2].name, 'Рубин');
+  assert.equal(R.variants()[1].name, 'Серый гранит', 'пустое название — как в манифесте');
+  assert.deepEqual(R.variants('cross').map(x => x.id), ['black', 'red']);
+  assert.deepEqual(R.variants('vertical').map(x => x.id), ['black', 'gray', 'red', 'brown']);
+  assert.match(R.swatches('cross'), /<span>Рубин<\/span>/);
+  // в разделе один гранит — одно фото без смены камня
+  R.prefs({ stoneSet: { off: ['gray', 'red', 'brown', 'green'] }, categories: [] });
+  assert.equal(R.variants('cross').length, 1);
+  assert.equal(R.dots('x', 'cross'), ''); assert.equal(R.swatches('cross'), '');
+  assert.doesNotMatch(R.stage('B4', 'x', '300px', false, 'cross'), /r3-nm/);
+  // выключены все — остаётся первый гранит манифеста
+  R.prefs({ stoneSet: { off: MAN.variants.map(x => x.id) } });
+  assert.deepEqual(R.variants().map(x => x.id), ['black']);
+  // первый выключен — базовый слой из следующего
+  R.prefs({ stoneSet: { off: ['black'] } });
+  assert.match(R.stage('B4', 'x', '300px'), /src="\/assets\/catalog\/3d\/sm\/B4-gray\.webp/);
+  R.prefs(null);
 });
 
 function freshModule() { delete require.cache[require.resolve('../js/catalog-3d.js')]; return require('../js/catalog-3d.js'); }

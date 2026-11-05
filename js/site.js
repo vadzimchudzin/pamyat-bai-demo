@@ -455,6 +455,7 @@
   var DIMS = { length: '', width: '' };
   var Q = new URLSearchParams(location.search);
   var STEPS = [], S = {}, step = 0, MODEL = Q.get('model') || '', MODEL_CAT = Q.get('cat') || '';
+  var QTY = {};                          /* позиции «за шт.»: количество по ключу «шаг:позиция» */
   function visibleCats() { return (CAT.categories || []).filter(function (c) { return c.visible !== false; }); }
   function catOf(code) { var it = (CAT.items || []).filter(function (x) { return x.code === code; })[0]; return it ? it.cat : ''; }
   function normalizeDimensionsConfig(raw) {
@@ -495,8 +496,22 @@
     };
   }
   function roundMoney(n) { return Math.round((Number(n) + Number.EPSILON) * 100) / 100; }
-  function calcItemPrice(it, d) {
-    return PP.calcItem(it, d || getDimensions(), { base: CALC_BASE });
+  function calcItemPrice(it, d, q) {
+    return PP.calcItem(it, d || getDimensions(), { base: CALC_BASE, qty: q });
+  }
+  function isPiece(it) { return pricingConfig(it).mode === 'piece'; }
+  function qtyKey(sid, id) { return sid + ':' + id; }
+  function qtyOf(sid, it) { return PP.pieceQty(QTY[qtyKey(sid, it.id)], pricingConfig(it).maxQty); }
+  function qtyHtml(sid, it) {
+    var q = qtyOf(sid, it), mx = pricingConfig(it).maxQty;
+    return '<span class="qty" data-qk="' + escHtml(qtyKey(sid, it.id)) + '" data-max="' + mx + '">' +
+      '<button type="button" class="qb' + (q <= 1 ? ' off' : '') + '" data-qd="-1" aria-label="Меньше">−</button><b>' + q + '</b><small>шт.</small>' +
+      '<button type="button" class="qb' + (q >= mx ? ' off' : '') + '" data-qd="1" aria-label="Больше">+</button></span>';
+  }
+  function qtyPayload() {
+    var o = {};
+    selectedBreakdown().forEach(function (r) { if (r.mode === 'piece' && r.price != null) o[qtyKey(r.stepId, r.itemId)] = r.quantity; });
+    return o;
   }
   function fmt(n) { return Number(n).toLocaleString('ru-RU', { maximumFractionDigits: 2 }); }
   function money(n) { return fmt(roundMoney(n)) + ' BYN'; }
@@ -512,17 +527,18 @@
   function priceLabel(it, catalogStep) {
     if (it.price == null) return 'инд. расчёт';
     if (it.note && Number(it.price) === 0) return it.note;
-    var p = pricingConfig(it), d = getDimensions(), out = calcItemPrice(it, d), lr = rateOf(it);
+    var p = pricingConfig(it), d = getDimensions(), out = calcItemPrice(it, d), lr = rateOf(it), ot = it.from === true ? 'от ' : '';
+    if (p.mode === 'piece') return ot + fmt(it.price) + ' BYN/шт.';
     if (p.mode === 'curve') {
-      if (d.provided) return money(out.amount);
-      return lr ? fmt(lr.rate) + ' BYN/' + lr.unit : 'от ' + fmt(out.amount) + ' BYN';
+      if (d.provided) return ot + money(out.amount);
+      return lr ? ot + fmt(lr.rate) + ' BYN/' + lr.unit : 'от ' + fmt(out.amount) + ' BYN';
     }
     if (p.mode !== 'fixed') {
-      if (d.provided) return money(out.amount);
+      if (d.provided) return ot + money(out.amount);
       return 'от ' + fmt(it.price) + ' BYN/' + unitName(it);
     }
     if (Number(it.price) === 0) return '0 BYN';
-    return (catalogStep ? 'от ' : '') + fmt(it.price) + ' BYN';
+    return (catalogStep || ot ? 'от ' : '') + fmt(it.price) + ' BYN';
   }
   /* строка под названием: что входит + как посчитано (площадь × ставка) */
   function itemNote(it) {
@@ -544,7 +560,7 @@
       if (s.type === 'contact' || s.type === 'dimensions') return;
       selectedIds(s).forEach(function (id) {
         var it = item(s, id); if (!it) return;
-        var dd = getDimensions(), p = calcItemPrice(it, dd), lr = rateOf(it);
+        var dd = getDimensions(), p = calcItemPrice(it, dd, isPiece(it) ? qtyOf(s.id, it) : undefined), lr = rateOf(it);
         var full = lr ? PP.roundMoney(PP.measureValue(lr.quantity, dd.provided ? dd : PP.dimsOf(CALC_BASE.length, CALC_BASE.width))) : null;
         result.push({
           stepId: s.id, itemId: id, step: s.name, name: it.name,
@@ -576,6 +592,8 @@
       } else if (row.mode === 'curve') {
         if (row.trimAmount > 0) line += ' (в т.ч. подрезка плитки ' + money(row.trimAmount) + ')';
         if (row.note) line += ' [' + row.note + ']';
+      } else if (row.mode === 'piece') {
+        if (row.price != null) line += ' (' + row.quantity + ' шт. × ' + fmt(row.basePrice) + ' BYN)';
       } else if (row.mode !== 'fixed' && d.provided) {
         line += ' (' + fmt(row.quantity) + ' ' + row.unit + ' × ' + fmt(row.basePrice) + ' × коэффициент ' + fmt(row.coefficient) + ')';
       }
@@ -616,6 +634,8 @@
           ? fmt(row.full) + ' ' + row.unit + ' × ' + fmt(row.rate) + ' BYN/' + row.unit + (d.provided ? '' : ' · базовый участок ' + fmt(CALC_BASE.length) + ' × ' + fmt(CALC_BASE.width) + ' м')
           : row.mode === 'curve'
           ? [row.trimAmount > 0 ? 'в т.ч. подрезка плитки ' + money(row.trimAmount) : '', row.note].filter(Boolean).join(' · ')
+          : row.mode === 'piece'
+          ? (row.price == null ? '' : row.quantity + ' шт. × ' + fmt(row.basePrice) + ' BYN')
           : row.mode !== 'fixed'
           ? (d.provided
             ? fmt(row.quantity) + ' ' + row.unit + ' × ' + fmt(row.basePrice) + ' BYN' + (row.coefficient !== 1 ? ' · коэффициент ' + fmt(row.coefficient) : '')
@@ -623,7 +643,7 @@
           : '';
         var amount = row.price == null ? 'инд.' : (row.mode === 'curve' && !d.provided
           ? 'от ' + money(row.price)
-          : row.mode !== 'fixed' && row.mode !== 'curve' && !d.provided
+          : row.mode !== 'fixed' && row.mode !== 'curve' && row.mode !== 'piece' && !d.provided
           ? 'от ' + fmt(row.price) + ' BYN/' + row.unit
           : money(row.price));
         return '<div class="rw"><span>' + escHtml(row.name) + '</span><i>' + amount + '</i></div>' +
@@ -729,9 +749,10 @@
       $('#q').innerHTML = '<div class="qtitle">' + escHtml(s.name) + '</div><div class="qsub">' + escHtml(s.sub || '') + '</div>' + s.items.map(function (o) {
         var on = s.type === 'multi' ? S[s.id].indexOf(o.id) > -1 : S[s.id] === o.id;
         var nt = itemNote(o), tt = '<span class="t">' + escHtml(o.name) + (nt ? '<small class="opt-note">' + escHtml(nt) + '</small>' : '') + '</span>';
+        var qh = on && !s.catalog && o.price != null && isPiece(o) ? qtyHtml(s.id, o) : '';
         return s.type === 'multi'
-          ? '<div class="tog' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="switch" aria-checked="' + on + '" tabindex="0"><span class="sw"></span>' + tt + '<span class="p">' + priceLabel(o, s.catalog) + '</span></div>'
-          : '<div class="radio' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="radio" aria-checked="' + on + '" tabindex="0"><i></i>' + tt + '<span class="p">' + priceLabel(o, s.catalog) + '</span></div>';
+          ? '<div class="tog' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="switch" aria-checked="' + on + '" tabindex="0"><span class="sw"></span>' + tt + '<span class="p">' + priceLabel(o, s.catalog) + '</span>' + qh + '</div>'
+          : '<div class="radio' + (on ? ' on' : '') + '" data-id="' + o.id + '" role="radio" aria-checked="' + on + '" tabindex="0"><i></i>' + tt + '<span class="p">' + priceLabel(o, s.catalog) + '</span>' + qh + '</div>';
       }).join('') + pick + (s.catalog && individual() && M.ind
         ? '<div class="indcall"><p>' + escHtml(M.ind) + '</p></div>' : '');
       $$('[data-id]', $('#q')).forEach(function (el) {
@@ -742,6 +763,17 @@
           render();
         };
         el.addEventListener('click', act); el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); act(); } });
+      });
+      $$('.qty', $('#q')).forEach(function (box) {     /* −/+ количества: не переключает саму позицию */
+        box.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var b = e.target.closest && e.target.closest('.qb'), k = box.dataset.qk, mx = +box.dataset.max || 10;
+          if (!b) return;
+          QTY[k] = Math.max(1, Math.min(mx, PP.pieceQty(QTY[k], mx) + Number(b.dataset.qd)));
+          render();
+          var nb = $('.qty[data-qk="' + k + '"] .qb[data-qd="' + b.dataset.qd + '"]', $('#q')); if (nb) nb.focus();
+        });
+        box.addEventListener('keydown', function (e) { e.stopPropagation(); });
       });
     }
     var navbar = $('#prev').parentNode;
@@ -1011,7 +1043,7 @@
       e.preventDefault();
       var fd = new FormData(f), btn = f.querySelector('button[type=submit]');
       var lead = { type: type, name: fd.get('name'), phone: fd.get('phone'), comment: fd.get('c') || '', source: location.href };
-      if (type === 'calc') { lead.price = individual() ? null : total(); lead.config = { summary: summary(), sel: S, model: MODEL, dimensions: getDimensions(), calculations: selectedBreakdown() }; }
+      if (type === 'calc') { lead.price = individual() ? null : total(); lead.config = { summary: summary(), sel: S, qty: qtyPayload(), model: MODEL, dimensions: getDimensions(), calculations: selectedBreakdown() }; }
       function done() { f.style.display = 'none'; $(okSel).classList.add('on'); }
       if (window.PAMYAT_DEMO) return done();
       btn.disabled = true; btn.textContent = 'Отправляем…';

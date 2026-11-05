@@ -1,17 +1,29 @@
 #!/usr/bin/env python3
 # Манифест 3D-каталога, листы и журнал: python3 manifest.py <assets/catalog/3d> <run_id> [log_dir] [raw_log_dir]
-# Код попадает в манифест, только если есть все варианты в обоих размерах.
+# Код попадает в манифест, только если есть все варианты в обоих размерах. Файлы гранитов, которых больше нет
+# в granites.json (старые серый/зелёный), удаляются. Размер кадра — общий (res) и отдельно для крупных (rs: ограды 2000²).
 import json, os, re, sys, glob
+from collections import Counter
 from PIL import Image, ImageDraw
 HERE = os.path.dirname(os.path.abspath(__file__))
 d, run = sys.argv[1], sys.argv[2]; logd = sys.argv[3] if len(sys.argv) > 3 else None; raw = sys.argv[4] if len(sys.argv) > 4 else None
 G = json.load(open(os.path.join(HERE, 'granites.json')))
 ids = [g['id'] for g in G]
 def nat(c): return (c[0], int(re.sub(r'\D', '', c) or 0))
+for sub in ('', 'sm'):
+    for f in glob.glob(os.path.join(d, sub, '*.webp')):
+        m = re.fullmatch(r'[A-Z]\d+-([a-z]+)\.webp', os.path.basename(f))
+        if m and m.group(1) not in ids: os.remove(f)
 codes = sorted({m.group(1) for f in os.listdir(d) for m in [re.fullmatch(r'([A-Z]\d+)-[a-z]+\.webp', f)] if m}, key=nat)
 ok = [c for c in codes if all(os.path.exists(os.path.join(d, p, '%s-%s.webp' % (c, v))) for v in ids for p in ('', 'sm'))]
-man = {'v': str(run), 'res': Image.open(os.path.join(d, '%s-%s.webp' % (ok[0], ids[0]))).size[0] if ok else 0,
-       'variants': [{'id': g['id'], 'name': g['name'], 'swatch': g['swatch']} for g in G], 'codes': ok}
+size = {c: Image.open(os.path.join(d, '%s-%s.webp' % (c, ids[0]))).size[0] for c in ok}
+base = Counter(size.values()).most_common(1)[0][0] if size else 0
+def var(g):
+    v = {'id': g['id'], 'name': g['name'], 'swatch': g['swatch']}
+    if os.path.exists(os.path.join(d, 'sw', g['id'] + '.jpg')): v['tex'] = 'sw/%s.jpg' % g['id']
+    return v
+man = {'v': str(run), 'res': base, 'rs': {c: w for c, w in size.items() if w != base},
+       'variants': [var(g) for g in G], 'codes': ok}
 json.dump(man, open(os.path.join(d, 'index.json'), 'w'), ensure_ascii=False, separators=(',', ':'))
 print('codes', len(ok), 'incomplete', sorted(set(codes) - set(ok)))
 if logd:  # листы: по 60 изделий, вариант = номер по кругу

@@ -1,0 +1,5 @@
+run 41979445486 · 2026-11-05 06:49 UTC · кадров 893
+15M	assets/story
+8.3M	assets/story-m
+assets/story MB 13.3 файлов 878
+assets/story-m MB 6.6 файлов 877

@@ -13,11 +13,13 @@
 <link rel="stylesheet" href="/css/dusk.css?v=e30">
 <link rel="stylesheet" href="/css/works-polish.css?v=2">
 <link rel="stylesheet" href="/css/hero-blend.css?v=1">
-<link rel="stylesheet" href="/css/story-pro.css?v=1">
-<link rel="stylesheet" href="/css/polish.css?v=3">
-<link rel="stylesheet" href="/css/works-pro.css?v=2">
-<link rel="stylesheet" href="/css/fx.css?v=1">
+<link rel="stylesheet" href="/css/story-pro.css?v=3">
+<link rel="stylesheet" href="/css/polish.css?v=5">
+<link rel="stylesheet" href="/css/works-pro.css?v=3">
+<link rel="stylesheet" href="/css/fx.css?v=2">
 <link rel="stylesheet" href="/css/catalog-lux.css?v=1">
+<link rel="stylesheet" href="/css/catalog-3d.css?v=2">
+<link rel="stylesheet" href="/css/catalog-x.css?v=1">
 </head>
 <body>
 <div class="ambience" aria-hidden="true"><div class="flame-light"></div><div class="light-breath"></div></div>
@@ -28,11 +30,11 @@
   <div class="wrap bar">
     <a class="logo" href="#hero">Память<span>.бай</span></a>
     <nav class="menu">
-      <a class="l" href="#works">Работы</a>
-      <a class="l" href="#story">Установка</a>
-      <a class="l" href="/catalog">Каталог</a>
-      <a class="l" href="#calc">Расчёт</a>
-      <a class="l" href="#contact">Контакты</a>
+      <a class="l" href="#works" data-t="navWorks">Работы</a>
+      <a class="l" href="#story" data-t="navStory">Установка</a>
+      <a class="l" href="/catalog" data-t="navCatalog">Каталог</a>
+      <a class="l" href="#calc" data-t="navCalc">Расчёт</a>
+      <a class="l" href="#contact" data-t="navContact">Контакты</a>
       <span class="socs" aria-label="Соцсети">
         <a class="soc" data-soc="telegram" href="#contact" aria-label="Telegram"><svg viewBox="0 0 24 24"><path d="M21.9 4.3 18.7 19.4c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.5 13.2l-4.7-1.5c-1-.3-1-1 .2-1.5L20.6 3c.9-.3 1.6.2 1.3 1.3z"/></svg></a>
         <a class="soc" data-soc="viber" href="#contact" aria-label="Viber"><svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 5.9 2 10.7c0 2.8 1.5 5.2 3.9 6.8V22l3.6-2.2c.8.2 1.6.3 2.5.3 5.5 0 10-3.9 10-8.7S17.5 2 12 2z"/></svg></a>
@@ -65,14 +67,14 @@
     <h1 data-t="heroTitle">Память, которая живёт</h1>
     <span class="rule"></span>
     <p data-t="heroLead">Памятники из гранита в Беларуси под ключ: изготовление, установка и благоустройство участка.</p>
-    <div class="cta"><a class="btn btn-gold" href="#calc">Рассчитать стоимость <span class="arr">→</span></a><a class="btn btn-line" href="#contact">Получить консультацию</a></div>
+    <div class="cta"><a class="btn btn-gold" href="#calc"><span data-t="heroBtnCalc">Рассчитать стоимость</span> <span class="arr">→</span></a><a class="btn btn-line" href="#contact" data-t="heroBtnCall">Получить консультацию</a></div>
   </div>
 </section>
 
 <!-- 2. ПРИМЕРЫ РАБОТ -->
 <section class="section" id="works">
   <div class="wrap">
-    <div class="head rv"><p class="eyebrow">Наши работы</p><h2>Примеры работ</h2><p class="lead" data-t="worksLead">Гранит разных пород, гравировка и портреты. Подберём форму и камень под ваш участок.</p></div>
+    <div class="head rv"><p class="eyebrow" data-t="worksEyebrow">Наши работы</p><h2 data-t="worksTitle">Примеры работ</h2><p class="lead" data-t="worksLead">Гранит разных пород, гравировка и портреты. Подберём форму и камень под ваш участок.</p></div>
     <div class="works-carousel is-scrollable" id="worksCarousel">
       <button class="works-arrow works-prev" type="button" aria-label="Предыдущие работы" disabled aria-disabled="true">‹</button>
       <div class="works works-track" id="worksGrid" tabindex="0" aria-label="Примеры выполненных работ">
@@ -118,27 +120,27 @@
 </section>
 
 <!-- 4. ВИЗУАЛИЗАЦИЯ: от разметки до сдачи (компактно) -->
-<section class="story" id="story" data-tone="l" data-frames="/assets/render/" data-frames-m="/assets/render-m/" data-count="246">
+<section class="story" id="story" data-tone="l" data-frames="/assets/story/" data-frames-m="/assets/story-m/" data-count="893">
   <div class="story-sticky">
     <div class="wrap">
       <div class="story-box glass">
-        <div class="story-head"><p class="eyebrow">Установка под ключ</p><h2>От разметки до сдачи</h2></div>
+        <div class="story-head"><p class="eyebrow" data-t="storyEyebrow">Установка под ключ</p><h2 data-t="storyTitle">От разметки до сдачи</h2></div>
         <div class="story-screen"><canvas aria-hidden="true"></canvas></div>
         <div class="story-side">
           <div class="sc-top"><span class="sc-chapter">Разметка</span><span><b class="sc-n">01</b> / 08</span></div>
           <div class="sc-stack">
-            <article class="sc-item on" data-f="0" data-chapter="Разметка"><h3>Участок до начала работ</h3><p>Выезжаем на место, замеряем участок и выставляем разметку по колышкам. Проверяем диагонали, чтобы комплекс встал ровно по оси.</p><small>Контроль: диагонали и оси участка</small></article>
-            <article class="sc-item" data-f="3" data-chapter="Фундамент"><h3>Опалубка и армирование</h3><p>Опалубка по периметру, песчаная подушка, затем арматура: каждый пруток на своё место.</p><small>Контроль: шаг сетки и защитный слой</small></article>
-            <article class="sc-item" data-f="42" data-chapter="Бетон"><h3>Заливка бетона</h3><p>Заливаем за один подход и проходим правилом: монолит без холодных швов.</p><small>Контроль: горизонт по всей плоскости</small></article>
-            <article class="sc-item" data-f="84" data-chapter="Плитка"><h3>Бордюр и плитка</h3><p>Ставим бордюр, керамогранитную плитку кладём на клей ряд за рядом, со швом 2 мм.</p><small>Контроль: швы и уклон для воды</small></article>
-            <article class="sc-item" data-f="136" data-chapter="Ограда"><h3>Ограда и цветники</h3><p>Столбики, перемычки и короба цветников из того же гранита. Каждый элемент по уровню.</p><small>Контроль: симметрия относительно оси</small></article>
-            <article class="sc-item" data-f="185" data-chapter="Памятник"><h3>Установка стел</h3><p>Стелы опускаем медленно, без рывков и сколов. Крест складывается точно по шву.</p><small>Контроль: вертикаль и совмещение</small></article>
-            <article class="sc-item" data-f="214" data-chapter="Декор"><h3>Ваза и декор</h3><p>Ставим вазу, в цветниках — искусственная трава или белый щебень. Убираем за собой весь мусор.</p><small>Контроль: чистота участка</small></article>
-            <article class="sc-item" data-f="240" data-chapter="Готово"><h3>Комплекс в день сдачи</h3><p>Чисто, ровно, спокойно. Таким вы увидите место, когда приедете принимать работу.</p><small>Сдаём по акту, с гарантией</small></article>
+            <article class="sc-item on" data-f="0" data-chapter="Разметка"><h3 data-t="story1Title">Участок до начала работ</h3><p data-t="story1Text">Выезжаем на место, замеряем участок и выставляем разметку по колышкам. Проверяем диагонали, чтобы комплекс встал ровно по оси.</p><small data-t="story1Note">Контроль: диагонали и оси участка</small></article>
+            <article class="sc-item" data-f="78" data-chapter="Фундамент"><h3 data-t="story2Title">Опалубка и армирование</h3><p data-t="story2Text">Опалубка по периметру, песчаная подушка, затем арматура: каждый пруток на своё место.</p><small data-t="story2Note">Контроль: шаг сетки и защитный слой</small></article>
+            <article class="sc-item" data-f="190" data-chapter="Бетон"><h3 data-t="story3Title">Заливка бетона</h3><p data-t="story3Text">Заливаем за один подход и проходим правилом: монолит без холодных швов.</p><small data-t="story3Note">Контроль: горизонт по всей плоскости</small></article>
+            <article class="sc-item" data-f="318" data-chapter="Плитка"><h3 data-t="story4Title">Бордюр и плитка</h3><p data-t="story4Text">Ставим бордюр, зубчатым шпателем наносим клей на весь ряд — и только потом кладём плитку, ряд за рядом, со швом 2 мм.</p><small data-t="story4Note">Контроль: швы и уклон для воды</small></article>
+            <article class="sc-item" data-f="700" data-chapter="Ограда"><h3 data-t="story5Title">Ограда и цветники</h3><p data-t="story5Text">Столбики, перемычки и короба цветников из того же гранита. Каждый элемент по уровню.</p><small data-t="story5Note">Контроль: симметрия относительно оси</small></article>
+            <article class="sc-item" data-f="758" data-chapter="Памятник"><h3 data-t="story6Title">Установка стел</h3><p data-t="story6Text">Стелы опускаем медленно, без рывков и сколов. Крест складывается точно по шву.</p><small data-t="story6Note">Контроль: вертикаль и совмещение</small></article>
+            <article class="sc-item" data-f="834" data-chapter="Декор"><h3 data-t="story7Title">Ваза и декор</h3><p data-t="story7Text">Ставим вазу, в цветниках — искусственная трава или белый щебень. Убираем за собой весь мусор.</p><small data-t="story7Note">Контроль: чистота участка</small></article>
+            <article class="sc-item" data-f="880" data-chapter="Готово"><h3 data-t="story8Title">Комплекс в день сдачи</h3><p data-t="story8Text">Чисто, ровно, спокойно. Таким вы увидите место, когда приедете принимать работу.</p><small data-t="story8Note">Сдаём по акту, с гарантией</small></article>
           </div>
           <div class="rail"></div>
           <div class="rail-line"><i></i></div>
-          <a class="cta2" href="#calc" style="margin-top:20px;align-self:flex-start">Рассчитать стоимость <i>→</i></a>
+          <a class="cta2" href="#calc" style="margin-top:20px;align-self:flex-start"><span data-t="storyCta">Рассчитать стоимость</span> <i>→</i></a>
         </div>
       </div>
     </div>
@@ -148,12 +150,12 @@
 <!-- 5. СХЕМА РАБОТЫ -->
 <section class="section" id="steps">
   <div class="wrap">
-    <div class="head rv"><p class="eyebrow">Как работаем</p><h2>4 шага до установки</h2></div>
+    <div class="head rv"><p class="eyebrow" data-t="stepsEyebrow">Как работаем</p><h2 data-t="stepsTitle">4 шага до установки</h2></div>
     <div class="steps">
-      <div class="step glass rv"><b>01</b><h3>Заявка и консультация</h3><p>Обсуждаем пожелания, бюджет и сроки. Отвечаем на вопросы.</p></div>
-      <div class="step glass rv"><b>02</b><h3>Выезд и замер</h3><p>Приезжаем на участок или работаем по вашим размерам, делаем 3D-эскиз.</p></div>
-      <div class="step glass rv"><b>03</b><h3>Договор и цена</h3><p>Стоимость и сроки фиксируем в договоре. Вы вносите предоплату.</p></div>
-      <div class="step glass rv"><b>04</b><h3>Изготовление и установка</h3><p>Делаем всё под ключ. Принимаете готовую работу по акту.</p></div>
+      <div class="step glass rv"><b>01</b><h3 data-t="step1Title">Заявка и консультация</h3><p data-t="step1Text">Обсуждаем пожелания, бюджет и сроки. Отвечаем на вопросы.</p></div>
+      <div class="step glass rv"><b>02</b><h3 data-t="step2Title">Выезд и замер</h3><p data-t="step2Text">Приезжаем на участок или работаем по вашим размерам, делаем 3D-эскиз.</p></div>
+      <div class="step glass rv"><b>03</b><h3 data-t="step3Title">Договор и цена</h3><p data-t="step3Text">Стоимость и сроки фиксируем в договоре. Вы вносите предоплату.</p></div>
+      <div class="step glass rv"><b>04</b><h3 data-t="step4Title">Изготовление и установка</h3><p data-t="step4Text">Делаем всё под ключ. Принимаете готовую работу по акту.</p></div>
     </div>
   </div>
 </section>
@@ -161,7 +163,7 @@
 <!-- 6. КАТАЛОГ (короткий блок → /catalog) -->
 <section class="section" id="catalog" style="padding-top:0">
   <div class="wrap">
-    <div class="head rv"><p class="eyebrow">Каталог</p><h2>Каталог памятников</h2><p class="lead">Памятник может быть изготовлен из любого гранита по вашему выбору. В стандартную комплектацию входят стела, тумба и цветник.</p></div>
+    <div class="head rv"><p class="eyebrow" data-t="catEyebrow">Каталог</p><h2 data-t="catTitle">Каталог памятников</h2><p class="lead" data-t="catLead">Памятник может быть изготовлен из любого гранита по вашему выбору. В стандартную комплектацию входят стела, тумба и цветник.</p></div>
     <div class="cats" id="catTeaser"></div>
     <p class="note" data-t="priceNote">Указанные цены являются базовыми. Итоговая смета зависит от выбранной породы камня, габаритов стелы и состояния участка, но фиксируется до начала работ.</p>
   </div>
@@ -170,7 +172,7 @@
 <!-- 7. КАЛЬКУЛЯТОР-КОНСТРУКТОР -->
 <section class="section" id="calc" style="padding-top:0">
   <div class="wrap">
-    <div class="head rv"><p class="eyebrow">Калькулятор</p><h2 data-t="calcTitle">Соберите свой комплекс</h2><p class="lead" data-t="calcLead">Каждый участок уникален. Отметьте то, что вам необходимо, чтобы понять порядок цен. Точную смету зафиксируем в договоре после выезда на участок.</p></div>
+    <div class="head rv"><p class="eyebrow" data-t="calcEyebrow">Калькулятор</p><h2 data-t="calcTitle">Соберите свой комплекс</h2><p class="lead" data-t="calcLead">Каждый участок уникален. Отметьте то, что вам необходимо, чтобы понять порядок цен. Точную смету зафиксируем в договоре после выезда на участок.</p></div>
     <div class="calc">
       <div class="panel glass rv">
         <div class="stepnav" id="snav"></div>
@@ -179,10 +181,10 @@
         <div class="mbar" id="mbar" aria-live="polite"><div class="mt"><span>Итого</span><b id="mtv">0 BYN</b></div><button class="btn btn-gold" id="mnext" type="button">Далее <span class="arr">→</span></button></div>
       </div>
       <aside class="panel summary glass rv">
-        <h3>Ваш комплекс</h3>
+        <h3 data-t="calcSumTitle">Ваш комплекс</h3>
         <div class="live"><span>Итого</span><b id="tv">—</b></div>
         <ul id="sum"></ul>
-        <p class="muted">Ориентир по базовым ценам. Точную смету рассчитаем после выезда, цена фиксируется в договоре.</p>
+        <p class="muted" data-t="calcNote">Ориентир по базовым ценам. Точную смету рассчитаем после выезда, цена фиксируется в договоре.</p>
       </aside>
     </div>
   </div>
@@ -191,12 +193,12 @@
 <!-- 8. ЧТО ВАЖНО -->
 <section class="section" id="trust" style="padding-top:0">
   <div class="wrap">
-    <div class="head rv"><p class="eyebrow">Условия</p><h2>Что важно</h2></div>
+    <div class="head rv"><p class="eyebrow" data-t="trustEyebrow">Условия</p><h2 data-t="trustTitle">Что важно</h2></div>
     <div class="points">
-      <div class="point glass rv"><h3>Фиксированная смета</h3><p>Работы и материалы прописаны заранее. Итоговая цена закрепляется в договоре. Никаких скрытых «дополнительно» в конце.</p></div>
-      <div class="point glass rv"><h3>Прозрачные сроки</h3><p>Не торопим и не затягиваем. Сроки изготовления и установки согласуем под вас и погодные условия.</p></div>
-      <div class="point glass rv"><h3>Оплата и рассрочка</h3><p>Оплата по этапам. Обсудим удобные варианты и рассрочку. Все условия фиксируем на бумаге.</p></div>
-      <div class="point glass rv"><h3>Гарантия 2 года и 10 лет</h3><p>2 года — на фундамент и установку, 10 лет — на камень. Письменная гарантия, условия указываем в договоре.</p></div>
+      <div class="point glass rv"><h3 data-t="trust1Title">Фиксированная смета</h3><p data-t="trust1Text">Работы и материалы прописаны заранее. Итоговая цена закрепляется в договоре. Никаких скрытых «дополнительно» в конце.</p></div>
+      <div class="point glass rv"><h3 data-t="trust2Title">Прозрачные сроки</h3><p data-t="trust2Text">Не торопим и не затягиваем. Сроки изготовления и установки согласуем под вас и погодные условия.</p></div>
+      <div class="point glass rv"><h3 data-t="trust3Title">Оплата и рассрочка</h3><p data-t="trust3Text">Оплата по этапам. Обсудим удобные варианты и рассрочку. Все условия фиксируем на бумаге.</p></div>
+      <div class="point glass rv"><h3 data-t="trust4Title">Гарантия 2 года и 10 лет</h3><p data-t="trust4Text">2 года — на фундамент и установку, 10 лет — на камень. Письменная гарантия, условия указываем в договоре.</p></div>
     </div>
   </div>
 </section>
@@ -204,7 +206,7 @@
 <!-- 9. FAQ -->
 <section class="section" id="faq" style="padding-top:0">
   <div class="wrap faq">
-    <div class="head rv"><p class="eyebrow">Вопросы</p><h2>Частые вопросы</h2><p class="lead">Не нашли ответ? Позвоните или напишите — объясним по-человечески.</p><div class="faq-cta"><a class="btn btn-line btn-sm btn-rim" href="#contact" data-ask>Задать вопрос <span class="arr">→</span></a><a class="btn btn-line btn-sm btn-rim" id="faqCall" href="#contact"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 3.5h2.6l1.4 4.1-1.9 1.3a12.4 12.4 0 0 0 6.4 6.4l1.3-1.9 4.1 1.4v2.6a2 2 0 0 1-2.2 2A16.6 16.6 0 0 1 4.6 5.7a2 2 0 0 1 2-2.2z"/></svg>Позвонить</a></div></div>
+    <div class="head rv"><p class="eyebrow" data-t="faqEyebrow">Вопросы</p><h2 data-t="faqTitle">Частые вопросы</h2><p class="lead" data-t="faqLead">Не нашли ответ? Позвоните или напишите — объясним по-человечески.</p><div class="faq-cta"><a class="btn btn-line btn-sm btn-rim" href="#contact" data-ask><span data-t="faqAsk">Задать вопрос</span> <span class="arr">→</span></a><a class="btn btn-line btn-sm btn-rim" id="faqCall" href="#contact"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.6 3.5h2.6l1.4 4.1-1.9 1.3a12.4 12.4 0 0 0 6.4 6.4l1.3-1.9 4.1 1.4v2.6a2 2 0 0 1-2.2 2A16.6 16.6 0 0 1 4.6 5.7a2 2 0 0 1 2-2.2z"/></svg><span data-t="faqCall">Позвонить</span></a></div></div>
     <div class="faq-list glass rv" id="qa"></div>
   </div>
 </section>
@@ -213,11 +215,11 @@
 <section class="section" id="contact" style="padding-top:0">
   <div class="wrap contact">
     <div class="rv">
-      <p class="eyebrow">Контакты</p>
-      <h2>Обсудим детали вашего проекта</h2>
-      <p class="lead" style="margin-top:14px">Ответим в рабочее время. Подскажем по материалам и срокам.</p>
+      <p class="eyebrow" data-t="contactEyebrow">Контакты</p>
+      <h2 data-t="contactTitle">Обсудим детали вашего проекта</h2>
+      <p class="lead" style="margin-top:14px" data-t="contactLead">Ответим в рабочее время. Подскажем по материалам и срокам.</p>
       <a class="phone" id="cPhone" href="#contact">+375 (XX) XXX-XX-XX</a>
-      <p class="muted" style="margin-top:20px">Неудобно говорить? Напишите нам:</p>
+      <p class="muted" style="margin-top:20px" data-t="contactWrite">Неудобно говорить? Напишите нам:</p>
       <div class="msgs">
         <a class="msg" id="cTg" href="#"><svg viewBox="0 0 24 24"><path d="M21.9 4.3 18.7 19.4c-.2 1-.9 1.3-1.7.8l-4.8-3.5-2.3 2.2c-.3.3-.5.5-1 .5l.3-4.9 8.9-8c.4-.3-.1-.5-.6-.2L6.5 13.2l-4.7-1.5c-1-.3-1-1 .2-1.5L20.6 3c.9-.3 1.6.2 1.3 1.3z"/></svg>Telegram</a>
         <a class="msg" id="cViber" href="#"><svg viewBox="0 0 24 24"><path d="M12 2C6.5 2 2 5.9 2 10.7c0 2.8 1.5 5.2 3.9 6.8V22l3.6-2.2c.8.2 1.6.3 2.5.3 5.5 0 10-3.9 10-8.7S17.5 2 12 2z"/></svg>Viber</a>
@@ -226,15 +228,15 @@
       </div>
     </div>
     <div class="panel glass rv">
-      <h3 style="margin-bottom:16px">Оставьте номер — мы перезвоним</h3>
+      <h3 style="margin-bottom:16px" data-t="contactFormTitle">Оставьте номер — мы перезвоним</h3>
       <form class="form" id="lform">
         <input required name="name" placeholder="Имя" autocomplete="name">
         <input required name="phone" type="tel" placeholder="+375 (XX) XXX-XX-XX" autocomplete="tel">
         <textarea name="c" rows="3" placeholder="Комментарий (необязательно)"></textarea>
-        <button class="btn btn-gold btn-rim" type="submit">Жду звонка</button>
-        <p class="muted">Нажимая кнопку, вы соглашаетесь с политикой обработки персональных данных.</p>
+        <button class="btn btn-gold btn-rim" type="submit" data-t="contactBtn">Жду звонка</button>
+        <p class="muted" data-t="contactAgree">Нажимая кнопку, вы соглашаетесь с политикой обработки персональных данных.</p>
       </form>
-      <div class="ok" id="lok">Спасибо! Перезвоним в рабочее время.</div>
+      <div class="ok" id="lok" data-t="contactOk">Спасибо! Перезвоним в рабочее время.</div>
     </div>
   </div>
 </section>
@@ -242,7 +244,7 @@
 
 <footer>
   <div class="wrap">
-    <span>© 2026 Память.бай · Памятники из гранита под ключ · Беларусь</span>
+    <span data-t="footerCopy">© 2026 Память.бай · Памятники из гранита под ключ · Беларусь</span>
     <span class="legal">
       <a href="#">Политика конфиденциальности</a>
       <a href="#">Обработка персональных данных</a>
@@ -256,15 +258,18 @@
 
 <script src="/js/catalog-default.js?v=c3"></script>
 <script src="https://cdn.jsdelivr.net/npm/lenis@1.3.27/dist/lenis.min.js" integrity="sha384-R18XzqnxvVLEF+BYfhpmDx30v7eP83fAckyfoRzK7/Uf6nGqufcmsk0eAKo7S3RU" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="/js/pricing.js?v=p2"></script>
+<script src="/js/pricing.js?v=p3"></script>
 <script src="/js/look.js?v=1"></script>
 <script src="/js/calc-flow.js?v=1"></script>
 <script src="/js/calc-default.js?v=1"></script>
 <script src="/js/catalog-lux.js?v=1"></script>
-<script src="/js/site.js?v=e27"></script>
-<script src="/js/story.js?v=3"></script>
+<script src="/js/site.js?v=e28"></script>
+<script src="/js/catalog-3d.js?v=2"></script>
+<script src="/js/catalog-x.js?v=1"></script>
+<script src="/js/home-3d.js?v=1"></script>
+<script src="/js/story.js?v=5"></script>
 <script src="/js/works-fix.js?v=3" defer></script>
 <script src="/js/lamp.js?v=3" defer></script>
-<script src="/js/fx.js?v=1" defer></script>
+<script src="/js/fx.js?v=2" defer></script>
 </body>
 </html>
