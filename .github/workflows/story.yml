@@ -1,0 +1,173 @@
+name: Story renders
+
+# «От разметки до сдачи» (tools/story): процедурная сцена Blender (Cycles), камера и солнце совпадают с фото-фоном
+# (tools/story/plate.webp). Кадр — состояние сцены по номеру; рендерятся только изменившиеся области кадра
+# (scene.py). Шарды — непрерывные диапазоны кадров из tools/story/plan.json (равная цена работы).
+# Сборка (assemble.py): истинные кадры → композит на фон → дельта-кадры webp + ключевые кадры каждые 40 →
+# assets/story (1920×1080) и assets/story-m (1280×720) + meta.json для плеера js/story.js.
+# Запуск: правка tools/story/run.txt (не в main — слияние PR не перезапускает рендер) или Actions → Run workflow.
+on:
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - tools/story/run.txt
+  workflow_dispatch:
+    inputs:
+      res:
+        description: Ширина кадра, px
+        default: "1920"
+      spp:
+        description: Сэмплов на пиксель
+        default: "16"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: story-${{ github.ref_name }}
+  cancel-in-progress: true
+
+env:
+  BLENDER: blender-4.2.3-linux-x64
+  BLENDER_SHA: 3a64efd1982465395abab4259b4091d5c8c56054c7267e9633e4f702a71ea3f4
+  HDR: sunset_forest_2k.hdr
+  HDR_SHA: 17a84a9a9a7d355b30adbe0d587cea851d10055ced62f7aa1e1234f21bca3feb
+
+jobs:
+  render:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: tools/story
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Frames of shard
+        id: p
+        env:
+          IN_RES: ${{ inputs.res }}
+          IN_SPP: ${{ inputs.spp }}
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = workflow_dispatch ]; then R="$IN_RES"; S="$IN_SPP"
+          else
+            R="$(sed -n 's/^res:[[:space:]]*//p' tools/story/run.txt)"
+            S="$(sed -n 's/^spp:[[:space:]]*//p' tools/story/run.txt)"
+          fi
+          F="$(python -c "import json; s = json.load(open('tools/story/plan.json'))['shards']; i = ${{ matrix.shard }}; print('%d-%d' % tuple(s[i]) if i < len(s) else '')")"
+          echo "shard ${{ matrix.shard }}: frames $F, res ${R:-1920}, spp ${S:-16}"
+          { echo "frames=$F"; echo "res=${R:-1920}"; echo "spp=${S:-16}"; } >> "$GITHUB_OUTPUT"
+      - name: Blender cache
+        if: steps.p.outputs.frames != ''
+        uses: actions/cache@v4
+        with:
+          path: ~/blender.tar.xz
+          key: ${{ env.BLENDER }}
+      - name: HDR cache
+        if: steps.p.outputs.frames != ''
+        uses: actions/cache@v4
+        with:
+          path: ~/hdr
+          key: hdr-${{ env.HDR }}
+      - name: Render frames ${{ steps.p.outputs.frames }}
+        if: steps.p.outputs.frames != ''
+        run: |
+          set -eo pipefail
+          mkdir -p out _log
+          {
+            echo "cpu $(nproc)"; free -g | head -2
+            ok() { echo "$BLENDER_SHA  $HOME/blender.tar.xz" | sha256sum -c --quiet - 2>/dev/null; }
+            if ! ok; then
+              for m in https://mirrors.ocf.berkeley.edu/blender https://mirror.clarkson.edu/blender https://ftp.nluug.nl/pub/graphics/blender https://download.blender.org; do
+                curl -fsSL --retry 2 "$m/release/Blender4.2/$BLENDER.tar.xz" -o ~/blender.tar.xz && ok && break
+              done
+            fi
+            ok
+            hok() { echo "$HDR_SHA  $HOME/hdr/$HDR" | sha256sum -c --quiet - 2>/dev/null; }
+            mkdir -p ~/hdr
+            hok || curl -fsSL --retry 3 "https://dl.polyhaven.org/file/ph-assets/HDRIs/hdr/2k/$HDR" -o ~/hdr/$HDR
+            hok
+            tar -xJf ~/blender.tar.xz -C ~ && mv ~/$BLENDER ~/blender
+            sudo apt-get -qq update && sudo apt-get -qq install -y --no-install-recommends libxxf86vm1 libxfixes3 libxi6 libxkbcommon0 libsm6 libgl1 libegl1 libxrender1 libxext6 libx11-6 > /dev/null
+            pip install -q numpy opencv-python-headless pillow
+            ~/blender/blender -b --factory-startup -noaudio --version | head -1
+            ~/blender/blender -b --factory-startup -noaudio --python-exit-code 1 -P tools/story/scene.py -- --frames ${{ steps.p.outputs.frames }} \
+              --out out --res ${{ steps.p.outputs.res }} --spp ${{ steps.p.outputs.spp }} --hdr ~/hdr/$HDR | { grep --line-buffered -v '^Fra:' || true; }
+            # 16-bit PNG → 8-bit webp без потерь (в 10–15 раз меньше; сборка всё равно 8-битная)
+            python - <<'PY'
+          import glob, os, cv2, numpy as np
+          from PIL import Image
+          n = 0
+          for p in sorted(glob.glob('out/*.png')):
+              im = cv2.imread(p, cv2.IMREAD_UNCHANGED)
+              if im.dtype == np.uint16: im = (im.astype(np.float32) / 257.0 + 0.5).astype(np.uint8)
+              Image.fromarray(cv2.cvtColor(im, cv2.COLOR_BGRA2RGBA)).save(p[:-4] + '.webp', 'WEBP', lossless=True, quality=60, method=4)
+              os.remove(p); n += 1
+          print('webp', n, 'MB %.1f' % (sum(os.path.getsize(q) for q in glob.glob('out/*.webp')) / 1e6))
+          PY
+          } 2>&1 | tee _log/shard-${{ matrix.shard }}.txt
+          cp _log/shard-${{ matrix.shard }}.txt out/
+      - uses: actions/upload-artifact@v4
+        if: always() && steps.p.outputs.frames != ''
+        with:
+          name: story-${{ matrix.shard }}
+          path: out
+          retention-days: 2
+
+  assemble:
+    needs: render
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+          sparse-checkout: |
+            tools/story
+            assets/story
+            assets/story-m
+            assets/render
+            assets/render-m
+      - uses: actions/download-artifact@v4
+        with:
+          path: /tmp/story
+          pattern: story-*
+          merge-multiple: true
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -q numpy opencv-python-headless pillow
+      - name: Assemble, commit
+        run: |
+          set -euo pipefail
+          N="$(python -c "import json; print(json.load(open('tools/story/plan.json'))['count'])")"
+          mkdir -p tools/story/log
+          rm -f tools/story/log/shard-*.txt
+          for t in /tmp/story/shard-*.txt; do tail -c 12000 "$t" > "tools/story/log/$(basename "$t")"; done
+          python tools/story/assemble.py --src /tmp/story --plate tools/story/plate.webp --out assets --count "$N" \
+            --sizes 1920x1080:story,1280x720:story-m 2>&1 | tee tools/story/log/assemble.txt
+          {
+            echo "run ${{ github.run_id }} · $(date -u +%F\ %H:%M) UTC · кадров $N"
+            du -sh assets/story assets/story-m
+            grep -h 'MB' tools/story/log/assemble.txt || true
+          } > tools/story/log/last-run.txt
+          cat tools/story/log/last-run.txt
+          # прежний ролик (assets/render*) удаляем, если сайт на него больше не ссылается
+          if ! git grep -q -e "assets/render/" -e "assets/render-m/" HEAD -- '*.html' '*.js' '*.css' '*.json' ':!tools' ':!.github'; then
+            git rm -rq --ignore-unmatch assets/render assets/render-m
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A assets/story assets/story-m tools/story/log
+          git diff --cached --quiet && { echo "nothing to commit"; exit 0; }
+          git commit -q -m "Story: «От разметки до сдачи», $N кадров (run ${{ github.run_id }})"
+          for i in 1 2 3 4; do git pull -q --rebase origin "${{ github.ref_name }}" && git push -q origin "HEAD:${{ github.ref_name }}" && exit 0; sleep 7; done
+          exit 1
