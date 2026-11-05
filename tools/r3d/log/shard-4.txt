@@ -15,24 +15,23 @@ No user sessions are running outdated binaries.
 
 No VM guests are running outdated hypervisor (qemu) binaries on this host.
 Blender 4.2.3 LTS (hash 0e22e4fcea03 built 2024-10-14 23:31:34)
-{"code": "B4", "side": {"dx": 0.06, "dy": 0.0386}, "render": 93.1, "recon": "0.012998208403587341", "ok": true, "sec": 95.7}
-{"code": "B14", "side": {"dx": 0.0521, "dy": 0.0334}, "render": 91.6, "recon": "0.012917815707623959", "ok": true, "sec": 94.1}
-{"code": "B24", "side": {"dx": 0.0324, "dy": 0.0243}, "render": 91.2, "recon": "0.01281861960887909", "ok": true, "sec": 93.7}
-{"code": "C5", "side": {"dx": 0.0295, "dy": 0.004}, "render": 90.7, "recon": "0.01321738213300705", "ok": true, "sec": 93.2}
-{"code": "C15", "side": {"dx": 0.0243, "dy": 0.0219}, "render": 91.1, "recon": "0.013088802807033062", "ok": true, "sec": 93.7}
-{"code": "C25", "decor": 0.035, "side": {"dx": 0.0223, "dy": 0.004}, "render": 92.1, "recon": "0.013779382221400738", "ok": true, "sec": 95.0}
-{"code": "D5", "decor": 0.0, "side": {"dx": 0.0274, "dy": 0.0371}, "render": 91.5, "recon": "0.013286846689879894", "ok": true, "sec": 94.4}
-{"code": "E3", "decor": 0.081, "side": {"dx": 0.0239, "dy": 0.004}, "render": 92.4, "recon": "0.014163018204271793", "ok": true, "sec": 95.7}
-{"code": "F1", "decor": 0.0, "side": {"dx": 0.0241, "dy": 0.004}, "render": 92.7, "recon": "0.012970407493412495", "ok": true, "sec": 95.7}
-{"code": "F11", "decor": 0.07, "side": {"dx": 0.0239, "dy": 0.004}, "render": 92.5, "recon": "0.014333355240523815", "ok": true, "sec": 95.4}
-{"code": "F21", "decor": 0.0, "side": {"dx": 0.0255, "dy": 0.0096}, "render": 92.1, "recon": "0.013090725988149643", "ok": true, "sec": 95.0}
-{"code": "F31", "decor": 0.0, "side": {"dx": 0.0207, "dy": 0.004}, "render": 92.1, "recon": "0.01346758846193552", "ok": true, "sec": 95.0}
-{"code": "H5", "side": {"dx": 0.0173, "dy": 0.0142}, "render": 107.7, "recon": "0.010792197659611702", "ok": true, "sec": 111.2}
-{"code": "H15", "side": {"dx": 0.0164, "dy": 0.0102}, "render": 109.3, "recon": "0.010349886491894722", "ok": true, "sec": 112.8}
-{"code": "H25", "side": {"dx": 0.018, "dy": 0.0118}, "render": 108.4, "recon": "0.01044035516679287", "ok": true, "sec": 111.9}
-{"code": "H35", "side": {"dx": 0.0206, "dy": 0.0095}, "render": 108.1, "recon": "0.010514762252569199", "ok": true, "sec": 111.6}
-{"code": "I5", "decor": 0.0, "side": {"dx": 0.0179, "dy": 0.0101}, "render": 110.7, "recon": "0.010418525896966457", "ok": true, "sec": 115.1}
-{"code": "I15", "decor": 0.003, "side": {"dx": 0.0164, "dy": 0.004}, "render": 110.4, "recon": "0.010619547218084335", "ok": true, "sec": 114.8}
-{"code": "I25", "decor": 0.0, "side": {"dx": 0.0172, "dy": 0.004}, "render": 109.4, "recon": "0.010694903321564198", "ok": true, "sec": 113.9}
-{"code": "O5", "render": 365.6, "recon": "0.0016260584816336632", "ok": true, "sec": 374.8}
-{"code": "P3", "side": {"dx": 0.029, "dy": 0.004}, "render": 84.5, "recon": "0.013823987916111946", "ok": true, "sec": 87.0}
+{"code": "B4", "side": {"dx": 0.06, "dy": 0.0386}, "decor": 0.0, "render": 81.3, "recon": "0.012998146936297417", "ok": true, "sec": 86.3}
+{"code": "B14", "side": {"dx": 0.0521, "dy": 0.0334}, "decor": 0.0, "render": 78.8, "recon": "0.012918021529912949", "ok": true, "sec": 83.4}
+{"code": "B24", "side": {"dx": 0.0324, "dy": 0.0243}, "decor": 0.0, "render": 78.7, "recon": "0.012818769551813602", "ok": true, "sec": 83.2}
+{"code": "C5", "side": {"dx": 0.0295, "dy": 0.004}, "decor": 0.0, "render": 78.0, "recon": "0.013217322528362274", "ok": true, "sec": 82.9}
+{"code": "C15", "side": {"dx": 0.0243, "dy": 0.0219}, "decor": 0.0, "render": 78.1, "recon": "0.013088831678032875", "ok": true, "sec": 83.3}
+{"code": "C25", "side": {"dx": 0.0223, "dy": 0.004}, "decor": 0.017, "render": 79.5, "recon": "0.013519986532628536", "ok": true, "sec": 84.9}
+{"code": "D5", "side": {"dx": 0.0274, "dy": 0.0371}, "decor": 0.0, "render": 78.3, "recon": "0.013286948204040527", "ok": true, "sec": 83.7}
+{"code": "E3", "side": {"dx": 0.0239, "dy": 0.004}, "decor": 0.083, "render": 78.8, "recon": "0.014183496125042439", "ok": true, "sec": 84.4}
+{"code": "F1", "side": {"dx": 0.0241, "dy": 0.004}, "decor": 0.0, "render": 79.0, "recon": "0.01297022495418787", "ok": true, "sec": 84.0}
+{"code": "F11", "side": {"dx": 0.0239, "dy": 0.004}, "decor": 0.07, "render": 79.4, "recon": "0.014333170838654041", "ok": true, "sec": 85.0}
+{"code": "F21", "side": {"dx": 0.0255, "dy": 0.0096}, "decor": 0.0, "render": 79.2, "recon": "0.01309068500995636", "ok": true, "sec": 84.4}
+{"code": "F31", "side": {"dx": 0.0207, "dy": 0.004}, "decor": 0.0, "render": 78.9, "recon": "0.013467622920870781", "ok": true, "sec": 84.2}
+{"code": "H5", "side": {"dx": 0.0173, "dy": 0.0142}, "decor": 0.0, "render": 97.8, "recon": "0.010792195796966553", "ok": true, "sec": 105.1}
+{"code": "H15", "side": {"dx": 0.0164, "dy": 0.0102}, "decor": 0.0, "render": 99.7, "recon": "0.010349887423217297", "ok": true, "sec": 107.1}
+{"code": "H25", "side": {"dx": 0.018, "dy": 0.0118}, "decor": 0.0, "render": 98.3, "recon": "0.010440300218760967", "ok": true, "sec": 105.7}
+{"code": "H35", "side": {"dx": 0.0206, "dy": 0.0095}, "decor": 0.0, "render": 97.9, "recon": "0.010514703579246998", "ok": true, "sec": 105.4}
+{"code": "I5", "side": {"dx": 0.0179, "dy": 0.0101}, "decor": 0.0, "render": 100.9, "recon": "0.010418561287224293", "ok": true, "sec": 109.7}
+{"code": "I15", "side": {"dx": 0.0164, "dy": 0.004}, "decor": 0.0, "render": 100.1, "recon": "0.010619571432471275", "ok": true, "sec": 109.0}
+{"code": "I25", "side": {"dx": 0.0172, "dy": 0.004}, "decor": 0.0, "render": 100.1, "recon": "0.010694810189306736", "ok": true, "sec": 109.1}
+{"code": "P5", "side": {"dx": 0.027, "dy": 0.0166}, "decor": 0.0, "render": 70.7, "recon": "0.013922723941504955", "ok": true, "sec": 75.8}

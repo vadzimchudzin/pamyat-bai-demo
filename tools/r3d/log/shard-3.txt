@@ -1,6 +1,6 @@
 cpu 2
                total        used        free      shared  buff/cache   available
-Mem:               7           1           4           0           1           6
+Mem:               7           1           5           0           1           6
 
 Running kernel seems to be up-to-date.
 
@@ -15,25 +15,23 @@ No user sessions are running outdated binaries.
 
 No VM guests are running outdated hypervisor (qemu) binaries on this host.
 Blender 4.2.3 LTS (hash 0e22e4fcea03 built 2024-10-14 23:31:34)
-{"code": "B3", "side": {"dx": 0.0465, "dy": 0.0225}, "render": 72.0, "recon": "0.01288857776671648", "ok": true, "sec": 74.6}
-{"code": "B13", "side": {"dx": 0.0504, "dy": 0.0244}, "render": 71.0, "recon": "0.012917648069560528", "ok": true, "sec": 73.6}
-{"code": "B23", "side": {"dx": 0.0275, "dy": 0.0275}, "render": 72.7, "recon": "0.013008932583034039", "ok": true, "sec": 75.3}
-{"code": "C4", "side": {"dx": 0.0279, "dy": 0.0131}, "render": 70.6, "recon": "0.013314261101186275", "ok": true, "sec": 73.2}
-{"code": "C14", "side": {"dx": 0.0277, "dy": 0.0179}, "render": 70.2, "recon": "0.013098860159516335", "ok": true, "sec": 72.9}
-{"code": "C24", "side": {"dx": 0.0306, "dy": 0.0194}, "render": 71.1, "recon": "0.013152234256267548", "ok": true, "sec": 73.8}
-{"code": "D4", "decor": 0.0, "side": {"dx": 0.0279, "dy": 0.0279}, "render": 72.2, "recon": "0.013805326074361801", "ok": true, "sec": 75.2}
-{"code": "E2", "decor": 0.088, "side": {"dx": 0.0207, "dy": 0.0056}, "render": 73.3, "recon": "0.014283662661910057", "ok": true, "sec": 76.3}
-{"code": "E12", "decor": 0.128, "side": {"dx": 0.0271, "dy": 0.0335}, "render": 71.6, "recon": "0.015090899541974068", "ok": true, "sec": 74.6}
-{"code": "F10", "decor": 0.0, "side": {"dx": 0.0222, "dy": 0.027}, "render": 76.8, "recon": "0.0130564384162426", "ok": true, "sec": 79.9}
-{"code": "F20", "decor": 0.0, "side": {"dx": 0.0257, "dy": 0.0257}, "render": 77.1, "recon": "0.013323929160833359", "ok": true, "sec": 80.3}
-{"code": "F30", "decor": 0.0, "side": {"dx": 0.006, "dy": 0.004}, "render": 76.0, "recon": "0.01357702724635601", "ok": true, "sec": 79.1}
-{"code": "H4", "side": {"dx": 0.0173, "dy": 0.0149}, "render": 90.7, "recon": "0.010757575742900372", "ok": true, "sec": 94.9}
-{"code": "H14", "side": {"dx": 0.0189, "dy": 0.004}, "render": 93.0, "recon": "0.010263204574584961", "ok": true, "sec": 96.8}
-{"code": "H24", "side": {"dx": 0.0386, "dy": 0.011}, "render": 93.9, "recon": "0.01040098536759615", "ok": true, "sec": 97.7}
-{"code": "H34", "side": {"dx": 0.0371, "dy": 0.0134}, "render": 92.7, "recon": "0.010489235632121563", "ok": true, "sec": 96.5}
-{"code": "I4", "decor": 0.0, "side": {"dx": 0.038, "dy": 0.0127}, "render": 94.5, "recon": "0.010708906687796116", "ok": true, "sec": 99.3}
-{"code": "I14", "decor": 0.0, "side": {"dx": 0.0243, "dy": 0.004}, "render": 89.9, "recon": "0.011037061922252178", "ok": true, "sec": 94.6}
-{"code": "I24", "decor": 0.135, "side": {"dx": 0.006, "dy": 0.004}, "render": 90.6, "recon": "0.012176222167909145", "ok": true, "sec": 95.2}
-{"code": "O4", "render": 291.0, "recon": "0.0013967636041343212", "ok": true, "sec": 300.7}
-{"code": "P2", "side": {"dx": 0.006, "dy": 0.004}, "render": 70.5, "recon": "0.014863966964185238", "ok": true, "sec": 73.2}
-{"code": "P12", "side": {"dx": 0.0339, "dy": 0.004}, "render": 70.0, "recon": "0.01511608250439167", "ok": true, "sec": 72.5}
+{"code": "B3", "side": {"dx": 0.0465, "dy": 0.0225}, "decor": 0.0, "render": 89.7, "recon": "0.01288857776671648", "ok": true, "sec": 94.8}
+{"code": "B13", "side": {"dx": 0.0504, "dy": 0.0244}, "decor": 0.0, "render": 87.2, "recon": "0.012917648069560528", "ok": true, "sec": 92.2}
+{"code": "B23", "side": {"dx": 0.0275, "dy": 0.0275}, "decor": 0.0, "render": 87.0, "recon": "0.013008932583034039", "ok": true, "sec": 91.9}
+{"code": "C4", "side": {"dx": 0.0279, "dy": 0.0131}, "decor": 0.0, "render": 86.2, "recon": "0.013314261101186275", "ok": true, "sec": 91.5}
+{"code": "C14", "side": {"dx": 0.0277, "dy": 0.0179}, "decor": 0.0, "render": 86.6, "recon": "0.013098860159516335", "ok": true, "sec": 92.1}
+{"code": "C24", "side": {"dx": 0.0306, "dy": 0.0194}, "decor": 0.0, "render": 86.6, "recon": "0.013152234256267548", "ok": true, "sec": 91.8}
+{"code": "D4", "side": {"dx": 0.0279, "dy": 0.0279}, "decor": 0.0, "render": 87.7, "recon": "0.013805326074361801", "ok": true, "sec": 93.8}
+{"code": "E2", "side": {"dx": 0.0207, "dy": 0.0056}, "decor": 0.091, "render": 89.7, "recon": "0.01430991105735302", "ok": true, "sec": 95.5}
+{"code": "E12", "side": {"dx": 0.0271, "dy": 0.0335}, "decor": 0.128, "render": 86.6, "recon": "0.015090899541974068", "ok": true, "sec": 93.0}
+{"code": "F10", "side": {"dx": 0.0222, "dy": 0.027}, "decor": 0.0, "render": 87.8, "recon": "0.0130564384162426", "ok": true, "sec": 93.4}
+{"code": "F20", "side": {"dx": 0.0257, "dy": 0.0257}, "decor": 0.0, "render": 87.3, "recon": "0.013323929160833359", "ok": true, "sec": 92.9}
+{"code": "F30", "side": {"dx": 0.006, "dy": 0.004}, "decor": 0.0, "render": 86.9, "recon": "0.01357702724635601", "ok": true, "sec": 92.6}
+{"code": "H4", "side": {"dx": 0.0173, "dy": 0.0149}, "decor": 0.0, "render": 106.3, "recon": "0.010757575742900372", "ok": true, "sec": 114.1}
+{"code": "H14", "side": {"dx": 0.0189, "dy": 0.004}, "decor": 0.0, "render": 108.3, "recon": "0.010263204574584961", "ok": true, "sec": 116.2}
+{"code": "H24", "side": {"dx": 0.0386, "dy": 0.011}, "decor": 0.0, "render": 109.6, "recon": "0.01040098536759615", "ok": true, "sec": 117.1}
+{"code": "H34", "side": {"dx": 0.0371, "dy": 0.0134}, "decor": 0.0, "render": 108.2, "recon": "0.010489235632121563", "ok": true, "sec": 116.0}
+{"code": "I4", "side": {"dx": 0.038, "dy": 0.0127}, "decor": 0.0, "render": 109.8, "recon": "0.010708906687796116", "ok": true, "sec": 118.6}
+{"code": "I14", "side": {"dx": 0.0243, "dy": 0.004}, "decor": 0.0, "render": 108.6, "recon": "0.011037061922252178", "ok": true, "sec": 117.9}
+{"code": "I24", "side": {"dx": 0.006, "dy": 0.004}, "decor": 0.135, "render": 111.9, "recon": "0.012176222167909145", "ok": true, "sec": 121.2}
+{"code": "P4", "side": {"dx": 0.0337, "dy": 0.0242}, "decor": 0.0, "render": 77.9, "recon": "0.013959355652332306", "ok": true, "sec": 83.3}
