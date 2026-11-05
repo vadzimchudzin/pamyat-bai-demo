@@ -23,7 +23,7 @@ def spec_for(code, ol_dir, out_prefix, res=1000, samples=20, **kw):
     sp['stela']['cav'] = os.path.join(ol_dir, code + '-cav.png')
     if relief_family(code):
         sp['stela']['relief'] = os.path.join(ol_dir, code + '-relief.png')
-        dp = os.path.join(ol_dir, code + '-decor.png')
-        if os.path.exists(dp): sp['stela']['decor'] = dp
+    dp = os.path.join(ol_dir, code + '-decor.png')  # светлая резьба (relief.py) — у любой стелы, где она есть
+    if os.path.exists(dp): sp['stela']['decor'] = dp
     sp.update(kw)
     return sp

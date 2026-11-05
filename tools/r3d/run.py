@@ -59,8 +59,8 @@ def main():
                 sp = fence_spec(code, os.path.join(rd, code), res, a.spp, variants=ids, tex=tex)
             else:
                 o = outline(os.path.join(a.src, code + '.webp'), code, ol, dbg=False)
-                if relief_family(code): rec['decor'] = round(maps(code, ol), 3)
-                rec['side'] = photo_maps(code, ol)
+                rec['side'] = photo_maps(code, ol)  # лицевая грань (photo.png) нужна relief.maps — вызываем первым
+                rec['decor'] = round(maps(code, ol, relief=relief_family(code)), 3)  # рельеф и светлая резьба — у семейств с резьбой
                 sp = spec_for(code, ol, os.path.join(rd, code), res, a.spp, variants=ids, tex=tex)
             # крупный кадр — 4 части с перекрытием (память: 5 гранитов × проходы × шумодав), post.py сшивает
             S, MG = res // 2, 64
