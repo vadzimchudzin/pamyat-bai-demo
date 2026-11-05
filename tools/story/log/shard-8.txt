@@ -1,0 +1,176 @@
+": 653, "rects": [], "sec": 0.01, "w": 1920, "h": 1080}
+FRAME {"f": 654, "rects": [{"file": "r0654_0.png", "outer": [1240, 744, 1904, 1080], "inner": [1264, 768, 1880, 1080]}], "sec": 6.34, "w": 1920, "h": 1080}
+FRAME {"f": 655, "rects": [{"file": "r0655_0.png", "outer": [200, 672, 568, 1048], "inner": [224, 696, 544, 1024]}, {"file": "r0655_1.png", "outer": [1232, 744, 1904, 1080], "inner": [1256, 768, 1880, 1080]}], "sec": 9.78, "w": 1920, "h": 1080}
+FRAME {"f": 656, "rects": [{"file": "r0656_0.png", "outer": [200, 672, 568, 1048], "inner": [224, 696, 544, 1024]}, {"file": "r0656_1.png", "outer": [1232, 760, 1880, 1080], "inner": [1256, 784, 1856, 1080]}], "sec": 9.52, "w": 1920, "h": 1080}
+FRAME {"f": 657, "rects": [{"file": "r0657_0.png", "outer": [200, 672, 568, 1048], "inner": [224, 696, 544, 1024]}, {"file": "r0657_1.png", "outer": [1232, 776, 1864, 1080], "inner": [1256, 800, 1840, 1080]}], "sec": 8.92, "w": 1920, "h": 1080}
+FRAME {"f": 658, "rects": [{"file": "r0658_0.png", "outer": [200, 664, 568, 1048], "inner": [224, 688, 544, 1024]}, {"file": "r0658_1.png", "outer": [1312, 784, 1840, 1080], "inner": [1336, 808, 1816, 1080]}], "sec": 8.09, "w": 1920, "h": 1080}
+FRAME {"f": 659, "rects": [{"file": "r0659_0.png", "outer": [200, 664, 568, 1048], "inner": [224, 688, 544, 1024]}, {"file": "r0659_1.png", "outer": [1312, 800, 1832, 1080], "inner": [1336, 824, 1808, 1080]}], "sec": 7.53, "w": 1920, "h": 1080}
+FRAME {"f": 660, "rects": [{"file": "r0660_0.png", "outer": [192, 656, 568, 1056], "inner": [216, 680, 544, 1032]}, {"file": "r0660_1.png", "outer": [976, 728, 1816, 1080], "inner": [1000, 752, 1792, 1080]}], "sec": 12.08, "w": 1920, "h": 1080}
+FRAME {"f": 661, "rects": [{"file": "r0661_0.png", "outer": [192, 656, 576, 1056], "inner": [216, 680, 552, 1032]}, {"file": "r0661_1.png", "outer": [976, 728, 1808, 1080], "inner": [1000, 752, 1784, 1080]}], "sec": 11.88, "w": 1920, "h": 1080}
+FRAME {"f": 662, "rects": [{"file": "r0662_0.png", "outer": [184, 640, 576, 1064], "inner": [208, 664, 552, 1040]}, {"file": "r0662_1.png", "outer": [984, 744, 1800, 1080], "inner": [1008, 768, 1776, 1080]}], "sec": 12.01, "w": 1920, "h": 1080}
+FRAME {"f": 663, "rects": [{"file": "r0663_0.png", "outer": [184, 632, 584, 1072], "inner": [208, 656, 560, 1048]}, {"file": "r0663_1.png", "outer": [984, 760, 1792, 1080], "inner": [1008, 784, 1768, 1080]}], "sec": 11.49, "w": 1920, "h": 1080}
+FRAME {"f": 664, "rects": [{"file": "r0664_0.png", "outer": [176, 616, 584, 1080], "inner": [200, 640, 560, 1056]}, {"file": "r0664_1.png", "outer": [1032, 768, 1792, 1080], "inner": [1056, 792, 1768, 1080]}], "sec": 11.15, "w": 1920, "h": 1080}
+FRAME {"f": 665, "rects": [{"file": "r0665_0.png", "outer": [168, 600, 592, 1080], "inner": [192, 624, 568, 1072]}, {"file": "r0665_1.png", "outer": [1032, 776, 1784, 1080], "inner": [1056, 800, 1760, 1080]}], "sec": 11.01, "w": 1920, "h": 1080}
+FRAME {"f": 666, "rects": [{"file": "r0666_0.png", "outer": [160, 584, 600, 1080], "inner": [184, 608, 576, 1080]}, {"file": "r0666_1.png", "outer": [712, 720, 1784, 1080], "inner": [736, 744, 1760, 1080]}], "sec": 16.15, "w": 1920, "h": 1080}
+FRAME {"f": 667, "rects": [{"file": "r0667_0.png", "outer": [152, 560, 608, 1080], "inner": [176, 584, 584, 1080]}, {"file": "r0667_1.png", "outer": [712, 720, 1784, 1080], "inner": [736, 744, 1760, 1080]}], "sec": 16.89, "w": 1920, "h": 1080}
+FRAME {"f": 668, "rects": [{"file": "r0668_0.png", "outer": [136, 528, 616, 1080], "inner": [160, 552, 592, 1080]}, {"file": "r0668_1.png", "outer": [712, 728, 1784, 1080], "inner": [736, 752, 1760, 1080]}], "sec": 17.28, "w": 1920, "h": 1080}
+FRAME {"f": 669, "rects": [{"file": "r0669_0.png", "outer": [120, 496, 624, 1080], "inner": [144, 520, 600, 1080]}, {"file": "r0669_1.png", "outer": [728, 744, 1784, 1080], "inner": [752, 768, 1760, 1080]}], "sec": 17.28, "w": 1920, "h": 1080}
+FRAME {"f": 670, "rects": [{"file": "r0670_0.png", "outer": [104, 456, 648, 1080], "inner": [128, 480, 624, 1080]}, {"file": "r0670_1.png", "outer": [768, 752, 1504, 1080], "inner": [792, 776, 1480, 1072]}], "sec": 14.67, "w": 1920, "h": 1080}
+FRAME {"f": 671, "rects": [{"file": "r0671_0.png", "outer": [104, 456, 648, 1080], "inner": [128, 480, 624, 1080]}, {"file": "r0671_1.png", "outer": [768, 768, 1504, 1080], "inner": [792, 792, 1480, 1064]}], "sec": 14.19, "w": 1920, "h": 1080}
+FRAME {"f": 672, "rects": [{"file": "r0672_0.png", "outer": [456, 696, 1496, 1080], "inner": [480, 720, 1472, 1064]}], "sec": 10.55, "w": 1920, "h": 1080}
+FRAME {"f": 673, "rects": [{"file": "r0673_0.png", "outer": [456, 696, 1496, 1080], "inner": [480, 720, 1472, 1064]}], "sec": 10.37, "w": 1920, "h": 1080}
+FRAME {"f": 674, "rects": [{"file": "r0674_0.png", "outer": [464, 712, 1496, 1080], "inner": [488, 736, 1472, 1064]}], "sec": 9.94, "w": 1920, "h": 1080}
+FRAME {"f": 675, "rects": [{"file": "r0675_0.png", "outer": [464, 728, 1496, 1080], "inner": [488, 752, 1472, 1064]}], "sec": 9.29, "w": 1920, "h": 1080}
+FRAME {"f": 676, "rects": [{"file": "r0676_0.png", "outer": [520, 736, 1232, 1064], "inner": [544, 760, 1208, 1040]}], "sec": 6.08, "w": 1920, "h": 1080}
+FRAME {"f": 677, "rects": [{"file": "r0677_0.png", "outer": [520, 744, 1232, 1064], "inner": [544, 768, 1208, 1040]}], "sec": 5.72, "w": 1920, "h": 1080}
+FRAME {"f": 678, "rects": [{"file": "r0678_0.png", "outer": [208, 688, 1232, 1064], "inner": [232, 712, 1208, 1040]}], "sec": 10.12, "w": 1920, "h": 1080}
+FRAME {"f": 679, "rects": [{"file": "r0679_0.png", "outer": [208, 688, 1232, 1064], "inner": [232, 712, 1208, 1040]}], "sec": 10.14, "w": 1920, "h": 1080}
+FRAME {"f": 680, "rects": [{"file": "r0680_0.png", "outer": [232, 704, 1232, 1064], "inner": [256, 728, 1208, 1040]}], "sec": 9.57, "w": 1920, "h": 1080}
+FRAME {"f": 681, "rects": [{"file": "r0681_0.png", "outer": [232, 720, 1232, 1064], "inner": [256, 744, 1208, 1040]}], "sec": 8.95, "w": 1920, "h": 1080}
+FRAME {"f": 682, "rects": [{"file": "r0682_0.png", "outer": [280, 728, 984, 1040], "inner": [304, 752, 960, 1016]}], "sec": 5.78, "w": 1920, "h": 1080}
+FRAME {"f": 683, "rects": [{"file": "r0683_0.png", "outer": [288, 736, 984, 1040], "inner": [312, 760, 960, 1016]}], "sec": 5.32, "w": 1920, "h": 1080}
+FRAME {"f": 684, "rects": [{"file": "r0684_0.png", "outer": [288, 744, 976, 1040], "inner": [312, 768, 952, 1016]}], "sec": 5.13, "w": 1920, "h": 1080}
+FRAME {"f": 685, "rects": [{"file": "r0685_0.png", "outer": [288, 744, 976, 1032], "inner": [312, 768, 952, 1008]}], "sec": 4.96, "w": 1920, "h": 1080}
+FRAME {"f": 686, "rects": [{"file": "r0686_0.png", "outer": [288, 752, 976, 1032], "inner": [312, 776, 952, 1008]}], "sec": 4.87, "w": 1920, "h": 1080}
+FRAME {"f": 687, "rects": [{"file": "r0687_0.png", "outer": [288, 752, 976, 1032], "inner": [312, 776, 952, 1008]}], "sec": 4.95, "w": 1920, "h": 1080}
+FRAME {"f": 688, "rects": [{"file": "r0688_0.png", "outer": [288, 760, 744, 1016], "inner": [312, 784, 720, 992]}], "sec": 3.16, "w": 1920, "h": 1080}
+FRAME {"f": 689, "rects": [{"file": "r0689_0.png", "outer": [288, 760, 744, 1016], "inner": [312, 784, 720, 992]}], "sec": 3.13, "w": 1920, "h": 1080}
+FRAME {"f": 690, "rects": [{"file": "r0690_0.png", "outer": [288, 760, 744, 1008], "inner": [312, 784, 720, 984]}], "sec": 3.04, "w": 1920, "h": 1080}
+FRAME {"f": 691, "rects": [{"file": "r0691_0.png", "outer": [288, 760, 744, 1008], "inner": [312, 784, 720, 984]}], "sec": 3.07, "w": 1920, "h": 1080}
+FRAME {"f": 692, "rects": [{"file": "r0692_0.png", "outer": [288, 760, 744, 1008], "inner": [312, 784, 720, 984]}], "sec": 3.08, "w": 1920, "h": 1080}
+FRAME {"f": 693, "rects": [{"file": "r0693_0.png", "outer": [288, 760, 744, 1008], "inner": [312, 784, 720, 984]}], "sec": 3.04, "w": 1920, "h": 1080}
+FRAME {"f": 694, "rects": [], "sec": 0.01, "w": 1920, "h": 1080}
+DONE 115
+
+Blender quit
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+libpng warning: eXIf: duplicate
+webp 130 MB 11.1
