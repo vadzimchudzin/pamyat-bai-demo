@@ -7,7 +7,7 @@
 /* ---------- фон секции: светлый мрамор, снизу плавно растворяется в фоне страницы ---------- */
 #works:before{
   inset:0!important;z-index:0!important;filter:none!important;opacity:1!important;
-  background:#ece3d8 url(/assets/img/marble-works.svg) 50% 40%/cover no-repeat!important;
+  background:#ece3d8 url(/assets/img/marble-works.svg?v=2) 50% 40%/cover no-repeat!important;
   -webkit-mask-image:linear-gradient(180deg,#000 0,#000 calc(100% - 200px),transparent 100%);
   mask-image:linear-gradient(180deg,#000 0,#000 calc(100% - 200px),transparent 100%)
 }
