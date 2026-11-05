@@ -1,0 +1,34 @@
+name: Apply bundle
+
+# Одноразовый: распаковывает tools/bundle (tar.gz частями в base64) в репозиторий и удаляет сам бандл.
+# После распаковки этот файл удаляется вручную (токен Actions не может менять .github/workflows).
+on:
+  push:
+    branches-ignore:
+      - main
+    paths:
+      - tools/bundle/SHA256SUMS
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+      - name: Unpack, commit
+        run: |
+          set -euo pipefail
+          (cd tools/bundle && sha256sum -c SHA256SUMS)
+          cat tools/bundle/p*.b64 | base64 -d | tar -xzv
+          git rm -rq tools/bundle
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A tools/story
+          git commit -q -m "tools/story: сцена, сборка, фон и план ролика (распаковка бандла)"
+          for i in 1 2 3 4; do git pull -q --rebase origin "${{ github.ref_name }}" && git push -q origin "HEAD:${{ github.ref_name }}" && exit 0; sleep 6; done
+          exit 1
