@@ -25,7 +25,7 @@
   /* ---------- HUD поверх кадра ---------- */
   story.classList.add('sp');
   var hud = document.createElement('div'); hud.className = 'sp-hud'; hud.setAttribute('aria-hidden', 'true');
-  hud.innerHTML = '<div class="sp-load"><i></i></div><div class="sp-light"></div><div class="sp-grain"></div>' +
+  hud.innerHTML = '<div class="sp-load"><i></i></div><div class="sp-light"></div>' +
     '<div class="sp-tag"><span class="sp-idx"><b>01</b></span><span class="sp-name">Разметка</span></div>' +
     '<div class="sp-time"><span class="sp-pct">0</span>%</div>' +
     '<div class="sp-bar">' + items.map(function (it) {
@@ -34,14 +34,6 @@
   screen.appendChild(hud);
   var hudIdx = $('.sp-idx b', hud), hudName = $('.sp-name', hud), hudPct = $('.sp-pct', hud);
   var hudBar = $('.sp-bar b', hud), loadBar = $('.sp-load i', hud), ticks = $$('.sp-bar i', hud);
-
-  (function () {     // зерно плёнки: маленькая текстура шума
-    var c = document.createElement('canvas'); c.width = c.height = 160;
-    var g = c.getContext('2d'), d = g.createImageData(160, 160);
-    for (var i = 0; i < d.data.length; i += 4) { var v = Math.random() * 255 | 0; d.data[i] = d.data[i + 1] = d.data[i + 2] = v; d.data[i + 3] = 255; }
-    g.putImageData(d, 0, 0);
-    $('.sp-grain', hud).style.backgroundImage = 'url(' + c.toDataURL('image/png') + ')';
-  })();
 
   /* ---------- карта скролл → кадр (meta.flow: резкие места проходят медленнее) ---------- */
   var cum = null;

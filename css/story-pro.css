@@ -22,8 +22,6 @@
 .sp-hud{position:absolute;inset:0;z-index:3;pointer-events:none;color:#f6efe4;font:500 11px var(--sans);letter-spacing:.2em;text-transform:uppercase}
 .sp-light{position:absolute;inset:-20%;mix-blend-mode:screen;opacity:calc(.55 - var(--sp-q,0) * .2);
   background:radial-gradient(38% 42% at calc(16% + var(--sp-mx,0) * 6%) calc(12% + var(--sp-my,0) * 5%),rgba(255,214,150,.38),rgba(255,190,110,.1) 45%,transparent 70%)}
-.sp-grain{position:absolute;inset:-50%;opacity:.07;mix-blend-mode:overlay;background-size:160px 160px;animation:sp-gr .9s steps(6) infinite}
-@keyframes sp-gr{0%{transform:translate(0,0)}17%{transform:translate(-7%,4%)}33%{transform:translate(5%,-6%)}50%{transform:translate(-3%,8%)}67%{transform:translate(8%,2%)}83%{transform:translate(-6%,-5%)}100%{transform:translate(2%,6%)}}
 .sp-load{position:absolute;left:0;right:0;top:0;height:2px;background:rgba(255,255,255,.08);transition:opacity .8s .4s}
 .sp-load i{display:block;height:100%;background:linear-gradient(90deg,#b8924f,#f0d3a0);transform-origin:0 50%;transform:scaleX(0);transition:transform .4s var(--ez)}
 .sp-hud.ready .sp-load{opacity:0}
@@ -72,6 +70,5 @@
   .sp-bar i{width:4px;height:4px;margin:-2px 0 0 -2px}
 }
 @media (prefers-reduced-motion:reduce){
-  .sp-grain{animation:none}
   .sp .story-screen{clip-path:none}
 }
