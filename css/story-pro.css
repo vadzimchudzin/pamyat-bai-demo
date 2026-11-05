@@ -1,5 +1,5 @@
 /* «От разметки до сдачи» — кинематографичная подача (поверх dusk.css) */
-.story.sp{height:440vh}
+.story.sp{height:540vh}
 .sp .story-box{grid-template-columns:2.05fr 1fr;gap:26px;padding:20px}
 .sp .story-head{padding:6px 6px 0}
 .sp .story-screen{max-height:70vh;border-radius:20px;isolation:isolate;
@@ -59,7 +59,7 @@
   .sp .story-screen{max-height:52svh}
 }
 @media (max-width:720px){
-  .story.sp{height:380vh}
+  .story.sp{height:460vh}
   .sp .story-box{padding:12px;gap:10px}
   .sp .sc-top{display:none}
   .sp .story-screen{aspect-ratio:4/3;max-height:38svh;border-radius:16px;clip-path:inset(calc((1 - var(--sp-in,1)) * 5%) calc((1 - var(--sp-in,1)) * 4%) round 16px)}
