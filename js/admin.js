@@ -240,12 +240,11 @@
     var studioOn = !(K.look && K.look.studio === false);
     var opt = function (list, cur) { return list.map(function (o) { return '<option value="' + o[0] + '"' + (o[0] === cur ? ' selected' : '') + '>' + o[1] + '</option>'; }).join(''); };
     return '<div class="card lx-look-ed">' +
-      '<div class="size-global-head"><div><b>Вид каталога и фото</b><p class="hint">Золотые линии, анимации и блок «Детали» в карточке модели (угол, основание, фактура камня). ' +
+      '<div class="size-global-head"><div><b>Вид каталога и фото</b><p class="hint">Золотые линии и анимации. ' +
       'Студийная обработка: у нового фото убирается однотонный фон, изделие ставится в кадр раздела на белый фон с мягкой тенью — как у остальных моделей. Если фон на фото сложный, фото загрузится как есть.</p></div></div>' +
       '<div class="lx-look-grid">' +
         '<label class="chk"><input type="checkbox" name="lxStudio"' + (studioOn ? ' checked' : '') + '> Студийная обработка новых фото</label>' +
         '<label class="chk"><input type="checkbox" name="lxFrames"' + (L.frames ? ' checked' : '') + '> Золотые рамки и линии</label>' +
-        '<label class="chk"><input type="checkbox" name="lxDetails"' + (L.details ? ' checked' : '') + '> Блок «Детали» в карточке модели</label>' +
         '<label>Анимации<select name="lxMotion">' + opt([['full', 'Полные'], ['soft', 'Мягкие'], ['off', 'Без анимаций']], L.motion) + '</select></label>' +
         '<label>Фон под фото<select name="lxStage">' + opt([['warm', 'Белый, слегка подсвеченный'], ['white', 'Чисто белый']], L.stage) + '</select></label>' +
       '</div></div>';
@@ -294,7 +293,7 @@
             var gi = K.items.indexOf(m);
             var addon = c.calc === false || c.id === 'accessories';
             return '<div class="mod" data-gi="' + gi + '"><div class="ph">' + modThumb(m.img) +
-              (m.studio === true || (LX && LX.code(m.img)) ? '<i class="st" title="Студийное фото">студия</i>' : '') + '</div>' +
+              (m.studio === true || (LX && (LX.code(m.img) || (LX.acc && LX.acc(m.img)))) ? '<i class="st" title="Студийное фото">студия</i>' : '') + '</div>' +
               '<div class="mup"><label class="btn line xs" title="Заменить основное фото">Заменить<input type="file" accept="image/*" data-up="replace" hidden></label>' +
               '<label class="btn line xs" title="Дополнительные фото: углы, детали, фактура (видны в карточке модели)">+ Фото<input type="file" accept="image/*" multiple data-up="photos" hidden></label></div>' +
               photoStrip(m) +
@@ -316,7 +315,7 @@
     if (K.commonSize == null) K.commonSize = '';
     K.granite = $('#catGranite').value.trim();
     var lf = $('#catEd [name=lxFrames]');
-    if (lf) K.look = { studio: $('#catEd [name=lxStudio]').checked, frames: lf.checked, details: $('#catEd [name=lxDetails]').checked,
+    if (lf) K.look = { studio: $('#catEd [name=lxStudio]').checked, frames: lf.checked, details: true,
       motion: $('#catEd [name=lxMotion]').value, stage: $('#catEd [name=lxStage]').value };
     $$('#catEd .catc').forEach(function (el) {
       var c = K.categories[+el.dataset.ci], v = function (n) { var i = $('[name=' + n + ']', el); return i ? i.value.trim() : ''; };
@@ -391,7 +390,7 @@
     drawCatalog();
   });
   $('#catEd').addEventListener('toggle', function (e) {
-    var d = e.target; if (d.tagName !== 'DETAILS') return;
+    var d = e.target; if (d.tagName !== 'DETAILS' || !d.dataset.id) return; // свои блоки (группы) — без перерисовки
     var was = !!openCats[d.dataset.id]; openCats[d.dataset.id] = d.open;
     if (d.open && !was) { readCatalog(); drawCatalog(); }
   }, true);

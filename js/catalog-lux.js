@@ -7,8 +7,10 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   // версия студийной обработки: новый адрес фото, чтобы браузер не показал старую копию из кэша (кэш фото — 7 дней)
-  var V = 's2';
+  var V = 's3';
   var ASSET = /^\/assets\/catalog\/(?:md\/|sm\/)?([A-Za-z0-9_-]+)\.webp(?:[?#].*)?$/;
+  // аксессуары (каталог декора): /assets/acc/<артикул>.webp — 1200 px, sm/ — 640 px; своя версия кэша
+  var ACC = /^\/assets\/acc\/(?:sm\/)?([a-z0-9_-]+)\.webp(?:[?#].*)?$/i, VA = 'a1';
   // обложки разделов, переснятые студией: прежний адрес → [файл, масштаб и кадр, под которые была настроена старая обложка]
   var COVERS = {
     '/api/img?id=8': ['cover-vertical', 1.2, ''],
@@ -32,11 +34,16 @@
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
   function num(v, d) { v = +v; return isFinite(v) && v > 0 ? v : d; }
   function code(u) { var m = ASSET.exec(u || ''); return m ? m[1] : ''; }
-  function isStudio(u, flag) { return flag === true || !!code(u); }
-  function url(u) { var c = code(u); return c ? '/assets/catalog/' + c + '.webp?v=' + V : (u || ''); }
+  function acc(u) { var m = ACC.exec(u || ''); return m ? m[1] : ''; }
+  function isStudio(u, flag) { return flag === true || !!code(u) || !!acc(u); }
+  function url(u) {
+    var c = code(u); if (c) return '/assets/catalog/' + c + '.webp?v=' + V;
+    var a = acc(u); return a ? '/assets/acc/' + a + '.webp?v=' + VA : (u || '');
+  }
   function sized(u, size) {
-    var c = code(u);
+    var c = code(u), a = acc(u);
     if (c) return '/assets/catalog/' + (size ? size + '/' : '') + c + '.webp?v=' + V;
+    if (a) return '/assets/acc/' + (size === 'sm' ? 'sm/' : '') + a + '.webp?v=' + VA;
     if (size && /^\/api\/img\?/.test(u || '') && !/[?&]w=/.test(u)) return u + '&w=' + (size === 'sm' ? 640 : 1600);
     return u || '';
   }
@@ -306,8 +313,8 @@
     [].forEach.call(els, function (e) { IO.observe(e); });
   }
 
-  return { V: V, COVERS: COVERS, FRAMES: FRAMES, CAT_FRAME: CAT_FRAME, DEPTH: DEPTH, DETAILS: DETAILS, LOOK: LOOK,
-    code: code, isStudio: isStudio, url: url, sized: sized, cover: cover, frameOf: frameOf, stageAr: stageAr,
+  return { V: V, VA: VA, COVERS: COVERS, FRAMES: FRAMES, CAT_FRAME: CAT_FRAME, DEPTH: DEPTH, DETAILS: DETAILS, LOOK: LOOK,
+    code: code, acc: acc, isStudio: isStudio, url: url, sized: sized, cover: cover, frameOf: frameOf, stageAr: stageAr,
     frame: frame, glint: glint, rule: rule, go: go, sketch: sketch, lens: lens, lensCenter: lensCenter, focusList: focusList, aim: aim,
     focusFromMask: focusFromMask, focusFromPixels: focusFromPixels, texturePoint: texturePoint, studioMask: studioMask, studioLayout: studioLayout, look: look, applyLook: applyLook, reveal: reveal };
 });
