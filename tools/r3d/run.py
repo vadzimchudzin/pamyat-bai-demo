@@ -8,6 +8,7 @@ from relief import maps
 from mkspec import spec_for, relief_family
 from photo import photo_maps
 from fencespec import FENCES, fence_spec
+from fixes import patched  # перерисовка нечитаемого мелкого декора (F18)
 from PIL import Image
 import texsynth
 FAM = 'ABCDEFHIP'  # вертикальные, горизонтальные, кресты — по контуру с фото; ограды O1–O12 — по параметрам (fencespec.py);
@@ -58,7 +59,7 @@ def main():
             if code in FENCES:
                 sp = fence_spec(code, os.path.join(rd, code), res, a.spp, variants=ids, tex=tex)
             else:
-                o = outline(os.path.join(a.src, code + '.webp'), code, ol, dbg=False)
+                o = outline(patched(os.path.join(a.src, code + '.webp'), code, os.path.join(a.work, 'fix')), code, ol, dbg=False)
                 rec['side'] = photo_maps(code, ol)  # лицевая грань (photo.png) нужна relief.maps — вызываем первым
                 rec['decor'] = round(maps(code, ol, relief=relief_family(code)), 3)  # рельеф и светлая резьба — у семейств с резьбой
                 sp = spec_for(code, ol, os.path.join(rd, code), res, a.spp, variants=ids, tex=tex)
