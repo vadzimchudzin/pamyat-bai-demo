@@ -10,6 +10,11 @@
 .cx-chips button[aria-pressed=true]{background:var(--gold);border-color:var(--gold);color:var(--goldt,#1b140c)}
 .cx-chips button[aria-pressed=true] i{color:inherit;opacity:.75}
 .cx-chips button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+/* подгруппы выбранной группы — второй ряд, тоньше; описание группы */
+.cx-chips.cx-sub{margin:-8px 0 16px;padding-left:14px;border-left:1px solid color-mix(in oklab,var(--gold) 45%,transparent);gap:6px}
+.cx-sub button{min-height:32px;padding:5px 12px;font-size:12.5px;background:transparent}
+.cx-sub button[aria-pressed=true]{background:color-mix(in oklab,var(--gold) 22%,transparent);border-color:var(--gold);color:var(--ink)}
+.cx-gdesc{margin:-6px 0 18px;max-width:72ch;font-size:14px;line-height:1.5;color:var(--mut)}
 
 /* ---------- бейдж: «−15%», «Хит», «Новинка»… ---------- */
 .cx-badge{position:absolute;right:12px;top:12px;z-index:5;max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;pointer-events:none;
@@ -30,5 +35,8 @@
   .cx-chips{flex-wrap:nowrap;overflow-x:auto;margin:0 -16px 14px;padding:2px 16px 6px;scrollbar-width:none}
   .cx-chips::-webkit-scrollbar{display:none}
   .cx-chips button{flex:none;min-height:36px;padding:6px 13px;font-size:13px}
+  .cx-chips.cx-sub{margin:-6px -16px 12px;padding:2px 16px 6px;border-left:0}
+  .cx-sub button{min-height:32px;padding:5px 11px;font-size:12.5px}
+  .cx-gdesc{margin:-4px 0 14px;font-size:13px}
   .cx-badge{right:8px;top:8px;padding:4px 8px;font-size:10.5px}
 }
