@@ -1,20 +1,54 @@
-/* ПАМЯТЬ.БАЙ — каталог: группы-чипсы в разделе, скидки и бейджи (раздел или позиция), 3D-модель на обложке раздела.
+/* ПАМЯТЬ.БАЙ — каталог: группы-чипсы в разделе (с подгруппами), скидки и бейджи (раздел или позиция), 3D-модель на обложке раздела.
    Общий модуль сайта (catalog.js, главная: home-3d.js), админки (admin-catalog-x.js) и сервера (api/_accessories.js — группы по умолчанию).
    Данные — в content.catalog из админки:
-     раздел: groups [{ id, name, material? }], discount (%), badge { text, tone }, cover.r3 (код модели, '' — фото без 3D), stoneOff [id гранита];
-     позиция: group (id группы), discount (%; 0 — без скидки раздела), badge { text, tone }.
+     раздел: groups [{ id, name, material?, parent? (id группы верхнего уровня — подгруппа), desc? }], discount (%), badge { text, tone },
+             cover.r3 (код модели, '' — фото без 3D), stoneOff [id гранита];
+     позиция: group (id группы или подгруппы), discount (%; 0 — без скидки раздела), badge { text, tone }, material?, color?, note?.
    Чистые функции проверяются в tests/catalog-x.test.js. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.PamyatCatX = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
-  // «Аксессуары»: группы, пока в админке не задано своих
+  // «Аксессуары»: группы и подгруппы (parent) — весь каталог декора; пока в админке не задано своих
   var ACC_GROUPS = [
-    { id: 'vases', name: 'Вазы' }, { id: 'lamps', name: 'Лампады' }, { id: 'tables', name: 'Столики и скамьи' },
-    { id: 'stands', name: 'Подставки' }, { id: 'bronze', name: 'Изделия из бронзы', material: 'бронза' }
+    { id: 'vases', name: 'Вазы', material: 'полимергранит', desc: '23 формы в семи цветах: чёрный, чёрный с золотом и с серебром, бронза, тёмный гранит, серебро, белый мрамор.' },
+    { id: 'vases-black', name: 'Чёрные', parent: 'vases', desc: 'Универсальный цвет — подходит к большинству памятников и комплексов.' },
+    { id: 'vases-gold', name: 'Чёрные с золотом', parent: 'vases' },
+    { id: 'vases-silverblack', name: 'Чёрные с серебром', parent: 'vases' },
+    { id: 'vases-bronze', name: 'Бронза', parent: 'vases' },
+    { id: 'vases-granite', name: 'Тёмный гранит', parent: 'vases' },
+    { id: 'vases-silver', name: 'Серебро', parent: 'vases' },
+    { id: 'vases-marble', name: 'Белый мрамор', parent: 'vases', desc: 'Белые вазы выглядят элегантно и подходят к любому камню.' },
+    { id: 'pots', name: 'Вазоны', material: 'полимергранит', desc: 'Низкий вазон — для искусственных цветов и живых растений.' },
+    { id: 'lamps', name: 'Лампады' },
+    { id: 'lamps-marble', name: 'Литьевой мрамор', parent: 'lamps', material: 'литьевой мрамор', desc: 'Простая конструкция со съёмной крышкой.' },
+    { id: 'lamps-metal', name: 'Металлический корпус', parent: 'lamps', material: 'металлический корпус', desc: 'Дверца на магнитах; можно установить крестик на выбор.' },
+    { id: 'parts', name: 'Комплектующие для лампад' },
+    { id: 'parts-inserts', name: 'Вставки', parent: 'parts' },
+    { id: 'parts-doors', name: 'Дверцы', parent: 'parts' },
+    { id: 'parts-symbols', name: 'Крестики и символы', parent: 'parts' },
+    { id: 'parts-glass', name: 'Стекло и держатели', parent: 'parts' },
+    { id: 'sculpture', name: 'Скульптура' },
+    { id: 'sculpture-marble', name: 'Белый мрамор', parent: 'sculpture' },
+    { id: 'sculpture-bronze', name: 'Бронза', parent: 'sculpture' },
+    { id: 'decor', name: 'Декор', material: 'литьевой мрамор', desc: 'Весь декор — в цветах бронза, золото, серебро; под заказ — мрамор и тёмный гранит.' },
+    { id: 'decor-crosses', name: 'Кресты', parent: 'decor' },
+    { id: 'decor-crucifix', name: 'Распятия', parent: 'decor' },
+    { id: 'decor-flowers', name: 'Розы и цветы', parent: 'decor' },
+    { id: 'decor-other', name: 'Голубь и свеча', parent: 'decor' },
+    { id: 'bronze', name: 'Изделия из бронзы', material: 'бронза' },
+    { id: 'bronze-crosses', name: 'Кресты и распятия', parent: 'bronze' },
+    { id: 'bronze-frames', name: 'Рамки для фото', parent: 'bronze' },
+    { id: 'bronze-decor', name: 'Голуби, ваза, лампада', parent: 'bronze' },
+    { id: 'granite', name: 'Натуральный гранит', material: 'габбро-диабаз', desc: 'Лампады и вазы из габбро-диабаза. Религиозный символ на лампаду — по согласованию.' },
+    { id: 'granite-lamps', name: 'Лампады', parent: 'granite' },
+    { id: 'granite-vases', name: 'Вазы', parent: 'granite' },
+    { id: 'other', name: 'Прочее' },
+    { id: 'stands', name: 'Стенды', material: 'сталь с матовым полимерным покрытием', desc: 'Стенды с образцами изделий, 65 × 125 см — изготовим по запросу.' }
   ];
-  var ACC_BY_CODE = [[/^V/i, 'vases'], [/^(L|[АA]-?\d)/i, 'lamps'], [/^T/i, 'tables'], [/^[GS]/i, 'stands']];
+  // старые артикулы без группы (до каталога декора): V — вазы, L и «А-N» — лампады, T/G/S — прочее
+  var ACC_BY_CODE = [[/^V\d/i, 'vases'], [/^(L\d|[АA]-\d)/i, 'lamps'], [/^[TGS]\d/i, 'other']];
   var TONES = ['gold', 'sale', 'dark', 'green'];
   // обложка-3D по умолчанию: своё фото обложки похоже на эту модель (стела с волной — B7, ограда на столбиках — O10)
   var COVER_R3 = { vertical: 'B7', fence: 'O10' };
@@ -27,19 +61,30 @@
   var NO_R3 = { complex: 1, individual: 1, accessories: 1 };
   function r3ok(c) { return !!c && (c.stones === true || (c.stones !== false && !NO_R3[c.id])); }
 
-  /* ---------- группы (чипсы) ---------- */
+  /* ---------- группы (чипсы) и подгруппы ---------- */
   function cleanGroups(list) {
     var seen = {};
-    return (Array.isArray(list) ? list : []).filter(function (g) {
+    var out = (Array.isArray(list) ? list : []).filter(function (g) {
       if (!g || !ID.test(g.id || '') || !String(g.name || '').trim() || seen[g.id]) return false;
       return (seen[g.id] = true);
-    }).map(function (g) { var o = { id: g.id, name: String(g.name).trim().slice(0, 60) }; if (g.material) o.material = String(g.material).trim().slice(0, 60); return o; });
+    }).map(function (g) {
+      var o = { id: g.id, name: String(g.name).trim().slice(0, 60) };
+      if (g.material) o.material = String(g.material).trim().slice(0, 60);
+      if (g.parent && g.parent !== g.id && ID.test(String(g.parent))) o.parent = String(g.parent);
+      if (g.desc && String(g.desc).trim()) o.desc = String(g.desc).trim().slice(0, 300);
+      return o;
+    });
+    // подгруппа — только у группы верхнего уровня (два уровня)
+    var top = {}; out.forEach(function (g) { if (!g.parent) top[g.id] = 1; });
+    out.forEach(function (g) { if (g.parent && !top[g.parent]) delete g.parent; });
+    return out;
   }
   function groups(c) {
     if (!c) return [];
     if (Array.isArray(c.groups)) return cleanGroups(c.groups);
     return c.id === 'accessories' ? ACC_GROUPS.map(function (g) { return Object.assign({}, g); }) : [];
   }
+  function groupById(c, id) { if (!id) return null; var gs = groups(c); for (var i = 0; i < gs.length; i++) if (gs[i].id === id) return gs[i]; return null; }
   function defaultGroup(code) {
     for (var i = 0; i < ACC_BY_CODE.length; i++) if (ACC_BY_CODE[i][0].test(String(code || '').trim())) return ACC_BY_CODE[i][1];
     return '';
@@ -52,13 +97,42 @@
     if (!Array.isArray(c.groups) && c.id === 'accessories') { var d = defaultGroup(it.code); return has(d) ? d : ''; }
     return '';
   }
-  // чипсы раздела: только группы, в которых есть позиции
+  // группа верхнего уровня (для подгруппы — её родитель)
+  function topOf(c, gid) { var g = groupById(c, gid); return g ? (g.parent || g.id) : ''; }
+  // чипсы раздела: группы верхнего уровня, в которых есть позиции (n — вместе с подгруппами); kids — непустые подгруппы
   function usedGroups(c, items) {
-    var n = {};
-    (items || []).forEach(function (it) { var g = groupOf(it, c); if (g) n[g] = (n[g] || 0) + 1; });
-    return groups(c).filter(function (g) { return n[g.id]; }).map(function (g) { return Object.assign({ n: n[g.id] }, g); });
+    var gs = groups(c), n = {}, par = {};
+    gs.forEach(function (g) { if (g.parent) par[g.id] = g.parent; });
+    (items || []).forEach(function (it) {
+      var g = groupOf(it, c); if (!g) return;
+      n[g] = (n[g] || 0) + 1; if (par[g]) n[par[g]] = (n[par[g]] || 0) + 1;
+    });
+    return gs.filter(function (g) { return !g.parent && n[g.id]; }).map(function (g) {
+      var o = Object.assign({ n: n[g.id] }, g);
+      var kids = gs.filter(function (k) { return k.parent === g.id && n[k.id]; }).map(function (k) { return Object.assign({ n: n[k.id] }, k); });
+      if (kids.length) o.kids = kids;
+      return o;
+    });
   }
-  function inGroup(items, c, gid) { return gid ? (items || []).filter(function (it) { return groupOf(it, c) === gid; }) : (items || []).slice(); }
+  // позиции группы; у группы верхнего уровня — вместе с подгруппами
+  function inGroup(items, c, gid) {
+    if (!gid) return (items || []).slice();
+    var kid = {}; groups(c).forEach(function (g) { if (g.parent === gid) kid[g.id] = 1; });
+    return (items || []).filter(function (it) { var g = groupOf(it, c); return g === gid || !!kid[g]; });
+  }
+  // материал позиции: свой, подгруппы или группы (бронза, полимергранит…); '' — не указан
+  function materialOf(it, c) {
+    if (it && it.material) return String(it.material);
+    var g = groupById(c, groupOf(it, c)); if (!g) return '';
+    if (g.material) return g.material;
+    var p = groupById(c, g.parent); return p && p.material || '';
+  }
+  // описание выбранной группы (подгруппы — её своё, иначе группы)
+  function descOf(c, gid) {
+    var g = groupById(c, gid); if (!g) return '';
+    if (g.desc) return g.desc;
+    var p = groupById(c, g.parent); return p && p.desc || '';
+  }
 
   /* ---------- скидки ---------- */
   function clampPct(v) { var n = num(v); return isFinite(n) && n > 0 ? Math.min(95, Math.round(n)) : 0; }
@@ -101,6 +175,7 @@
   }
 
   return { ACC_GROUPS: ACC_GROUPS, COVER_R3: COVER_R3, TONES: TONES, esc: esc, isAddon: isAddon, r3ok: r3ok,
-    groups: groups, cleanGroups: cleanGroups, defaultGroup: defaultGroup, groupOf: groupOf, usedGroups: usedGroups, inGroup: inGroup,
+    groups: groups, cleanGroups: cleanGroups, groupById: groupById, defaultGroup: defaultGroup, groupOf: groupOf, topOf: topOf, usedGroups: usedGroups, inGroup: inGroup,
+    materialOf: materialOf, descOf: descOf,
     pct: pct, clampPct: clampPct, sale: sale, priceHtml: priceHtml, badge: badge, badgeHtml: badgeHtml, coverCode: coverCode };
 });

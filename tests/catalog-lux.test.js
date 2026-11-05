@@ -19,6 +19,19 @@ test('адреса фото каталога: новая версия студи
   assert.equal(LX.code('/api/img?id=3'), '');
 });
 
+test('аксессуары из каталога декора: 1200 px и sm/ 640 px, своя версия кэша', () => {
+  assert.equal(LX.acc('/assets/acc/v001.webp'), 'v001');
+  assert.equal(LX.acc('/assets/acc/sm/gr220-gb.webp?v=a0'), 'gr220-gb');
+  assert.equal(LX.acc('/assets/catalog/V1.webp'), '');
+  assert.equal(LX.code('/assets/acc/v001.webp'), '', 'не код фото каталога (нет в variants.json и 3D)');
+  assert.equal(LX.url('/assets/acc/v001.webp'), '/assets/acc/v001.webp?v=' + LX.VA);
+  assert.equal(LX.sized('/assets/acc/v001.webp', 'sm'), '/assets/acc/sm/v001.webp?v=' + LX.VA);
+  assert.equal(LX.sized('/assets/acc/sm/v001.webp', 'md'), '/assets/acc/v001.webp?v=' + LX.VA);
+  assert.equal(LX.sized('/assets/acc/20-3017-gb.webp', ''), '/assets/acc/20-3017-gb.webp?v=' + LX.VA);
+  assert.equal(LX.isStudio('/assets/acc/k005.webp'), true);
+  assert.equal(LX.isStudio('/assets/acc/../x.webp'), false);
+});
+
 test('студийное фото: файлы каталога и загрузки с флагом studio', () => {
   assert.equal(LX.isStudio('/assets/catalog/C3.webp'), true);
   assert.equal(LX.isStudio('/api/img?id=3'), false);

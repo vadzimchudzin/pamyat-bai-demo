@@ -8,12 +8,45 @@ const ACC = { id: 'accessories', name: 'Аксессуары', calc: false };
 const ITEMS = [{ code: 'V1' }, { code: 'V2' }, { code: 'L1' }, { code: 'L2' }, { code: 'А-9' }, { code: 'T1' }, { code: 'T2' }, { code: 'G1' }, { code: 'X5' }];
 
 test('аксессуары: группы по умолчанию и позиции по артикулу', () => {
-  assert.deepEqual(X.groups(ACC).map(g => g.id), ['vases', 'lamps', 'tables', 'stands', 'bronze']);
-  assert.deepEqual(ITEMS.map(it => X.groupOf(it, ACC)), ['vases', 'vases', 'lamps', 'lamps', 'lamps', 'tables', 'tables', 'stands', '']);
-  // пустая группа «Изделия из бронзы» на сайте не показывается
-  assert.deepEqual(X.usedGroups(ACC, ITEMS).map(g => g.id + ':' + g.n), ['vases:2', 'lamps:3', 'tables:2', 'stands:1']);
+  assert.deepEqual(X.groups(ACC).filter(g => !g.parent).map(g => g.id), ['vases', 'pots', 'lamps', 'parts', 'sculpture', 'decor', 'bronze', 'granite', 'other', 'stands']);
+  assert.deepEqual(ITEMS.map(it => X.groupOf(it, ACC)), ['vases', 'vases', 'lamps', 'lamps', 'lamps', 'other', 'other', 'other', '']);
+  // пустые группы на сайте не показываются; n — вместе с подгруппами
+  assert.deepEqual(X.usedGroups(ACC, ITEMS).map(g => g.id + ':' + g.n), ['vases:2', 'lamps:3', 'other:3']);
   assert.deepEqual(X.inGroup(ITEMS, ACC, 'lamps').map(it => it.code), ['L1', 'L2', 'А-9']);
   assert.equal(X.inGroup(ITEMS, ACC, '').length, ITEMS.length, '«Все»');
+});
+
+test('подгруппы: чипсы второго уровня, позиции группы вместе с подгруппами, материал и описание', () => {
+  const list = [
+    { code: 'В001', group: 'vases-black' }, { code: 'В401', group: 'vases-gold' }, { code: 'В402', group: 'vases-gold' },
+    { code: 'V9', group: 'vases' }, { code: 'П001', group: 'lamps-marble' }, { code: 'К252', group: 'bronze-crosses', material: 'латунь' }
+  ];
+  const used = X.usedGroups(ACC, list);
+  assert.deepEqual(used.map(g => g.id + ':' + g.n), ['vases:4', 'lamps:1', 'bronze:1']);
+  assert.deepEqual(used[0].kids.map(k => k.id + ':' + k.n), ['vases-black:1', 'vases-gold:2'], 'пустые подгруппы не показываются');
+  assert.equal(used[1].kids.length, 1);
+  assert.deepEqual(X.inGroup(list, ACC, 'vases').map(i => i.code), ['В001', 'В401', 'В402', 'V9']);
+  assert.deepEqual(X.inGroup(list, ACC, 'vases-gold').map(i => i.code), ['В401', 'В402']);
+  assert.equal(X.topOf(ACC, 'vases-gold'), 'vases');
+  assert.equal(X.topOf(ACC, 'lamps'), 'lamps');
+  assert.equal(X.topOf(ACC, 'nope'), '');
+  assert.equal(X.materialOf(list[0], ACC), 'полимергранит', 'материал группы — у подгруппы');
+  assert.equal(X.materialOf(list[4], ACC), 'литьевой мрамор', 'свой материал подгруппы');
+  assert.equal(X.materialOf(list[5], ACC), 'латунь', 'материал позиции важнее');
+  assert.equal(X.materialOf({ code: 'Z1' }, ACC), '');
+  assert.match(X.descOf(ACC, 'vases-gold'), /семи цветах/, 'описание группы — у подгруппы без своего');
+  assert.match(X.descOf(ACC, 'vases-marble'), /Белые вазы/);
+  assert.equal(X.descOf(ACC, ''), '');
+});
+
+test('подгруппы из админки: только у группы верхнего уровня, описание обрезается', () => {
+  const c = { id: 'accessories', groups: [
+    { id: 'a', name: 'А', desc: '  ' }, { id: 'a1', name: 'А1', parent: 'a', desc: ' Текст ' }, { id: 'a2', name: 'А2', parent: 'a1' },
+    { id: 'b', name: 'Б', parent: 'b' }, { id: 'c', name: 'В', parent: 'gone' }, { id: 'd', name: 'Г', parent: 'bad id' }] };
+  assert.deepEqual(X.groups(c), [
+    { id: 'a', name: 'А' }, { id: 'a1', name: 'А1', parent: 'a', desc: 'Текст' }, { id: 'a2', name: 'А2' },
+    { id: 'b', name: 'Б' }, { id: 'c', name: 'В' }, { id: 'd', name: 'Г' }]);
+  assert.equal(X.groups({ id: 'accessories', groups: [{ id: 'x', name: 'X', desc: 'я'.repeat(400) }] })[0].desc.length, 300);
 });
 
 test('свои группы из админки: порядок, проверка, «без группы»', () => {

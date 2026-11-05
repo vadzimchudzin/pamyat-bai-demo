@@ -3,12 +3,32 @@
 .cx-row{display:grid;grid-template-columns:110px minmax(160px,1fr) 140px minmax(150px,190px);gap:10px;align-items:end}
 .cx-h{margin:0}
 .cx-stones b,.cx-groups b{display:block;margin-bottom:6px;font-size:13px}
+.cx-groups>summary{display:flex;align-items:baseline;gap:10px;cursor:pointer;list-style:none;margin-bottom:6px}
+.cx-groups>summary::-webkit-details-marker{display:none}
+.cx-groups>summary b{margin:0}
+.cx-groups>summary i{font-style:normal;font-size:12px;color:var(--mut)}
+.cx-groups>summary:after{content:"▾";font-size:12px;color:var(--mut);transition:transform .2s}
+.cx-groups[open]>summary:after{transform:rotate(180deg)}
 .cx-sl{display:flex;flex-wrap:wrap;gap:6px 16px}
 .cx-sl .chk{font-size:13px}
 .cx-sl .chk.off{opacity:.45}
 .cx-sl i,.cx-s i{flex:none;width:18px;height:18px;border-radius:50%;background:var(--c) var(--t,none) center/cover;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18)}
-.cx-g{display:grid;grid-template-columns:1fr 1fr repeat(3,34px);gap:8px;margin-bottom:6px}
-.cx-g.nomat{grid-template-columns:1fr repeat(3,34px)}
+.cx-g{display:grid;grid-template-columns:1fr 1fr minmax(110px,.8fr) repeat(3,34px);gap:8px;margin-bottom:6px;align-items:center}
+.cx-g.nomat{grid-template-columns:1fr minmax(110px,.8fr) repeat(3,34px)}
+.cx-g .cx-gd{grid-column:1/-1;font-size:13px;padding-top:7px;padding-bottom:7px;min-height:0}
+.cx-g.sub{position:relative;margin-left:22px}
+.cx-g.sub:before{content:"";position:absolute;left:-14px;top:-6px;width:9px;height:26px;border:solid var(--line);border-width:0 0 1px 1px;border-bottom-left-radius:6px}
+@media (max-width:640px){
+  .cx-g,.cx-g.nomat{grid-template-columns:minmax(0,5fr) minmax(0,1fr) repeat(3,34px)}
+  .cx-g>*{min-width:0}
+  .cx-g>[data-cx=g-name]{grid-column:1/3;grid-row:1}
+  .cx-g>[data-cx=g-up]{grid-column:3;grid-row:1}.cx-g>[data-cx=g-down]{grid-column:4;grid-row:1}.cx-g>[data-cx=g-del]{grid-column:5;grid-row:1}
+  .cx-g>[data-cx=g-mat]{grid-column:1/2;grid-row:2}
+  .cx-g>[data-cx=g-parent]{grid-column:2/-1;grid-row:2}
+  .cx-g.nomat>[data-cx=g-parent]{grid-column:1/-1}
+  .cx-g>.cx-gd{grid-row:3}
+  .cx-g.sub{margin-left:14px}.cx-g.sub:before{left:-10px;width:6px}
+}
 .cx-groups .link{margin:2px 0 6px}
 .cx-granites .cx-st{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px 16px}
 .cx-s{display:grid;grid-template-columns:22px 1fr auto;align-items:center;gap:8px}
