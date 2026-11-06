@@ -951,7 +951,7 @@
     if (!c) return;
     if (LOOK) LOOK.apply(c.look);
     var T = c.texts || {};
-    $$('[data-t]').forEach(function (el) { var v = T[el.dataset.t]; if (v) el.textContent = v; });
+    $$('[data-t]').forEach(function (el) { var v = T[el.dataset.t]; if (v !== undefined && v !== null) el.textContent = String(v); });
     var C = c.contacts || {};
     var tel = (C.phone || '').replace(/[^\d+]/g, '');
     if ($('#cPhone') && C.phone) { $('#cPhone').textContent = C.phone; $('#cPhone').href = tel.replace(/\D/g, '').length >= 7 ? 'tel:' + tel : '#contact'; }

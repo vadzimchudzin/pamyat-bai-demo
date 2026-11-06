@@ -114,3 +114,10 @@ test('3D на обложке: своя модель, фото без 3D, исх�
   assert.equal(X.r3ok({ id: 'accessories', calc: false }), false);
   assert.equal(X.r3ok({ id: 'complex', stones: true }), true);
 });
+
+test('цена может быть без «от», в том числе со скидкой', () => {
+  const f = n => String(n);
+  assert.equal(X.priceHtml(123.45, 0, f, false), '123.45 BYN');
+  assert.equal(X.priceHtml(100, 10, f, false), '90 BYN <s class="cx-old">100 BYN</s>');
+  assert.equal(X.priceHtml(100, 0, f, true), 'от 100 BYN');
+});

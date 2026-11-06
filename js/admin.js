@@ -3,7 +3,7 @@
   'use strict';
   var $ = function (s, r) { return (r || document).querySelector(s); };
   var $$ = function (s, r) { return [].slice.call((r || document).querySelectorAll(s)); };
-  var C = null;                                   // текущее содержимое сайта
+  var C = null, versions = {}, saving = {};                                   // текущее содержимое сайта
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"]/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]; }); }
   function toast(msg, bad) { var t = $('#toast'); t.textContent = msg; t.className = 'toast' + (bad ? ' bad' : ''); t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(function () { t.hidden = true; }, 3200); }
   function api(path, opt) {
@@ -49,16 +49,26 @@
   function load() {
     api('/api/content?full=1').then(function (d) {
       if (!d.ok) return toast(d.error || 'Не удалось загрузить данные', true);
-      C = d.content; drawCatalog(); drawCalc(); if (window.AdminKit.drawWorks) window.AdminKit.drawWorks(); if (window.AdminKit.drawLook) window.AdminKit.drawLook(); drawTexts(); drawContacts(); drawTg();
+      C = d.content; versions = d.versions || {}; drawCatalog(); drawCalc(); if (window.AdminKit.drawWorks) window.AdminKit.drawWorks(); if (window.AdminKit.drawLook) window.AdminKit.drawLook(); drawTexts(); drawContacts(); drawTg();
       loadPricebook(); loadEstimates();
     });
     loadLeads();
   }
   function save(section, value) {
-    return api('/api/content', { method: 'PUT', body: { section: section, value: value } }).then(function (d) {
-      if (d.ok) { C = d.content; toast('Сохранено — на сайте уже обновилось'); } else toast(d.error || 'Не сохранилось', true);
+    if (saving[section]) { toast('Сохранение уже выполняется', true); return Promise.resolve({ok:false}); }
+    if (!versions[section]) { toast('Обновите страницу админки перед сохранением', true); return Promise.resolve({ok:false}); }
+    var sent = JSON.parse(JSON.stringify(value)), before = JSON.stringify(C[section]);
+    saving[section] = true;
+    return api('/api/content', { method: 'PUT', body: { section: section, value: sent, expectedVersion: versions[section] } }).then(function (d) {
+      if (d.ok) {
+        versions[section] = d.versions[section];
+        // Не затирать несохранённые изменения в других вкладках админки и во время запроса.
+        if (JSON.stringify(C[section]) === before) C[section] = d.content[section];
+        toast('Сохранено — обновите сайт для проверки');
+      } else { toast(d.error || 'Не сохранилось', true); if (d.status === 409) alert(d.error); }
       return d;
-    });
+    }).catch(function () { toast('Нет связи с сервером. Изменения не подтверждены — проверьте соединение.', true); return {ok:false}; })
+      .then(function (d) { saving[section] = false; return d; });
   }
   $$('[data-save]').forEach(function (b) {
     b.addEventListener('click', function () {
@@ -255,6 +265,14 @@
       return '<span class="x" data-pi="' + pi + '">' + modThumb(u) + '<button class="ic del" data-c="ph-del" title="Убрать фото">✕</button></span>';
     }).join('') + '</div>';
   }
+  function bulkPriceControls(c) {
+    var X = window.PamyatCatX, gs = X ? X.groups(c) : [];
+    return '<div class="bulk-price"><b>Массовая настройка цен</b><p class="hint">Выберите все изделия, группу (с подгруппами) или отметьте нужные галочками. Укажите цену и/или вид подписи, примените и сохраните каталог. Пустая цена не меняет текущие цены.</p>' +
+      '<div class="bulk-price-fields"><label>Для кого<select data-bulk-scope><option value="selected">Отмеченные изделия</option><option value="all">Все изделия раздела</option>' + gs.map(function(g) { return '<option value="group:' + esc(g.id) + '">' + (g.parent ? '— ' : '') + esc(g.name) + '</option>'; }).join('') + '</select></label>' +
+      '<label>Цена, BYN<input data-bulk-price type="number" min="0" step="0.01" placeholder="Не менять"></label>' +
+      '<label>Подпись цены<select data-bulk-from><option value="keep">Не менять</option><option value="from">Цена от</option><option value="exact">Просто цена</option></select></label>' +
+      '<button type="button" class="btn line sm" data-bulk-apply>Применить</button></div></div>';
+  }
   function drawCatalog() {
     var K = C.catalog || { categories: [], items: [] };
     $('#catGranite').value = K.granite || '';
@@ -288,11 +306,11 @@
           '<div class="acts"><button class="ic" data-c="up" title="Выше">↑</button><button class="ic" data-c="down" title="Ниже">↓</button><button class="ic del" data-c="del" title="Удалить раздел">✕</button></div></div>' +
         '</div></div>' +
         '<details' + (openCats[c.id] ? ' open' : '') + ' data-id="' + esc(c.id) + '"><summary>Модели: ' + its.length + '</summary>' +
-          '<div class="acts" style="margin-top:10px"><label class="btn line sm">+ Загрузить модели<input type="file" accept="image/*" multiple data-up="items" hidden></label></div>' +
+          '<div class="acts" style="margin-top:10px"><label class="btn line sm">+ Загрузить модели<input type="file" accept="image/*" multiple data-up="items" hidden></label></div>' + (openCats[c.id] ? bulkPriceControls(c) : '') +
           (openCats[c.id] ? '<div class="mods">' + its.map(function (m) {
             var gi = K.items.indexOf(m);
             var addon = c.calc === false || c.id === 'accessories';
-            return '<div class="mod" data-gi="' + gi + '"><div class="ph">' + modThumb(m.img) +
+            return '<div class="mod" data-gi="' + gi + '"><label class="chk"><input type="checkbox" data-bulk-select> Выбрать</label><div class="ph">' + modThumb(m.img) +
               (m.studio === true || (LX && (LX.code(m.img) || (LX.acc && LX.acc(m.img)))) ? '<i class="st" title="Студийное фото">студия</i>' : '') + '</div>' +
               '<div class="mup"><label class="btn line xs" title="Заменить основное фото">Заменить<input type="file" accept="image/*" data-up="replace" hidden></label>' +
               '<label class="btn line xs" title="Дополнительные фото: углы, детали, фактура (видны в карточке модели)">+ Фото<input type="file" accept="image/*" multiple data-up="photos" hidden></label></div>' +
@@ -300,7 +318,8 @@
               '<input name="code" value="' + esc(m.code) + '" title="Артикул" placeholder="Артикул">' +
               '<input name="mname" value="' + esc(m.name || '') + '" title="Название (необязательно)" placeholder="Название">' +
               '<input name="msize" value="' + esc(m.size || '') + '" title="Размер (необязательно)" placeholder="Размер">' +
-              (addon || m.price != null ? '<input name="mprice" type="number" min="0" step="1" value="' + (m.price == null ? '' : esc(m.price)) + '" title="Цена «от», BYN — пусто = по запросу" placeholder="Цена, BYN">' : '') +
+              '<input name="mprice" type="number" min="0" step="0.01" value="' + (m.price == null ? '' : esc(m.price)) + '" title="Цена, BYN" placeholder="Цена, BYN">' +
+              '<select name="mfrom" aria-label="Вид цены"><option value="from"' + (m.priceFrom !== false ? ' selected' : '') + '>Цена от</option><option value="exact"' + (m.priceFrom === false ? ' selected' : '') + '>Просто цена</option></select>' +
               '<div class="row"><select name="mcat" title="Раздел">' + K.categories.map(function (x) { return '<option value="' + esc(x.id) + '"' + (x.id === c.id ? ' selected' : '') + '>' + esc(x.short || x.name) + '</option>'; }).join('') + '</select>' +
               '<button class="ic" data-c="as-cover" title="Сделать обложкой">★</button><button class="ic del" data-c="m-del" title="Удалить">✕</button></div></div>';
           }).join('') + '</div>' : '') + '</details></div>';
@@ -346,11 +365,42 @@
         if (pr) {
           var pv = pr.value.trim();
           if (pv === '') { if ('price' in it || c.calc === false || c.id === 'accessories') it.price = null; }
-          else if (isFinite(+pv)) it.price = Math.max(0, Math.round(+pv));
+          else if (isFinite(+pv)) it.price = Math.max(0, Math.round(+pv * 100) / 100);
+          var priceMode = $('[name=mfrom]', m); if (priceMode) it.priceFrom = priceMode.value !== 'exact';
         }
       });
     });
   }
+  $('#catEd').addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-bulk-apply]'); if (!btn) return;
+    e.preventDefault();
+    var card = btn.closest('.catc'), K = C.catalog, c = K.categories[+card.dataset.ci];
+    var scope = card.querySelector('[data-bulk-scope]').value, price = card.querySelector('[data-bulk-price]').value.trim(), mode = card.querySelector('[data-bulk-from]').value;
+    if (price === '' && mode === 'keep') return toast('Укажите цену или выберите вид подписи', true);
+    if (price !== '' && (!isFinite(+price) || +price < 0)) return toast('Укажите корректную цену', true);
+    var selected = [].slice.call(card.querySelectorAll('.mod [data-bulk-select]:checked')).map(function(el) { return +el.closest('.mod').dataset.gi; });
+    var X = window.PamyatCatX, gid = scope.indexOf('group:') === 0 ? scope.slice(6) : '';
+    var targets = K.items.filter(function(it, i) {
+      if (it.cat !== c.id) return false;
+      if (scope === 'all') return true;
+      if (scope === 'selected') return selected.indexOf(i) !== -1;
+      if (!X || !gid) return false;
+      var g = X.groupOf(it, c); return g === gid || X.topOf(c, g) === gid;
+    });
+    if (!targets.length) return toast('Нет подходящих изделий — выберите позиции или другую группу', true);
+    if (!confirm('Применить к изделиям: ' + targets.length + '? Затем нажмите «Сохранить» в каталоге.')) return;
+    readCatalog();
+    targets.forEach(function(it) {
+      if (price !== '') it.price = Math.round(+price * 100) / 100;
+      if (mode !== 'keep') it.priceFrom = mode === 'from';
+    });
+    [].forEach.call(card.querySelectorAll('.mod'), function(row) {
+      var it = K.items[+row.dataset.gi]; if (targets.indexOf(it) < 0) return;
+      if (price !== '') row.querySelector('[name=mprice]').value = it.price;
+      if (mode !== 'keep') row.querySelector('[name=mfrom]').value = mode;
+    });
+    toast('Изменено: ' + targets.length + '. Нажмите «Сохранить»');
+  });
   $('#catEd').addEventListener('input', function (e) {
     var inp = e.target;
     if (inp.name === 'zoom') {
@@ -641,6 +691,7 @@
       if (!d.ok) { toast(d.error || 'Не удалось сохранить каталог цен',true); return d; }
       PRICEBOOK = d.pricebook || PRICEBOOK;
       drawPricebook();
+      var note = document.getElementById('catalogSyncNote'); if (note) note.hidden = !PRICEBOOK.siteSync;
       toast('Каталог цен сохранён');
       return d;
     });
@@ -650,6 +701,8 @@
       if (!d.ok) return toast(d.error || 'Не удалось загрузить каталог цен',true);
       PRICEBOOK = d.pricebook || {items:[],siteSync:false};
       drawPricebook();
+      var note = document.getElementById('catalogSyncNote');
+      if (note) note.hidden = !PRICEBOOK.siteSync;
     });
   }
   $('#priceSave').addEventListener('click',savePricebook);
