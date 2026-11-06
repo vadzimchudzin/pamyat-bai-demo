@@ -18,12 +18,12 @@
   function cats() { return (CAT.categories || []).filter(function (c) { return c.visible !== false; }); }
   function items(id) { return (CAT.items || []).filter(function (x) { return x.cat === id; }); }
   function pctOf(m, c) { return X ? X.pct(m, c) : 0; }
-  function priceFrom(p, pc) { return X ? X.priceHtml(p, pc, fmt) : 'от ' + fmt(p) + ' BYN'; }
-  function price(c) { return c.price == null || c.price === '' ? 'Индивидуальный расчёт' : priceFrom(c.price, pctOf(null, c)); }
+  function priceFrom(p, pc, from) { return X ? X.priceHtml(p, pc, fmt, from) : (from === false ? '' : 'от ') + fmt(p) + ' BYN'; }
+  function price(c) { return c.price == null || c.price === '' ? 'Индивидуальный расчёт' : priceFrom(c.price, pctOf(null, c), c.priceFrom !== false); }
   function hasOwnPrice(m) { return m && Object.prototype.hasOwnProperty.call(m, 'price'); }
   function itemPrice(m, c) {
-    if (!hasOwnPrice(m)) return c && c.price != null && c.price !== '' ? priceFrom(c.price, pctOf(m, c)) : ''; // цена раздела, скидка — своя у модели или раздела
-    return m.price == null || m.price === '' ? 'Цена по запросу' : priceFrom(m.price, pctOf(m, c));
+    if (!hasOwnPrice(m)) return c && c.price != null && c.price !== '' ? priceFrom(c.price, pctOf(m, c), m && m.priceFrom != null ? m.priceFrom : c.priceFrom !== false) : ''; // цена раздела, скидка — своя у модели или раздела
+    return m.price == null || m.price === '' ? 'Цена по запросу' : priceFrom(m.price, pctOf(m, c), m.priceFrom != null ? m.priceFrom : c.priceFrom !== false);
   }
   // подпись под фото аксессуара: цена, если задана; иначе артикул и размер (у декора цены по запросу)
   function addonSub(m, c) {
