@@ -67,19 +67,40 @@ function merge(base, over) {
   }
   return over === undefined ? base : over;
 }
-async function getContent() {
-  await init();
-  const r = await q(`select value from kv where key='content'`);
-  const c = merge(JSON.parse(JSON.stringify(DEFAULTS)), r.rows[0] ? r.rows[0].value : {});
-  // калькулятор по тарифам из смет (цена за м²): однократный перенос старых шагов, дальше — как сохранено в админке
+function normalizeContent(raw) {
+  const c = merge(JSON.parse(JSON.stringify(DEFAULTS)), raw || {});
   if (c.calc) c.calc = TARIFFS.migrateCalc(c.calc);
-  // раздел «Аксессуары» в каталоге — однократно (если его удалить в админке, он не вернётся)
   if (c.catalog) c.catalog = ACCESSORIES.migrateCatalog(c.catalog);
   return c;
 }
-async function saveContent(c) {
+async function contentSnapshot() {
   await init();
-  await q(`insert into kv(key,value,updated_at) values('content',$1,now()) on conflict(key) do update set value=excluded.value, updated_at=now()`, [JSON.stringify(c)]);
+  const r = await q(`select value from kv where key='content'`);
+  const raw = r.rows[0] ? r.rows[0].value : null;
+  return { raw, content: normalizeContent(raw) };
+}
+async function getContent() { return (await contentSnapshot()).content; }
+function canonical(v) {
+  if (Array.isArray(v)) return v.map(canonical);
+  if (v && typeof v === 'object') return Object.keys(v).sort().reduce((o, k) => { o[k] = canonical(v[k]); return o; }, {});
+  return v === undefined ? null : v;
+}
+function sectionVersion(value) { return crypto.createHash('sha256').update(JSON.stringify(canonical(value))).digest('hex'); }
+const CONTENT_SECTIONS = ['catalog', 'calc', 'texts', 'contacts', 'works', 'telegram', 'look'];
+function contentVersions(c) { return Object.fromEntries(CONTENT_SECTIONS.map(k => [k, sectionVersion(c[k])])); }
+// Compare-and-swap guards against simultaneous serverless requests clobbering each other.
+async function saveContentSection(section, value, expected) {
+  if (!CONTENT_SECTIONS.includes(section) || typeof expected !== 'string') return { invalid: true };
+  for (let i = 0; i < 8; i++) {
+    const snap = await contentSnapshot();
+    if (sectionVersion(snap.content[section]) !== expected) return { conflict: true };
+    const next = merge(snap.content, { [section]: value });
+    const r = snap.raw === null
+      ? await q(`insert into kv(key,value,updated_at) values('content',$1::jsonb,now()) on conflict(key) do nothing returning key`, [JSON.stringify(next)])
+      : await q(`update kv set value=$1::jsonb, updated_at=now() where key='content' and value=$2::jsonb returning key`, [JSON.stringify(next), JSON.stringify(snap.raw)]);
+    if (r.rows.length) return { content: next, versions: contentVersions(next) };
+  }
+  return { conflict: true };
 }
 function publicContent(c) {
   const p = JSON.parse(JSON.stringify(c));
@@ -486,5 +507,5 @@ async function createEstimateFromLead(leadId, by) {
   return created.rows[0];
 }
 
-module.exports = { q, init, getContent, getSiteContent, getPriceBook, applySitePriceBook, saveContent, publicContent, merge, checkLogin, setPassword, session, setSession, clearSession,
+module.exports = { q, init, getContent, getSiteContent, getPriceBook, applySitePriceBook, contentVersions, sectionVersion, saveContentSection, publicContent, merge, checkLogin, setPassword, session, setSession, clearSession,
   log, body, send, fail, requireAdmin, tg, tgSecret, leadText, leadKeyboard, createEstimateFromLead, esc, ip, DEFAULTS };
