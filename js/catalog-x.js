@@ -144,11 +144,12 @@
   function sale(price, p) { var n = num(price); if (!isFinite(n)) return null; return p ? Math.round(n * (100 - p) / 100) : Math.round(n); }
   function fmtDefault(n) { return Number(n).toLocaleString('ru-RU'); }
   // «от 1 020 BYN 1 200 BYN» — новая цена и зачёркнутая старая
-  function priceHtml(price, p, fmt) {
+  function priceHtml(price, p, fmt, from) {
     var n = num(price); fmt = fmt || fmtDefault;
     if (!isFinite(n)) return '';
-    if (!p) return 'от ' + fmt(Math.round(n)) + ' BYN';
-    return 'от ' + fmt(sale(n, p)) + ' BYN <s class="cx-old">' + fmt(Math.round(n)) + ' BYN</s>';
+    var prefix = from === false ? '' : 'от ';
+    if (!p) return prefix + fmt(Math.round(n * 100) / 100) + ' BYN';
+    return prefix + fmt(sale(n, p)) + ' BYN <s class="cx-old">' + fmt(Math.round(n * 100) / 100) + ' BYN</s>';
   }
 
   /* ---------- бейджи ---------- */
