@@ -141,7 +141,7 @@ test('загрузка манифеста: один запрос, все кол�
     assert.equal(R2.settled(), false);
     R2.load(m => got.push(m.codes.B4)); R2.load(() => got.push(2)); R2.load();
     await tick();
-    assert.deepEqual(calls, ['/assets/catalog/3d/index.json']);
+    assert.deepEqual(calls, ['/assets/catalog/3d/index.json?v=2']);
     assert.ok(R2.settled());
     assert.deepEqual(got, [1, 2]);
     R2.load(() => got.push(3));
