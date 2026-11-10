@@ -247,3 +247,6 @@ html.lamp-off .lamp-src,html.lamp-off .lamp-shades,html.lamp-off .lamp-g,html.la
 .lx-sk .g{stroke-width:1.9}
 .lx-sk .f{stroke-width:1.15;opacity:.8}
 .lx-sk .d{stroke-width:1;opacity:.7}
+
+/* Подпись условных изображений видна также на телефонах. */
+.mc .t .ai-label{display:block;font-size:10px;line-height:1.2;text-align:right}

@@ -41,10 +41,18 @@
 
   /* ---------- размеры фото: sm 640 (сетка), md (карточка), оригинал (увеличение) ---------- */
   // все фото каталога пересняты студией (tools/media/studio.py) — новый адрес ?v=…, чтобы браузер не взял старую копию из кэша
-  function fresh(u) { return LX ? LX.url(u) : (u || ''); }
+  // ИИ-визуализации только для известных комплексов; загрузки владельца не подменяем.
+  function aiCode(u) {
+    if (!cur || cur.id !== 'complex') return '';
+    var m = /^\/assets\/catalog\/K([1-9]|[12][0-9]|3[0-3])\.webp(?:[?#].*)?$/.exec(u || '');
+    return m ? 'K' + m[1] : '';
+  }
+  function aiUrl(u, size) { var c = aiCode(u); return c ? '/assets/catalog/' + (size === 'sm' ? 'sm/' : '') + 'AI-' + c + '.webp?v=ai1' : ''; }
+  function fresh(u) { return aiUrl(u) || (LX ? LX.url(u) : (u || '')); }
   function assetFile(u) { var m = /^\/assets\/catalog\/([A-Za-z0-9_.-]+\.webp)(?:[?#].*)?$/.exec(u || ''); return m ? m[1] : ''; }
   function sized(u, size) {
     if (!u || !size) return fresh(u);
+    var ai = aiUrl(u, size); if (ai) return ai;
     if (LX) return LX.sized(u, size);
     var f = assetFile(u);
     if (f) return '/assets/catalog/' + size + '/' + f;
@@ -56,8 +64,8 @@
   function imgTag(u, alt, sizes, extra) {
     var sm = sized(u, 'sm'), md = sized(u, 'md');
     // У вертикальных исходников портретные копии имеют ширину 480 и 1200, а не высоту 640 и 1600.
-    var portrait = cur && X && X.verticalOriginal({ img: u }, cur);
-    var set = sm !== md ? ' srcset="' + esc(sm) + (portrait ? ' 480w, ' : ' 640w, ') + esc(md) + (portrait ? ' 1200w' : ' 1600w') + '" sizes="' + sizes + '"' : '';
+    var portrait = cur && X && X.verticalOriginal({ img: u }, cur), ai = !!aiCode(u);
+    var set = sm !== md ? ' srcset="' + esc(sm) + (portrait ? ' 480w, ' : ' 640w, ') + esc(md) + (portrait ? ' 1200w' : ai ? ' 1024w' : ' 1600w') + '" sizes="' + sizes + '"' : '';
     return '<img loading="lazy" decoding="async" src="' + esc(sm) + '"' + set + ' data-full="' + esc(fresh(u)) + '" alt="' + esc(alt) + '"' + (extra || '') + '>';
   }
   // нет уменьшенной копии — показываем оригинал
@@ -161,12 +169,12 @@
       '<div class="panel glass"><h3>' + (addon ? 'Стоимость' : 'В комплекте') + '</h3>' + kitHtml(c) + '</div></div>' + chips +
       '<div class="mgrid lx-grid' + (addon ? ' addons' : '') + (ar > 1.2 ? ' wide' : '') + (r3n ? ' r3g' : '') + '" style="--lx-ar:' + ar.toFixed(4) + '">' + list.map(function (m, i) {
         var t = itemTitle(m, c), sub = addon ? addonSub(m, c) : esc(c.short || ''), bd = badgeOf(m, pctOf(m, c));
-        var head = '<div class="mc glass lx' + (r3[i] ? ' r3c' : '') + '" style="--d:' + ((i % 6) * 0.06).toFixed(2) + 's" data-i="' + i + '" role="button" tabindex="0" aria-label="' + esc(t) + '">';
+        var head = '<div class="mc glass lx' + (r3[i] ? ' r3c' : '') + '" style="--d:' + ((i % 6) * 0.06).toFixed(2) + 's" data-i="' + i + '" role="button" tabindex="0" aria-label="' + esc(t + (aiCode(m.img) ? ' — ИИ-визуализация' : '')) + '">';
         if (r3[i]) return head + '<div class="im lx-stage r3s" data-r3="' + r3[i] + '" data-r3-label="' + esc(t) + '">' + R3.stage(r3[i], t, '(max-width:720px) 46vw, 300px', false, c.id) + lxFrame(8) + bd + '</div>' +
           '<div class="t"><b>' + esc(m.name || m.code) + '</b>' + R3.dots(t + ': выбрать гранит', c.id) + '</div></div>';
         return head + '<div class="im lx-stage' + (studio(m.img, m.studio) ? '' : ' raw') + '">' +
           imgTag(m.img, t, '(max-width:720px) 46vw, 240px', ' style="--z:' + ((c.cover && c.cover.zoomItems) || 1) + '"') + lxFrame(8) + bd + '</div>' +
-          '<div class="t"><b>' + esc(m.name || m.code) + '</b><span>' + sub + '</span></div></div>';
+          '<div class="t"><b>' + esc(m.name || m.code) + '</b><span' + (aiCode(m.img) ? ' class="ai-label"' : '') + '>' + (aiCode(m.img) ? 'ИИ-визуализация' : sub) + '</span></div></div>';
       }).join('') + '</div>';
     if (r3n) R3.bind(box);
     [].forEach.call(box.querySelectorAll('.cx-chips [data-g]'), function (b) {
@@ -225,6 +233,8 @@
   // Подлинные исходные изображения доступны только для известных файлов каталога, не для загрузок владельца.
   function verticalControls(m, mode) {
     var orig = X && X.verticalOriginal(m, cur);
+    if (aiCode(m.img)) return '<div class="r3-sw" role="group" aria-label="Виды модели"><button type="button" data-preview="complex-original">Исходное изображение</button></div>' +
+      '<p class="sv-note">ИИ-визуализация по каталогу: форма и фактура могут отличаться. Детали изделия уточняйте при заказе.</p>';
     if (!orig) return '';
     return '<div class="r3-sw" role="group" aria-label="Виды модели">' +
       '<button type="button" data-preview="original">Исходное изображение</button></div>' +
@@ -233,10 +243,10 @@
   function drawSingle(m, alt) {
     if (!PIC) return;
     ++TOK;
-    var md = sized(m.img, 'md'), wh = MAN && MAN[codeOf(m)], set = '';
+    var md = sized(m.img, 'md'), wh = aiCode(m.img) ? [1024, 1024] : MAN && MAN[codeOf(m)], set = '';
     if (wh && md !== m.img) {
       var mw = Math.round(wh[0] * 1600 / Math.max(wh[0], wh[1]));
-      set = ' srcset="' + esc(md) + ' ' + mw + 'w, ' + esc(fresh(m.img)) + ' ' + wh[0] + 'w" sizes="(max-width:720px) 100vw, 1080px"';
+      if (!aiCode(m.img)) set = ' srcset="' + esc(md) + ' ' + mw + 'w, ' + esc(fresh(m.img)) + ' ' + wh[0] + 'w" sizes="(max-width:720px) 100vw, 1080px"';
     }
     PIC.className = 'pic single';
     PIC.innerHTML = '<button type="button" class="sv one" data-v="0" aria-label="' + esc(alt + ': увеличить фото') + '">' +
@@ -376,11 +386,11 @@
   }
   function openZoom(v, at) { zoomEl().classList.add('on'); ZF = at || null; zoomVariant(); var x = $('.zx', Z); if (x) x.focus({ preventScroll: true }); }
   // дополнительное фото модели (админка → «Доп. фото»): только просмотр, без вариантов камня
-  function openPhoto(u, cap) {
+  function openPhoto(u, cap, original) {
     zoomEl().classList.add('on'); zoomBar(''); Z.classList.add('single'); ZF = null;
     var tok = ++ZTOK; $('.zt', Z).textContent = cap;
-    var ph = new Image(); ph.src = sized(u, 'md'); ph.alt = cap; zoomSwap(ph); zoomLoading(true);
-    loadImg(fresh(u), '', function (im) { if (tok !== ZTOK) return; zoomLoading(false); if (im) { var o = im.cloneNode(); o.alt = cap; zoomSwap(o, true); } });
+    var ph = new Image(); ph.src = original ? u : sized(u, 'md'); ph.alt = cap; zoomSwap(ph); zoomLoading(true);
+    loadImg(original ? u : fresh(u), '', function (im) { if (tok !== ZTOK) return; zoomLoading(false); if (im) { var o = im.cloneNode(); o.alt = cap; zoomSwap(o, true); } });
     var x = $('.zx', Z); if (x) x.focus({ preventScroll: true });
   }
   function closeZoom() { if (!Z) return; ZTOK++; ZF = null; Z.classList.remove('on'); var zs = $('.zs', Z); zs.innerHTML = ''; zoomLoading(false); }
@@ -389,10 +399,11 @@
     var choice = e.target.closest('[data-preview]');
     if (choice) {
       var m = list[idx], mode = choice.getAttribute('data-preview'), t = itemTitle(m, cur);
-      if (mode === 'original') { var original = X && X.verticalOriginal(m, cur); if (original) openPhoto(original, t + ' · исходное изображение (ограниченное разрешение)'); }
+      if (mode === 'complex-original') { if (aiCode(m.img)) openPhoto('/assets/catalog/' + assetFile(m.img) + '?v=s5', t + ' · исходное изображение', true); }
+      else if (mode === 'original') { var original = X && X.verticalOriginal(m, cur); if (original) openPhoto(original, t + ' · исходное изображение (ограниченное разрешение)'); }
       else if (mode === '3d') { var code = R3 && multiStone(cur) && R3.codeOf(m.img); if (code) draw3d(m, t, code); }
       else if (mode === 'photo') drawSingle(m, t);
-      if (mode !== 'original') { var next = PIC.querySelector('[data-preview]'); if (next) next.focus({ preventScroll: true }); }
+      if (mode !== 'original' && mode !== 'complex-original') { var next = PIC.querySelector('[data-preview]'); if (next) next.focus({ preventScroll: true }); }
       return;
     }
     var b = e.target.closest('.sv'); if (!b) return;
