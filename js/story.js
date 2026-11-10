@@ -99,7 +99,8 @@
     }
     if (!seen && !visible) return null;                  // пока секцию не видели — только начало
     for (j = K; j < N; j += K) if (want(id = 'k' + j)) return id;      // ключи: быстрый переход в любое место
-    if (lite) return null;
+    // On mobile keep the original frames, loading only the active window.
+    if (lite || small || calm) return null;
     for (j = ah + 1; j < N; j++) if (want(id = 'f' + j)) return id;
     for (var s = keyOf(c) - K; s >= 0; s -= K) for (j = s; j < s + K; j++) if (want(id = 'f' + j)) return id;
     return null;
@@ -126,7 +127,10 @@
     dec[id] = 1; decBusy++;
     var b = blob[id];
     var p = window.createImageBitmap ? createImageBitmap(b) : new Promise(function (res, rej) {
-      var im = new Image(); im.onload = function () { res(im); }; im.onerror = rej; im.src = URL.createObjectURL(b);
+      var im = new Image(), url = URL.createObjectURL(b);
+      im.onload = function () { URL.revokeObjectURL(url); res(im); };
+      im.onerror = function (error) { URL.revokeObjectURL(url); rej(error); };
+      im.src = url;
     });
     p.then(function (bm) { decBusy--; if (dec[id] === 1) dec[id] = bm; else if (bm.close) bm.close(); kick(); },
       function () { decBusy--; dec[id] = 0; delete blob[id]; req[id] = 0; pump(); });
@@ -280,7 +284,7 @@
 
   /* ---------- главный цикл ---------- */
   var target = 0, disp = 0, shown = 0, prog = 0, enter = 0, enterD = 0, mx = 0, my = 0, mxD = 0, myD = 0;
-  var raf = 0, last = 0, t0 = performance.now(), idle = 0;
+  var raf = 0, last = 0, t0 = performance.now(), idle = 0, requestedFrame = -1;
   function measure() {
     var r = story.getBoundingClientRect(), span = Math.max(1, story.offsetHeight - sticky.offsetHeight);
     prog = Math.min(1, Math.max(0, -r.top / span));
@@ -299,6 +303,8 @@
       enterD = damp(enterD, enter, 7, dt);
       mxD = damp(mxD, mx, 3.2, dt); myD = damp(myD, my, 3.2, dt);
     }
+    var currentFrame = Math.round(disp);
+    if (near && currentFrame !== requestedFrame) { requestedFrame = currentFrame; pump(); }
     // в покое не оставляем смесь двух кадров — мягко доводим до целого
     idle = Math.abs(disp - target) < .01 ? idle + dt : 0;
     var goal = idle > .14 ? Math.round(disp) : disp;

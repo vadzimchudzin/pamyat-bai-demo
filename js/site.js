@@ -51,8 +51,9 @@
 
   /* Small scroll-linked image drift: separate from hover zoom and the hero's slow camera animation. */
   var parallaxFrame = 0;
+  var finePointer = window.matchMedia && matchMedia('(hover: hover) and (pointer: fine)').matches;
   function scheduleImageParallax() {
-    if (calm || parallaxFrame) return;
+    if (calm || !finePointer || parallaxFrame) return;
     parallaxFrame = requestAnimationFrame(function () {
       parallaxFrame = 0;
       var viewport = window.innerHeight || document.documentElement.clientHeight || 800;
@@ -63,20 +64,18 @@
         var heroY = Math.max(-38, Math.min(0, heroTop * 0.11));
         heroCanvas.style.setProperty('--pamyat-hero-y', heroY.toFixed(2) + 'px');
       }
-      $$('.works-carousel .work-photo-main, .cc .cover img').forEach(function (img) {
+      // Group layout reads before writes to avoid layout thrashing on scroll.
+      var updates = $$('.works-carousel .work-photo-main, .cc .cover img').map(function (img) {
         var frame = img.closest('.mat, .cover') || img.parentElement;
-        if (!frame) return;
+        if (!frame) return null;
         var rect = frame.getBoundingClientRect();
-        if (rect.bottom < -60 || rect.top > viewport + 60) {
-          img.style.setProperty('--pamyat-image-y', '0px');
-          return;
-        }
+        if (rect.bottom < -60 || rect.top > viewport + 60) return [img, '0px'];
         var center = rect.top + rect.height / 2;
         var ratio = (viewport / 2 - center) / (viewport / 2 + rect.height / 2);
         var limit = img.matches('.cc .cover img') ? 10 : 5;
-        var offset = Math.max(-limit, Math.min(limit, ratio * limit));
-        img.style.setProperty('--pamyat-image-y', offset.toFixed(2) + 'px');
+        return [img, Math.max(-limit, Math.min(limit, ratio * limit)).toFixed(2) + 'px'];
       });
+      updates.forEach(function (u) { if (u && u[0].style.getPropertyValue('--pamyat-image-y') !== u[1]) u[0].style.setProperty('--pamyat-image-y', u[1]); });
     });
   }
   window.addEventListener('scroll', scheduleImageParallax, { passive: true });
@@ -89,9 +88,12 @@
   /* меню на телефоне */
   (function () {
     var b = $('#burger'), tp = $('#top'); if (!b || !tp) return;
-    b.addEventListener('click', function () { var o = tp.classList.toggle('open'); b.setAttribute('aria-expanded', o); });
-    $$('.menu a', tp).forEach(function (a) { a.addEventListener('click', function () { tp.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); }); });
-    document.addEventListener('click', function (e) { if (!tp.contains(e.target)) tp.classList.remove('open'); });
+    function closeMenu() { tp.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); }
+    b.addEventListener('click', function () { var o = tp.classList.toggle('open'); b.setAttribute('aria-expanded', String(o)); });
+    $$('.menu a', tp).forEach(function (a) { a.addEventListener('click', closeMenu); });
+    document.addEventListener('click', function (e) { if (!tp.contains(e.target)) closeMenu(); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && tp.classList.contains('open')) { closeMenu(); b.focus(); } });
+    window.addEventListener('resize', function () { if (window.innerWidth > 980) closeMenu(); });
   })();
 
   /* фон — одно полотно: верх светлый, середина — переход в сумерки.
@@ -151,7 +153,7 @@
   /* ---------- облака заслоняют солнце: яркость солнца и лучей гаснет под облаком ---------- */
   (function () {
     var heroEl = $('#hero'), sun = heroEl && $('.sun .core', heroEl), clouds = heroEl ? $$('.sky .cl', heroEl) : [];
-    if (!sun || !clouds.length) return;
+    if (!sun || !clouds.length || calm) return;
     var maps = {}, GW = 160, GH = 68, cur = 1;
     function grid(src, cb) {
       if (maps[src]) return cb(maps[src]);
@@ -215,11 +217,23 @@
       cur += (target - cur) * 0.08;
       heroEl.style.setProperty('--sun', cur.toFixed(3));
     }
-    var last = 0;
-    (function loop(t) {
-      if (t - last > 60 && heroEl.getBoundingClientRect().bottom > 0) { last = t; step(); }
-      requestAnimationFrame(loop);
-    })(0);
+    // No sampling while the hero or the page is not visible.
+    var last = 0, cloudFrame = 0, heroVisible = true;
+    function loop(t) {
+      cloudFrame = 0;
+      if (!heroVisible || document.hidden) return;
+      if (t - last > 60) { last = t; step(); }
+      cloudFrame = requestAnimationFrame(loop);
+    }
+    function syncClouds() {
+      if (heroVisible && !document.hidden) { if (!cloudFrame) cloudFrame = requestAnimationFrame(loop); }
+      else if (cloudFrame) { cancelAnimationFrame(cloudFrame); cloudFrame = 0; }
+    }
+    if ('IntersectionObserver' in window) new IntersectionObserver(function (entries) {
+      heroVisible = entries[0].isIntersecting; syncClouds();
+    }).observe(heroEl);
+    document.addEventListener('visibilitychange', syncClouds);
+    syncClouds();
   })();
 
   /* ---------- появление блоков ---------- */
@@ -231,10 +245,26 @@
   } else $$('.rv').forEach(function (el) { el.classList.add('in'); });
 
   /* ---------- лайтбокс работ ---------- */
-  var lbx = $('#lbx');
+  var lbx = $('#lbx'), lbxClose = $('#lbxClose'), workFocus = null;
   function openWork(w) {
-    var img = w && w.querySelector('.mat .work-photo-main, .mat img');
-    if (img && lbx && $('#lbimg')) { $('#lbimg').src = img.src; lbx.classList.add('on'); }
+    var img = w && w.querySelector('.mat .work-photo-main, .mat img'), full = $('#lbimg');
+    if (!img || !lbx || !full) return;
+    workFocus = document.activeElement;
+    var src = img.dataset.orig || img.currentSrc || img.src;
+    // /api/img without a width returns the original, not a thumbnail.
+    try { var url = new URL(src, location.href); if (url.origin === location.origin && url.pathname === '/api/img') { url.searchParams.delete('w'); src = url.href; } } catch (e) {}
+    var fallback = img.currentSrc || img.src;
+    full.onerror = function () { full.onerror = null; if (fallback && fallback !== full.src) full.src = fallback; };
+    full.src = src; full.alt = img.alt || 'Пример работы';
+    lbx.classList.add('on');
+    if (window.PAMYAT_LENIS) window.PAMYAT_LENIS.stop();
+    if (lbxClose) lbxClose.focus({ preventScroll: true });
+  }
+  function closeWork() {
+    if (!lbx || !lbx.classList.contains('on')) return;
+    lbx.classList.remove('on');
+    if (window.PAMYAT_LENIS) window.PAMYAT_LENIS.start();
+    if (workFocus && workFocus.focus) workFocus.focus({ preventScroll: true });
   }
 
   /* ---------- карусель примеров работ ----------
@@ -428,7 +458,9 @@
       worksTrack.addEventListener(ev, function () { WL.touch = false; worksSettleLater(); }, { passive: true });
     });
     worksTrack.addEventListener('keydown', function (e) {
-      if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
+      if ((e.key === 'Enter' || e.key === ' ') && e.target === worksTrack) {
+        e.preventDefault(); openWork($$('.work:not(.is-clone)', worksTrack)[worksIndex()]);
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
         e.preventDefault(); moveWorks(e.key === 'ArrowLeft' ? -1 : 1);
       }
     });
@@ -436,8 +468,22 @@
     if ('ResizeObserver' in window) new ResizeObserver(worksResize).observe(worksTrack);
     setupWorks(0);
   }
-  if (lbx) lbx.addEventListener('click', function () { lbx.classList.remove('on'); });
-  addEventListener('keydown', function (e) { if (e.key === 'Escape' && lbx) lbx.classList.remove('on'); });
+  if (lbx) lbx.addEventListener('click', function (e) { if (e.target === lbx || e.target.closest('#lbxClose')) closeWork(); });
+  addEventListener('keydown', function (e) { if (lbx && lbx.classList.contains('on') && e.key === 'Escape') closeWork(); });
+  // Keep keyboard navigation inside the topmost open dialog (including catalog zoom).
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'Tab') return;
+    var dialog = $('.czoom.on') || $('.clb.on') || $('.lbx.on');
+    if (!dialog) return;
+    var focusable = $$('a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])', dialog).filter(function (el) {
+      return el.getClientRects().length && getComputedStyle(el).visibility !== 'hidden';
+    });
+    if (!focusable.length) { e.preventDefault(); return; }
+    var first = focusable[0], last = focusable[focusable.length - 1], active = document.activeElement;
+    if (!dialog.contains(active) || (e.shiftKey && active === first) || (!e.shiftKey && active === last)) {
+      e.preventDefault(); (e.shiftKey ? last : first).focus();
+    }
+  });
 
   /* ---------- визуализация установки: см. js/story.js ---------- */
 

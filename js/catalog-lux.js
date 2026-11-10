@@ -7,7 +7,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
   // версия студийной обработки: новый адрес фото, чтобы браузер не показал старую копию из кэша (кэш фото — 7 дней)
-  var V = 's4';
+  var V = 's5';
   var ASSET = /^\/assets\/catalog\/(?:md\/|sm\/)?([A-Za-z0-9_-]+)\.webp(?:[?#].*)?$/;
   // аксессуары (каталог декора): /assets/acc/<артикул>.webp — 1200 px, sm/ — 640 px; своя версия кэша
   var ACC = /^\/assets\/acc\/(?:sm\/)?([a-z0-9_-]+)\.webp(?:[?#].*)?$/i, VA = 'a1';

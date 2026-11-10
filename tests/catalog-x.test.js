@@ -56,7 +56,7 @@ test('свои группы из админки: порядок, проверк�
   assert.equal(X.groupOf({ code: 'L1', group: 'lamps' }, c), 'lamps');
   assert.equal(X.groupOf({ code: 'L1', group: 'gone' }, c), '', 'удалённая группа');
   assert.equal(X.groupOf({ code: 'L1', group: '' }, ACC), '', 'явно «без группы»');
-  assert.deepEqual(X.groups({ id: 'vertical' }), []);
+  assert.equal(X.groups({ id: 'vertical' }).length, 6);
   assert.deepEqual(X.groups(null), []);
 });
 
@@ -99,7 +99,7 @@ test('бейдж: свой текст важнее скидки, тон, экр�
 test('3D на обложке: своя модель, фото без 3D, исходное фото, модель по умолчанию', () => {
   const has = { B7: 1, I26: 1, P3: 1, O10: 1 };
   const R3 = { has: c => !!has[c], codeOf: u => { const m = /^\/assets\/catalog\/([A-Z]\d+)\.webp$/.exec(u || ''); return m && has[m[1]] ? m[1] : ''; } };
-  assert.equal(X.coverCode({ id: 'vertical', cover: { img: '/api/img?id=8' } }, R3), 'B7', 'похожая модель');
+  assert.equal(X.coverCode({ id: 'vertical', cover: { img: '/api/img?id=8' } }, R3), '', 'по умолчанию исходное изображение');
   assert.equal(X.coverCode({ id: 'vertical', cover: { img: '/api/img?id=8', r3: '' } }, R3), '', 'в админке выбрано фото');
   assert.equal(X.coverCode({ id: 'vertical', cover: { img: '/api/img?id=8', r3: 'P3' } }, R3), 'P3');
   assert.equal(X.coverCode({ id: 'vertical', cover: { r3: 'Z9' } }, R3), '', 'нет рендера');
@@ -120,4 +120,27 @@ test('цена может быть без «от», в том числе со с
   assert.equal(X.priceHtml(123.45, 0, f, false), '123.45 BYN');
   assert.equal(X.priceHtml(100, 10, f, false), '90 BYN <s class="cx-old">100 BYN</s>');
   assert.equal(X.priceHtml(100, 0, f, true), 'от 100 BYN');
+});
+
+
+test('вертикальные серии: все исходные модели, настройки владельца и исходники', () => {
+  const fs = require('node:fs'), vm = require('node:vm');
+  const ctx = { window: {} }; vm.runInNewContext(fs.readFileSync('js/catalog-default.js', 'utf8'), ctx);
+  const cat = ctx.window.PAMYAT_CATALOG_DEFAULT, c = cat.categories.find(c => c.id === 'vertical');
+  const items = cat.items.filter(i => i.cat === c.id);
+  assert.equal(items.length, 120);
+  assert.deepEqual(X.usedGroups(c, items).map(g => [g.name, g.n]), [['Серия A', 1], ['Серия B', 29], ['Серия C', 30], ['Серия D', 12], ['Серия E', 12], ['Серия F', 36]]);
+  for (const item of items) {
+    assert.ok(X.groupOf(item, c));
+    const original = X.verticalOriginal(item, c);
+    assert.ok(original && fs.existsSync('.' + original), item.code);
+  }
+  assert.equal(X.verticalOriginal({ img: '/api/img?id=1' }, c), '');
+  assert.equal(X.verticalOriginal({ img: '/assets/catalog/E99.webp' }, c), '');
+  assert.equal(X.verticalOriginal({ img: '/assets/catalog/E10.webp' }, {id:'cross'}), '');
+  assert.equal(X.groupOf({code:'E10',group:''}, c), '');
+  const custom = {id:'vertical', groups:[{id:'own',name:'Своё'}]};
+  assert.equal(X.groupOf({code:'E10'}, custom), '');
+  assert.equal(X.groupOf({code:'E10',group:'own'}, custom), 'own');
+  assert.deepEqual(X.groups({id:'vertical',groups:[]}), []);
 });

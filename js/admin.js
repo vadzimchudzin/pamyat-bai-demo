@@ -334,14 +334,17 @@
     if (K.commonSize == null) K.commonSize = '';
     K.granite = $('#catGranite').value.trim();
     var lf = $('#catEd [name=lxFrames]');
-    if (lf) K.look = { studio: $('#catEd [name=lxStudio]').checked, frames: lf.checked, details: true,
-      motion: $('#catEd [name=lxMotion]').value, stage: $('#catEd [name=lxStage]').value };
+    if (lf) K.look = Object.assign({}, K.look || {}, { studio: $('#catEd [name=lxStudio]').checked, frames: lf.checked, details: true,
+      motion: $('#catEd [name=lxMotion]').value, stage: $('#catEd [name=lxStage]').value });
     $$('#catEd .catc').forEach(function (el) {
       var c = K.categories[+el.dataset.ci], v = function (n) { var i = $('[name=' + n + ']', el); return i ? i.value.trim() : ''; };
       c.name = v('name') || 'Раздел'; c.short = v('short'); c.inc = v('inc'); c.desc = v('desc');
-      var p = v('price'); c.price = p === '' ? null : Math.max(0, Math.round(+p));
-      c.visible = $('[name=visible]', el).checked;
-      c.calc = $('[name=incalc]', el).checked;
+      var p = v('price');
+      // При сохранении групп не переписываем неизменённые цену и настройки раздела.
+      if (p !== (c.price == null ? '' : String(c.price))) c.price = p === '' ? null : Math.max(0, Math.round(+p));
+      var visible = $('[name=visible]', el).checked, incalc = $('[name=incalc]', el).checked;
+      if (visible !== (c.visible !== false)) c.visible = visible;
+      if (incalc !== (c.calc !== false)) c.calc = incalc;
       c.cover = c.cover || {}; c.cover.zoom = +$('[name=zoom]', el).value;
       var previousKit = Array.isArray(c.kit) ? c.kit : [];
       var sectionCommonToggle = $('[name=useCommonKitSize]', el);
@@ -350,11 +353,13 @@
         var index = +r.dataset.ki, old = previousKit[index] || [];
         var commonToggle = $('[name=commonKitRow]', r), sizeInput = $('[name=kv]', r);
         var wasChecked = commonToggle ? commonToggle.checked : old[2] === true;
-        var selected = c.useCommonKitSize === true && wasChecked;
+        var selected = commonToggle ? c.useCommonKitSize === true && wasChecked : old[2] === true;
         var individualSize = wasChecked
           ? (sizeInput.dataset.individualValue || old[1] || '')
           : (sizeInput.value || '').trim();
-        return [$('[name=kn]', r).value.trim(), individualSize, selected];
+        var row = [$('[name=kn]', r).value.trim(), individualSize];
+        if (old.length > 2 || commonToggle || selected) row.push(selected);
+        return row;
       }).filter(function (k) { return k[0]; });
       $$('.mod', el).forEach(function (m) {
         var it = K.items[+m.dataset.gi]; if (!it) return;
@@ -364,9 +369,12 @@
         if (sz) { if (sz.value.trim()) it.size = sz.value.trim(); else delete it.size; }
         if (pr) {
           var pv = pr.value.trim();
-          if (pv === '') { if ('price' in it || c.calc === false || c.id === 'accessories') it.price = null; }
-          else if (isFinite(+pv)) it.price = Math.max(0, Math.round(+pv * 100) / 100);
-          var priceMode = $('[name=mfrom]', m); if (priceMode) it.priceFrom = priceMode.value !== 'exact';
+          if (pv !== (it.price == null ? '' : String(it.price))) {
+            if (pv === '') { if ('price' in it || c.calc === false || c.id === 'accessories') it.price = null; }
+            else if (isFinite(+pv)) it.price = Math.max(0, Math.round(+pv * 100) / 100);
+          }
+          var priceMode = $('[name=mfrom]', m), from = priceMode && priceMode.value !== 'exact';
+          if (priceMode && from !== (it.priceFrom !== false)) it.priceFrom = from;
         }
       });
     });
