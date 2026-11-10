@@ -226,11 +226,9 @@
   function verticalControls(m, mode) {
     var orig = X && X.verticalOriginal(m, cur);
     if (!orig) return '';
-    var code = R3 && multiStone(cur) && R3.codeOf(m.img);
     return '<div class="r3-sw" role="group" aria-label="Виды модели">' +
-      (code ? '<button type="button" data-preview="' + (mode === '3d' ? 'photo' : '3d') + '">' + (mode === '3d' ? 'Обработанное изображение' : 'Условная 3D-визуализация') + '</button>' : '') +
       '<button type="button" data-preview="original">Исходное изображение</button></div>' +
-      '<p class="sv-note">' + (mode === '3d' ? 'Приблизительная визуализация по изображению: форма и цвет могут отличаться от изделия.' : 'Изображение обработано и увеличено; исходник доступен в исходном разрешении.') + '</p>';
+      '<p class="sv-note">Изображение обработано и увеличено; исходник доступен в исходном разрешении.</p>';
   }
   function drawSingle(m, alt) {
     if (!PIC) return;
