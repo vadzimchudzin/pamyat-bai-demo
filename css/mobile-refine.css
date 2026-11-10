@@ -1,0 +1,40 @@
+/* Адаптивные исправления без изменения исходных фотографий. */
+:focus-visible { outline: 2px solid #a27432; outline-offset: 3px; }
+button, a, input, select, textarea { -webkit-tap-highlight-color: rgba(154,116,54,.18); }
+button, a { touch-action: manipulation; }
+html:has(.clb.on), html:has(.lbx.on) { overflow: hidden; }
+.clb .box { overscroll-behavior: contain; }
+.lbx-close { position: absolute; top: max(12px, env(safe-area-inset-top)); right: max(12px, env(safe-area-inset-right)); z-index: 1; width: 44px; height: 44px; border-radius: 50%; border: 1px solid rgba(255,255,255,.55); background: rgba(35,30,25,.86); color: #fff; font-size: 29px; line-height: 1; cursor: pointer; }
+.lbx { padding: 60px 16px 16px; }
+.lbx .in { max-height: calc(100dvh - 80px) !important; }
+.lbx #lbimg { max-height: calc(100dvh - 86px) !important; }
+@media (max-width: 1250px) {
+  /* At tablet widths the fixed controls overlap the light card, not just the dark backdrop. */
+  .clb .nv, .clb .x { background: rgba(37,31,25,.82); color: #fff; border-color: rgba(255,255,255,.65); }
+  .clb .nv:hover, .clb .x:hover { background: rgba(37,31,25,.95); }
+}
+@media (max-width: 980px) {
+  .top:not(.open) .menu { visibility: hidden; transition: opacity .2s ease, transform .25s ease, visibility 0s linear .25s; }
+  .top.open .menu { visibility: visible; transition: opacity .2s ease, transform .25s ease, visibility 0s; }
+  .top .menu { max-height: calc(100dvh - 88px); overflow-y: auto; overscroll-behavior: contain; }
+}
+@media (max-width: 720px) {
+  .wrap { width: calc(100% - 32px); }
+  .hero-copy h1 { text-wrap: balance; }
+  .hero-copy p { max-width: 38ch; line-height: 1.5; }
+  .hero-copy .btn { min-height: 48px; }
+  #worksCarousel { --wk-ar: 44px; }
+  .cx-chips button, .cx-chips.cx-sub button { min-height: 44px; }
+  .clb .x, .clb .nv { min-width: 44px; min-height: 44px; }
+  .stepnav, .cx-chips, .works-track { overscroll-behavior-x: contain; }
+  input, select, textarea { font-size: max(16px, 1em); }
+}
+/* Сохраняем вид индикаторов, увеличивая область нажатия. */
+#worksCarousel .works-pagination { gap: 0 !important; padding-top: 4px !important; flex-wrap: wrap; justify-content: center; }
+#worksCarousel .works-dot, #worksCarousel .works-dot.active { position: relative; width: 44px !important; min-width: 44px !important; height: 44px !important; background: transparent !important; box-shadow: none !important; transition: none !important; }
+#worksCarousel .works-dot::before { content: ''; position: absolute; left: 8px; right: 8px; top: 17px; height: 10px; border-radius: 999px; background: rgba(118,96,72,.24); transition: background-color .25s ease, transform .25s ease; }
+#worksCarousel .works-dot.active::before { background: linear-gradient(90deg,#b4843f,#e8c88b 52%,#a87a38); box-shadow: 0 2px 6px rgba(140,96,36,.3); transform: scaleX(1.12); }
+@media (prefers-reduced-motion: reduce) {
+  html:focus-within { scroll-behavior: auto; }
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; transition-delay: 0s !important; }
+}
