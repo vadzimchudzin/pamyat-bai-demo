@@ -54,7 +54,10 @@
   function studio(u, flag) { return LX ? LX.isStudio(u, flag) : false; }
   function lxFrame(r) { return LX ? LX.glint() + LX.frame(r) : ''; }
   function imgTag(u, alt, sizes, extra) {
-    var sm = sized(u, 'sm'), md = sized(u, 'md'), set = sm !== md ? ' srcset="' + esc(sm) + ' 640w, ' + esc(md) + ' 1600w" sizes="' + sizes + '"' : '';
+    var sm = sized(u, 'sm'), md = sized(u, 'md');
+    // У вертикальных исходников портретные копии имеют ширину 480 и 1200, а не высоту 640 и 1600.
+    var portrait = cur && X && X.verticalOriginal({ img: u }, cur);
+    var set = sm !== md ? ' srcset="' + esc(sm) + (portrait ? ' 480w, ' : ' 640w, ') + esc(md) + (portrait ? ' 1200w' : ' 1600w') + '" sizes="' + sizes + '"' : '';
     return '<img loading="lazy" decoding="async" src="' + esc(sm) + '"' + set + ' data-full="' + esc(fresh(u)) + '" alt="' + esc(alt) + '"' + (extra || '') + '>';
   }
   // нет уменьшенной копии — показываем оригинал
@@ -145,7 +148,7 @@
     }
     var addon = isAddon(c), ar = LX ? LX.stageAr(c.id) : 1;
     // 3D-модели: квадратный кадр, как у рендеров; позиции со своим фото из админки остаются фото
-    var r3 = list.map(function (m) { return R3 && multiStone(c) ? R3.codeOf(m.img) : ''; }), r3n = r3.filter(Boolean).length;
+    var r3 = list.map(function (m) { return c.id !== 'vertical' && R3 && multiStone(c) ? R3.codeOf(m.img) : ''; }), r3n = r3.filter(Boolean).length;
     if (r3n) ar = 1;
     // группы (чипсы): «Все» и группы, в которых есть позиции; у выбранной группы — ряд подгрупп и описание
     var chip = function (x, on) { return '<button type="button" data-g="' + esc(x.id) + '" aria-pressed="' + (on ? 'true' : 'false') + '">' + esc(x.name) + '<i>' + x.n + '</i></button>'; };
@@ -219,6 +222,16 @@
     b.style.setProperty('--nv-y', Math.round(ri.top - rb.top + b.scrollTop + ri.height / 2) + 'px');
   }
   // одно фото на студийном фоне: рамка повторяет пропорции снимка, белый фон фото растворяется в подложке
+  // Подлинные исходные изображения доступны только для известных файлов каталога, не для загрузок владельца.
+  function verticalControls(m, mode) {
+    var orig = X && X.verticalOriginal(m, cur);
+    if (!orig) return '';
+    var code = R3 && multiStone(cur) && R3.codeOf(m.img);
+    return '<div class="r3-sw" role="group" aria-label="Виды модели">' +
+      (code ? '<button type="button" data-preview="' + (mode === '3d' ? 'photo' : '3d') + '">' + (mode === '3d' ? 'Обработанное изображение' : 'Условная 3D-визуализация') + '</button>' : '') +
+      '<button type="button" data-preview="original">Исходное изображение</button></div>' +
+      '<p class="sv-note">' + (mode === '3d' ? 'Приблизительная визуализация по изображению: форма и цвет могут отличаться от изделия.' : 'Изображение обработано и увеличено; исходник доступен в исходном разрешении.') + '</p>';
+  }
   function drawSingle(m, alt) {
     if (!PIC) return;
     ++TOK;
@@ -231,7 +244,7 @@
     PIC.innerHTML = '<button type="button" class="sv one" data-v="0" aria-label="' + esc(alt + ': увеличить фото') + '">' +
       '<span class="im"><img decoding="async" src="' + esc(md) + '"' + set + ' data-full="' + esc(fresh(m.img)) + '" alt="' + esc(alt) + '"></span>' +
       '<span class="zh" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" focusable="false"><circle cx="10.5" cy="10.5" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.2 15.2 4.6 4.6M10.5 7.8v5.4M7.8 10.5h5.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Крупно</span></button>' +
-      '<p class="sv-note">Нажмите на фото, чтобы рассмотреть его крупно.</p>';
+      '<p class="sv-note">Нажмите на изображение, чтобы рассмотреть его крупно.</p>' + verticalControls(m, 'photo');
     if (wh) setAr(wh[0], wh[1]);
     var im = PIC.querySelector('.sv .im img');
     var fit = function () { if (im.naturalWidth) setAr(im.naturalWidth, im.naturalHeight); requestAnimationFrame(placeNav); };
@@ -249,7 +262,7 @@
     PIC.innerHTML = '<button type="button" class="sv one" data-v="0" aria-label="' + esc(alt + ': открыть крупно') + '">' +
       '<span class="im lx-stage r3s" data-r3="' + esc(code) + '" data-r3-label="' + esc(alt) + '">' + R3.stage(code, alt, '(max-width:720px) 92vw, 560px', true, cur.id) + '</span>' +
       '<span class="zh" aria-hidden="true"><svg viewBox="0 0 24 24" width="15" height="15" focusable="false"><circle cx="10.5" cy="10.5" r="6.2" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m15.2 15.2 4.6 4.6M10.5 7.8v5.4M7.8 10.5h5.4" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Крупно</span></button>' +
-      R3.swatches(cur.id) + '<p class="sv-note">' + (R3.variants(cur.id).length < 2 ? 'Нажмите на фото, чтобы рассмотреть модель крупно' : (COARSE ? 'Выберите гранит под фото' : 'Ведите курсор по фото — меняется гранит') + '. Рисунок камня у каждой плиты свой') + '.</p>';
+      R3.swatches(cur.id) + '<p class="sv-note">' + (R3.variants(cur.id).length < 2 ? 'Нажмите на фото, чтобы рассмотреть модель крупно' : (COARSE ? 'Выберите гранит под фото' : 'Ведите курсор по фото — меняется гранит') + '. Рисунок камня у каждой плиты свой') + '.</p>' + verticalControls(m, '3d');
     setAr(1, 1);
     R3.bind(PIC);
     var st = PIC.querySelector('[data-r3]'); if (k && st) R3.show(st, k, true);
@@ -375,6 +388,15 @@
   function closeZoom() { if (!Z) return; ZTOK++; ZF = null; Z.classList.remove('on'); var zs = $('.zs', Z); zs.innerHTML = ''; zoomLoading(false); }
   function zoomOn() { return !!(Z && Z.classList.contains('on')); }
   if (PIC) PIC.addEventListener('click', function (e) {
+    var choice = e.target.closest('[data-preview]');
+    if (choice) {
+      var m = list[idx], mode = choice.getAttribute('data-preview'), t = itemTitle(m, cur);
+      if (mode === 'original') { var original = X && X.verticalOriginal(m, cur); if (original) openPhoto(original, t + ' · исходное изображение (ограниченное разрешение)'); }
+      else if (mode === '3d') { var code = R3 && multiStone(cur) && R3.codeOf(m.img); if (code) draw3d(m, t, code); }
+      else if (mode === 'photo') drawSingle(m, t);
+      if (mode !== 'original') { var next = PIC.querySelector('[data-preview]'); if (next) next.focus({ preventScroll: true }); }
+      return;
+    }
     var b = e.target.closest('.sv'); if (!b) return;
     var st = R3 && b.querySelector('[data-r3]');
     if (st) { zoom3d(st.getAttribute('data-r3'), R3.current(st)); var x = $('.zx', Z); if (x) x.focus({ preventScroll: true }); return; }
@@ -428,10 +450,10 @@
       if (sec) { sec.href = '/#contact'; sec.textContent = 'Консультация'; }
     }
     var c3 = R3 && multiStone(cur) ? R3.codeOf(m.img) : '';
-    if (c3) draw3d(m, t, c3); else drawSingle(m, t);
+    if (c3 && cur.id !== 'vertical') draw3d(m, t, c3); else drawSingle(m, t);
     drawDetails(m);
     var nx = list[(idx + 1) % list.length];
-    if (nx && nx !== m) { var n3 = R3 && multiStone(cur) ? R3.codeOf(nx.img) : '', pre = new Image(); pre.decoding = 'async'; pre.src = n3 ? R3.src(n3, R3.variants(cur.id)[0].id) : sized(nx.img, 'md'); }
+    if (nx && nx !== m) { var n3 = R3 && multiStone(cur) ? R3.codeOf(nx.img) : '', pre = new Image(); pre.decoding = 'async'; pre.src = n3 && cur.id !== 'vertical' ? R3.src(n3, R3.variants(cur.id)[0].id) : sized(nx.img, 'md'); }
   }
   $('#clbCalc').addEventListener('click', function (e) {
     if (window.parent !== window && cur && list[idx] && !isAddon(cur)) { e.preventDefault(); window.parent.postMessage({ pamyatModel: list[idx].code, cat: cur.id }, '*'); }
@@ -491,6 +513,7 @@
       if (!cur && box.querySelector('.cats') && !box.querySelector('[data-r3]') && X && cats().some(function (c) { return X.coverCode(c, R3); })) home();
       return;
     }
+    if (cur && cur.id === 'vertical' && id === cur.id) { if ($('#clb').classList.contains('on')) show(idx); return; }
     if (!cur || cur.id !== id || !box.querySelector('.mgrid') || box.querySelector('.mgrid.r3g')) return;
     if (!multiStone(cur) || !list.some(function (m) { return R3.codeOf(m.img); })) return; // в разделе нет 3D-моделей
     open(id, true); if ($('#clb').classList.contains('on')) show(idx);

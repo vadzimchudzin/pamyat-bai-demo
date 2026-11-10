@@ -64,7 +64,7 @@
       set(j); ASKED = 'done'; var l = CBS; CBS = []; l.forEach(function (f) { try { f(M); } catch (e) {} });
       if (M && typeof document !== 'undefined') try { document.dispatchEvent(new CustomEvent('pamyat:3d', { detail: M })); } catch (e) {}
     };
-    fetch(BASE + 'index.json').then(function (r) { return r.ok ? r.json() : null; }).then(done, function () { done(null); });
+    fetch(BASE + 'index.json?v=2').then(function (r) { return r.ok ? r.json() : null; }).then(done, function () { done(null); });
   }
 
   /* ---------- разметка ---------- */

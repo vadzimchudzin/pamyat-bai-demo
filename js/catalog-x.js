@@ -49,6 +49,14 @@
   ];
   // старые артикулы без группы (до каталога декора): V — вазы, L и «А-N» — лампады, T/G/S — прочее
   var ACC_BY_CODE = [[/^V\d/i, 'vases'], [/^(L\d|[АA]-\d)/i, 'lamps'], [/^[TGS]\d/i, 'other']];
+  // Серии совпадают с обозначениями исходного каталога, без догадок о форме.
+  var VERTICAL_GROUPS = 'ABCDEF'.split('').map(function (s) { return { id: 'series-' + s.toLowerCase(), name: 'Серия ' + s }; });
+  var VERTICAL_LIMITS = { A: 1, B: 29, C: 30, D: 12, E: 12, F: 36 };
+  function verticalCode(img) {
+    var m = /^\/assets\/catalog\/(?:md\/|sm\/)?([A-F])(\d+)\.webp(?:[?#].*)?$/.exec(img || '');
+    return m && +m[2] > 0 && +m[2] <= VERTICAL_LIMITS[m[1]] && String(+m[2]) === m[2] ? m[1] + m[2] : '';
+  }
+  function verticalOriginal(it, c) { var code = c && c.id === 'vertical' && it && verticalCode(it.img); return code ? '/assets/catalog-originals/' + code + '.webp' : ''; }
   var TONES = ['gold', 'sale', 'dark', 'green'];
   // обложка-3D по умолчанию: своё фото обложки похоже на эту модель (стела с волной — B7, ограда на столбиках — O10)
   var COVER_R3 = { vertical: 'B7', fence: 'O10' };
@@ -82,7 +90,8 @@
   function groups(c) {
     if (!c) return [];
     if (Array.isArray(c.groups)) return cleanGroups(c.groups);
-    return c.id === 'accessories' ? ACC_GROUPS.map(function (g) { return Object.assign({}, g); }) : [];
+    var defaults = c.id === 'accessories' ? ACC_GROUPS : c.id === 'vertical' ? VERTICAL_GROUPS : [];
+    return defaults.map(function (g) { return Object.assign({}, g); });
   }
   function groupById(c, id) { if (!id) return null; var gs = groups(c); for (var i = 0; i < gs.length; i++) if (gs[i].id === id) return gs[i]; return null; }
   function defaultGroup(code) {
@@ -95,6 +104,11 @@
     if (it.group != null && it.group !== '') return has(it.group) ? it.group : '';
     if (it.group === '') return ''; // в админке выбрано «без группы»
     if (!Array.isArray(c.groups) && c.id === 'accessories') { var d = defaultGroup(it.code); return has(d) ? d : ''; }
+    if (!Array.isArray(c.groups) && c.id === 'vertical') {
+      var m = /^([A-F])(\d+)$/.exec(String(it.code || ''));
+      var v = m && +m[2] > 0 && +m[2] <= VERTICAL_LIMITS[m[1]] && String(+m[2]) === m[2] ? 'series-' + m[1].toLowerCase() : '';
+      return has(v) ? v : '';
+    }
     return '';
   }
   // группа верхнего уровня (для подгруппы — её родитель)
@@ -168,14 +182,15 @@
     if (!c || !R3 || !R3.has) return '';
     var cv = c.cover || {};
     if (typeof cv.r3 === 'string') return cv.r3 && R3.has(cv.r3) ? cv.r3 : '';
-    if (!r3ok(c)) return '';
+    // На обложке вертикальных моделей исходный вид точнее реконструкции; выбор админа выше сохраняется.
+    if (c.id === 'vertical' || !r3ok(c)) return '';
     var own = R3.codeOf ? R3.codeOf(cv.img) : '';
     if (own) return own;
     var d = COVER_R3[c.id];
     return d && R3.has(d) ? d : '';
   }
 
-  return { ACC_GROUPS: ACC_GROUPS, COVER_R3: COVER_R3, TONES: TONES, esc: esc, isAddon: isAddon, r3ok: r3ok,
+  return { ACC_GROUPS: ACC_GROUPS, VERTICAL_GROUPS: VERTICAL_GROUPS, verticalOriginal: verticalOriginal, COVER_R3: COVER_R3, TONES: TONES, esc: esc, isAddon: isAddon, r3ok: r3ok,
     groups: groups, cleanGroups: cleanGroups, groupById: groupById, defaultGroup: defaultGroup, groupOf: groupOf, topOf: topOf, usedGroups: usedGroups, inGroup: inGroup,
     materialOf: materialOf, descOf: descOf,
     pct: pct, clampPct: clampPct, sale: sale, priceHtml: priceHtml, badge: badge, badgeHtml: badgeHtml, coverCode: coverCode };
